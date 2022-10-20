@@ -4,10 +4,10 @@ import numpy as np
 # import pandas as pd
 import h5py
 
-# bad_list keeps track of the file number and frame number of the bad pannel p6a0
+# bad_list keeps track of the file number and frame number of the bad panel p6a0
 bad_list = [(1, 20), (1, 6), (1, 41), (1, 57), (1, 33), (11, 20), (11, 13), (1, 24), (1, 58), (1, 51)]
 
-# good_list keeps track of the file number and frame number of the bad pannel p6a0
+# good_list keeps track of the file number and frame number of the bad panel p6a0
 good_list = [(1, 55), (11, 8), (11, 17), (1, 25), (1, 37), (11, 10), (1, 12), (11, 48), (1, 3), (11, 51)]
 
 fig = plt.figure(figsize=(15, 18))
