@@ -42,8 +42,7 @@ def plotCurve(ax_name, input_list, fileName, plot_title):
         ax_name.set_xticks(np.linspace(0, 200, 21))
 
 
-fileName = '/bioxfel/data/2020/LCLS-2020-Aug-FrommeP172-P182/analysis/gihan/data-new-hitfindings/r0484-snr5pix2/' \
-           'mfxp17218-r0484_%s.cxi'
+fileName = '/Users/gketawal/PycharmProjects/InternalTool/r0484-snr5pix2/mfxp17218-r0484_%s.cxi'
 fig = plt.figure(figsize=(15, 18))
 ax1 = fig.add_axes([0.1, 0.6, 0.9, 0.15])
 ax2 = fig.add_axes([0.1, 0.4, 0.9, 0.15])
@@ -57,7 +56,7 @@ plotCurve(ax2, good_list, fileName, 'Good List')
 
 # sorting events from the cxi file based on the panel p6a0 intensity signature
 
-folder = '/bioxfel/data/2020/LCLS-2020-Aug-FrommeP172-P182/analysis/gihan/data-new-hitfindings/r0484-snr5pix2/'
+folder = '/Users/gketawal/PycharmProjects/InternalTool/r0484-snr5pix2/'
 files = Path(folder).glob('*.cxi')
 
 goodEvents = {}
