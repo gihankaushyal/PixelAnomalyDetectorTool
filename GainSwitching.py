@@ -56,6 +56,7 @@ plotCurve(ax2, good_list, fileName, 'Good List')
 
 # sorting events from the cxi file based on the panel p6a0 intensity signature
 
+
 folder = '/Users/gketawal/PycharmProjects/InternalTool/r0484-snr5pix2/'
 files = Path(folder).glob('*.cxi')
 
