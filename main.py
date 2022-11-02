@@ -10,11 +10,6 @@ import pyqtgraph as pg
 from PyQt5 import uic
 import sys
 
-
-# function for sorting good frames from the bad frames based on the average intensity ratio of the peak of the curve vs
-# crest of the curve
-
-
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -49,9 +44,13 @@ class MainWindow(QMainWindow):
                 f.write('%s //%i \n' % (key, i))
         f.close()
 
-    # this method only works on single cxi file. for multiple files code needs to be changed
-
     def sortFrames(self, file_name):
+        """
+            this method only works on single cxi file. for multiple files code needs to be changed
+            function for sorting good frames from the bad frames based on the average intensity ratio of the peak of the
+            curve vs crest of the curve
+        """
+
         try:
             goodEvents = {}
             badEvents = {}
@@ -254,13 +253,8 @@ class MainWindow(QMainWindow):
 
             fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
 
-            # fig, ax = plt.subplots()
             pg.plot(range(10, 186), avgIntensities, label='data')
             pg.plot(range(10, 186), np.polyval(fit, range(10, 186)), label='fit')
-            # ax.set_yticks(np.linspace(800, 2000, 7))
-            # ax.set_xticks(np.linspace(0, 200, 21))
-            # ax.legend()
-            # plt.show()
 
         except FileNotFoundError:
             error_msg1 = QMessageBox()
@@ -287,9 +281,6 @@ class MainWindow(QMainWindow):
             pg.plot(list(np.linspace(10, 185, 175)), avgIntensities,
                                    title='average intenstity over the selected panel')
 
-
-
-
         except FileNotFoundError:
             error_msg1 = QMessageBox()
             error_msg1.critical("Couldn't find file %s" % file_name)
@@ -313,4 +304,4 @@ if __name__ == '__main__':
     w.show()
     sys.exit(app.exec_())
 
-    # main()
+
