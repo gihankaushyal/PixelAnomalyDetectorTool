@@ -19,7 +19,6 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-
         uic.loadUi("mainWindow.ui", self)
 
         # connecting elements to functions
@@ -103,18 +102,16 @@ class MainWindow(QMainWindow):
             self.writeToFile(badEvents, 'badEventsGUI.list')
 
             done_msg = QMessageBox()
-            done_msg.setText("Done Sorting")
+            done_msg.information("Done Sorting")
             done_msg.exec_()
 
         except FileNotFoundError:
             error_msg1 = QMessageBox()
-            error_msg1.setText("Couldn't find file %s" % file_name)
+            error_msg1.critical("Couldn't find file %s" % file_name)
             error_msg1.exec_()
 
         except ValueError:
-            error_msg2 = QMessageBox()
-            error_msg2.setText("Please Enter a file path")
-            error_msg2.exec_()
+            QMessageBox.critical(self, "Please enter a valid path")
 
     def returnMaxPixel(self, coeff, x_range):
         """
@@ -162,16 +159,14 @@ class MainWindow(QMainWindow):
             x = range(len(y))
             pg.plot(x, y, pen=None, symbol='o')
 
-
-
         except FileNotFoundError:
             error_msg1 = QMessageBox()
-            error_msg1.setText("Couldn't find file %s" % file_name)
+            error_msg1.critical("Couldn't find file %s" % file_name)
             error_msg1.exec_()
 
         except ValueError:
             error_msg2 = QMessageBox()
-            error_msg2.setText("Please Enter a file path")
+            error_msg2.critical("Please Enter a file path")
             error_msg2.exec_()
 
     def browseFiles(self):
@@ -188,17 +183,56 @@ class MainWindow(QMainWindow):
         # print(fname[0][0])
 
     def advanceSortFrames(self, file_name):
+        goodEvents = {}
+        badEvents = {}
+
+        # goodList to store all the events with expected pixel intensities for the file
+        goodList = []
+        # badList to store all the events with detector artifacts for the file
+        badList = []
         try:
-            pass
+            with h5py.File(file_name, "r") as f:
+                data = f['entry_1']['data_1']['data'][()]
+
+            for i in range(len(data)):
+                frame = data[i]
+
+                avgIntensities = []
+                for j in range(10, 186):
+                    avgIntensities.append(np.average(frame[2112:2288, j]))
+
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=4)
+                # calculating the inflection points (second derivative of the forth order polynomial)
+
+                # print(fit)
+                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
+                # print('x1', x1)
+                # print('x2', x2)
+
+                if x1 in range(130, 140):
+                    goodList.append(i)
+                else:
+                    badList.append(i)
+
+            goodEvents[str(file_name)] = goodList
+            badEvents[str(file_name)] = badList
+
+            self.writeToFile(goodEvents, 'goodEvents-advanceSearch.list')
+            self.writeToFile(badEvents, 'badEvents-advanceSearch.list')
+
+            done_msg = QMessageBox()
+            done_msg.Information("Done Sorting")
+            done_msg.exec_()
 
         except FileNotFoundError:
             error_msg1 = QMessageBox()
-            error_msg1.setText("Couldn't find file %s" % file_name)
+            error_msg1.critical("Couldn't find file %s" % file_name)
             error_msg1.exec_()
 
         except ValueError:
             error_msg2 = QMessageBox()
-            error_msg2.setText("Please Enter a file path")
+            error_msg2.critical("Please Enter a file path")
             error_msg2.exec_()
 
     def plotFit(self, file_name, eventNumber=1, deg=4):
@@ -226,16 +260,16 @@ class MainWindow(QMainWindow):
             # ax.set_yticks(np.linspace(800, 2000, 7))
             # ax.set_xticks(np.linspace(0, 200, 21))
             # ax.legend()
-            #plt.show()
+            # plt.show()
 
         except FileNotFoundError:
             error_msg1 = QMessageBox()
-            error_msg1.setText("Couldn't find file %s" % file_name)
+            error_msg1.critical("Couldn't find file %s" % file_name)
             error_msg1.exec_()
 
         except ValueError:
             error_msg2 = QMessageBox()
-            error_msg2.setText("Please Enter a file path")
+            error_msg2.critical("Please Enter a file path")
             error_msg2.exec_()
 
     def plotCurve(self, file_name, event_number=1):
@@ -250,31 +284,25 @@ class MainWindow(QMainWindow):
             for i in range(10, 185):
                 avgIntensities.append(np.average(frame[2112:2288, i]))
 
+            pg.plot(list(np.linspace(10, 185, 175)), avgIntensities,
+                                   title='average intenstity over the selected panel')
 
-
-            styles = {"color": "#f00", "font-size": "20px"}
-            graphWidget.plot(list(np.linspace(10, 185, 175)), avgIntensities, **styles)
-            graphWidget.setTitle(" Average intensities")
-            graphWidget.setLabel('left', 'Avg. Intensity')
-            graphWidget.setLabel('bottom', 'Pixel Number')
-            #graphWidget.show()
-            #graphWidget.clear()
 
 
 
         except FileNotFoundError:
             error_msg1 = QMessageBox()
-            error_msg1.setText("Couldn't find file %s" % file_name)
+            error_msg1.critical("Couldn't find file %s" % file_name)
             error_msg1.exec_()
 
         except ValueError:
             error_msg2 = QMessageBox()
-            error_msg2.setText("Please Enter a file path")
+            error_msg2.critical("Please Enter a file path")
             error_msg2.exec_()
 
         except IndexError:
             error_msg3 = QMessageBox()
-            error_msg3.setText('Value you entered is out of bound')
+            error_msg3.critical('Value you entered is out of bound')
             error_msg3.exec_()
 
 
