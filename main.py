@@ -1,10 +1,6 @@
 # imports
-from typing import TextIO
-
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-
 from PyQt5.QtWidgets import *
 import pyqtgraph as pg
 from PyQt5 import uic
