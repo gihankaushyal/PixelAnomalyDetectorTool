@@ -13,10 +13,12 @@ from pathlib import Path
 # by eye.
 # tuple has the format of (*cxi file name, event number)
 
-# bad_list keeps track of the file number and frame number of the bad pannel p6a0
+
+# bad_list keeps track of the file number and frame number of the bad panel p6a0
 bad_list = [(1, 20), (1, 6), (1, 41), (1, 57), (1, 33), (11, 20), (11, 13), (1, 24), (1, 58), (1, 51)]
 
-# good_list keeps track of the file number and frame number of the bad pannel p6a0
+# good_list keeps track of the file number and frame number of the bad panel p6a0
+
 good_list = [(1, 55), (11, 8), (11, 17), (1, 25), (1, 37), (11, 10), (1, 12), (11, 48), (1, 3), (11, 51)]
 
 
@@ -55,6 +57,7 @@ plotCurve(ax2, good_list, fileName, 'Good List')
 # curve (pixel 165-185)
 
 # sorting events from the cxi file based on the panel p6a0 intensity signature
+
 
 folder = '/Users/gketawal/PycharmProjects/InternalTool/r0484-snr5pix2/'
 files = Path(folder).glob('*.cxi')
