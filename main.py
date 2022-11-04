@@ -54,12 +54,14 @@ class MainWindow(QMainWindow):
         f = open(fileName, 'w')
         for key in eventsList:
             for i in eventsList[key]:
+
                 # f.write('%s //%i \n' % (key, i))
                 f.write(key)
                 f.write(' ')
                 f.write('//')
                 f.write(str(i))
                 f.write('\n')
+
         f.close()
 
     def sortFrames(self, file_name):
