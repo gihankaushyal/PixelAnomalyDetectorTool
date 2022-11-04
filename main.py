@@ -23,11 +23,15 @@ class MainWindow(QMainWindow):
                                                                              self.eventNumber.text()))
         # button for call the fit_curve() method to fit a 4th order polynomial for
         # the vertically average intensity profile
-        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text()))
+        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
+                                                                       self.orderOfFit.text()))
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
 
+        #incrementing through eventnumbers
+        self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
+        self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
         # graphing
         self.graphWidget = pg.PlotWidget()
         self.layout = QHBoxLayout()
@@ -47,8 +51,20 @@ class MainWindow(QMainWindow):
         dialog_box = QDialog()
         fname = QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
-        self.eventNumber.setText("1")
+        self.eventNumber.setText("0")
+        self.orderOfFit.setText("4")
 
+    def nextEvent(self,eventNumber):
+        try:
+            self.eventNumber.setText(str(int(eventNumber)+1))
+        except:
+            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+
+    def previousEvent(self,eventNumber):
+        try:
+            self.eventNumber.setText(str(int(eventNumber)-1))
+        except:
+            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
@@ -240,11 +256,12 @@ class MainWindow(QMainWindow):
             frame = data[int(eventNumber)]
 
             avgIntensities = []
+            degry = int(deg)
 
             for i in range(10, 186):
                 avgIntensities.append(np.average(frame[2112:2288, i]))
 
-            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
+            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=degry)
 
             self.graphWidget.clear()
             self.graphWidget.plot(range(10, 186), avgIntensities, name='data')
