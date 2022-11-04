@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
         fname = QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
         self.eventNumber.setText("1")
-        # print(fname[0][0])
+
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
@@ -84,24 +84,16 @@ class MainWindow(QMainWindow):
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            # print(len(data)) #this line was intended to see if the code is actually reading file and also at the same
-            # time check to the number of data blocks in each cxi file
-
-            # print('Reading %s and it has %i events' % (file, len(data)))
-            # break
-
             for i in range(0, len(data)):
                 frame = data[i]
 
                 peakMeanIntensities = []
                 for j in range(60, 80):
                     peakMeanIntensities.append(np.average(frame[2112:2288, j]))
-                # print(peakMeanIntensities)
 
                 crestMeanIntensities = []
                 for k in range(165, 185):
                     crestMeanIntensities.append(np.average(frame[2112:2288, k]))
-                # print(crestMeanIntensities)
 
                 peakMean = np.average(peakMeanIntensities)
                 crestMean = np.average(crestMeanIntensities)
@@ -110,9 +102,6 @@ class MainWindow(QMainWindow):
                     goodList.append(i)
                 else:
                     badList.append(i)
-
-            #       print(goodList)
-            #       print(badList)
 
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
@@ -150,11 +139,8 @@ class MainWindow(QMainWindow):
                 fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=4)
                 # calculating the inflection points (second derivative of the forth order polynomial)
 
-                # print(fit)
                 x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
                 x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
-                # print('x1', x1)
-                # print('x2', x2)
 
                 if x1 in range(130, 140):
                     goodList.append(i)
@@ -231,7 +217,6 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
-            self.graphWidget.show()
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -269,7 +254,6 @@ class MainWindow(QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
-            self.graphWidget.show()
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -286,7 +270,6 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('change of the pixel with the highest average intensity', size='15pt')
             self.graphWidget.setLabel('left', "Pixel Number")
             self.graphWidget.setLabel('bottom', "Frame Number")
-            self.graphWidget.show()
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
