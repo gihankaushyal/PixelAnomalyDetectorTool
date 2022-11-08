@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
                 for j in range(10, 186):
                     avgIntensities.append(np.average(frame[2112:2288, j]))
 
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=4)
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
                 # calculating the inflection points (second derivative of the forth order polynomial)
 
                 x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
