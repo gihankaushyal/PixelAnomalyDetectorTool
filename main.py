@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please enter a valid path")
+            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def advanceSortFrames(self, file_name):
         goodEvents = {}
@@ -152,11 +152,17 @@ class MainWindow(QMainWindow):
                 for j in range(10, 186):
                     avgIntensities.append(np.average(frame[2112:2288, j]))
 
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit.text()))
                 # calculating the inflection points (second derivative of the forth order polynomial)
-
-                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
+                print(fit)
+                try:
+                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
+                except IndexError:
+                    QMessageBox.information(self, 'Error', 'Please try a higher order polynomial')
+                except ValueError:
+                    QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
+                    continue
 
                 if x1 in range(130, 140):
                     goodList.append(i)
@@ -169,7 +175,7 @@ class MainWindow(QMainWindow):
             self.writeToFile(goodEvents, 'goodEvents-advanceSearch.list')
             self.writeToFile(badEvents, 'badEvents-advanceSearch.list')
 
-            QMessageBox.information(self, 'Sucess', "Done Sorting")
+            QMessageBox.information(self, 'Success', "Done Sorting")
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -241,7 +247,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
         except IndexError:
-            QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
+            QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
+                                 % self.eventNumber.text())
 
     def plotFit(self, file_name, eventNumber=1, deg=4):
         """ fileName(str) : name of the file to be open
@@ -277,6 +284,9 @@ class MainWindow(QMainWindow):
 
         except ValueError:
             QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+        except IndexError:
+            QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
 
     def plotMaxPixels(self, file_name):
         try:
