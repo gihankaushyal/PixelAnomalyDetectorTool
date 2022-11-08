@@ -6,7 +6,6 @@ import pyqtgraph as pg
 from PyQt5 import uic
 import sys
 
-
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -29,9 +28,12 @@ class MainWindow(QMainWindow):
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
 
+
+
         #incrementing through eventnumbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
         self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
+
         # graphing
         self.graphWidget = pg.PlotWidget()
         self.layout = QHBoxLayout()
@@ -57,12 +59,20 @@ class MainWindow(QMainWindow):
     def nextEvent(self,eventNumber):
         try:
             self.eventNumber.setText(str(int(eventNumber)+1))
+            if self.buttonClicked =='plotCurve':
+                self.plotCurve(self.fileField.text(), self.eventNumber.text())
+            elif self.buttonClicked == 'plotFit':
+                self.plotFit(self.fileField.text(), self.eventNumber.text(),self.orderOfFit.text())
         except:
             QMessageBox.critical(self, 'Fail','Please Enter a valid input')
 
     def previousEvent(self,eventNumber):
         try:
             self.eventNumber.setText(str(int(eventNumber)-1))
+            if self.buttonClicked == 'plotCurve':
+                self.plotCurve(self.fileField.text(), self.eventNumber.text())
+            elif self.buttonClicked == 'plotFit':
+                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
         except:
             QMessageBox.critical(self, 'Fail','Please Enter a valid input')
 
@@ -239,6 +249,7 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
+            self.buttonClicked='plotCurve'
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -278,6 +289,7 @@ class MainWindow(QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
+            self.buttonClicked='plotFit'
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
