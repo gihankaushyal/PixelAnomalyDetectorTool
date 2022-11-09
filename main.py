@@ -6,7 +6,6 @@ import pyqtgraph as pg
 from PyQt5 import uic
 import sys
 
-
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -23,10 +22,17 @@ class MainWindow(QMainWindow):
                                                                              self.eventNumber.text()))
         # button for call the fit_curve() method to fit a 4th order polynomial for
         # the vertically average intensity profile
-        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text()))
+        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
+                                                                       self.orderOfFit.text()))
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
+
+
+
+        #incrementing through eventnumbers
+        self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
+        self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
 
         # graphing
         self.graphWidget = pg.PlotWidget()
@@ -47,8 +53,28 @@ class MainWindow(QMainWindow):
         dialog_box = QDialog()
         fname = QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
-        self.eventNumber.setText("1")
-        # print(fname[0][0])
+        self.eventNumber.setText("0")
+        self.orderOfFit.setText("4")
+
+    def nextEvent(self,eventNumber):
+        try:
+            self.eventNumber.setText(str(int(eventNumber)+1))
+            if self.buttonClicked =='plotCurve':
+                self.plotCurve(self.fileField.text(), self.eventNumber.text())
+            elif self.buttonClicked == 'plotFit':
+                self.plotFit(self.fileField.text(), self.eventNumber.text(),self.orderOfFit.text())
+        except:
+            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+
+    def previousEvent(self,eventNumber):
+        try:
+            self.eventNumber.setText(str(int(eventNumber)-1))
+            if self.buttonClicked == 'plotCurve':
+                self.plotCurve(self.fileField.text(), self.eventNumber.text())
+            elif self.buttonClicked == 'plotFit':
+                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+        except:
+            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
@@ -84,24 +110,16 @@ class MainWindow(QMainWindow):
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            # print(len(data)) #this line was intended to see if the code is actually reading file and also at the same
-            # time check to the number of data blocks in each cxi file
-
-            # print('Reading %s and it has %i events' % (file, len(data)))
-            # break
-
             for i in range(0, len(data)):
                 frame = data[i]
 
                 peakMeanIntensities = []
                 for j in range(60, 80):
                     peakMeanIntensities.append(np.average(frame[2112:2288, j]))
-                # print(peakMeanIntensities)
 
                 crestMeanIntensities = []
                 for k in range(165, 185):
                     crestMeanIntensities.append(np.average(frame[2112:2288, k]))
-                # print(crestMeanIntensities)
 
                 peakMean = np.average(peakMeanIntensities)
                 crestMean = np.average(crestMeanIntensities)
@@ -110,9 +128,6 @@ class MainWindow(QMainWindow):
                     goodList.append(i)
                 else:
                     badList.append(i)
-
-            #       print(goodList)
-            #       print(badList)
 
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
@@ -126,7 +141,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please enter a valid path")
+            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def advanceSortFrames(self, file_name):
         goodEvents = {}
@@ -147,14 +162,17 @@ class MainWindow(QMainWindow):
                 for j in range(10, 186):
                     avgIntensities.append(np.average(frame[2112:2288, j]))
 
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=4)
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit.text()))
                 # calculating the inflection points (second derivative of the forth order polynomial)
-
-                # print(fit)
-                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
-                # print('x1', x1)
-                # print('x2', x2)
+                print(fit)
+                try:
+                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
+                except IndexError:
+                    QMessageBox.information(self, 'Error', 'Please try a higher order polynomial')
+                except ValueError:
+                    QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
+                    continue
 
                 if x1 in range(130, 140):
                     goodList.append(i)
@@ -167,7 +185,7 @@ class MainWindow(QMainWindow):
             self.writeToFile(goodEvents, 'goodEvents-advanceSearch.list')
             self.writeToFile(badEvents, 'badEvents-advanceSearch.list')
 
-            QMessageBox.information(self, 'Sucess', "Done Sorting")
+            QMessageBox.information(self, 'Success', "Done Sorting")
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -231,7 +249,7 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
-            self.graphWidget.show()
+            self.buttonClicked='plotCurve'
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -240,7 +258,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
         except IndexError:
-            QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
+            QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
+                                 % self.eventNumber.text())
 
     def plotFit(self, file_name, eventNumber=1, deg=4):
         """ fileName(str) : name of the file to be open
@@ -255,11 +274,12 @@ class MainWindow(QMainWindow):
             frame = data[int(eventNumber)]
 
             avgIntensities = []
+            degry = int(deg)
 
             for i in range(10, 186):
                 avgIntensities.append(np.average(frame[2112:2288, i]))
 
-            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
+            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=degry)
 
             self.graphWidget.clear()
             self.graphWidget.plot(range(10, 186), avgIntensities, name='data')
@@ -269,13 +289,16 @@ class MainWindow(QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
-            self.graphWidget.show()
+            self.buttonClicked='plotFit'
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
             QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+        except IndexError:
+            QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
 
     def plotMaxPixels(self, file_name):
         try:
@@ -286,7 +309,6 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('change of the pixel with the highest average intensity', size='15pt')
             self.graphWidget.setLabel('left', "Pixel Number")
             self.graphWidget.setLabel('bottom', "Frame Number")
-            self.graphWidget.show()
 
         except FileNotFoundError:
             QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
