@@ -51,6 +51,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="sortButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>450</x>
@@ -64,6 +67,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="advanceSortButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>320</x>
@@ -113,6 +119,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="plotPixelIntensityButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>220</x>
@@ -126,6 +135,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="fitPolynormialButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>370</x>
@@ -139,6 +151,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="plotPeakPixelButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>510</x>
@@ -175,6 +190,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="nextButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>340</x>
@@ -188,6 +206,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="previousButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>430</x>
@@ -234,6 +255,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="browseButton_2">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>650</x>
@@ -260,6 +284,9 @@
     </property>
    </widget>
    <widget class="QPushButton" name="viewFileButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
     <property name="geometry">
      <rect>
       <x>100</x>
