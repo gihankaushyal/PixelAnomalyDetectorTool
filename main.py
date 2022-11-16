@@ -2,6 +2,7 @@
 import h5py
 import numpy as np
 from PyQt5 import QtWidgets as qtw
+from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 from PyQt5 import uic
 import sys
@@ -10,39 +11,56 @@ import lib.cfel_filetools as fileTools
 import lib.cfel_geometry as geomTools
 import lib.cfel_imgtools as imgTools
 
-class DisplayImage(qtw.QWidget):
-    def __init__(self, fileName, geometry):
-        super(DisplayImage,self).__init__()
 
-        self.setGeometry(100,100,500,500)
+class DisplayImage(qtw.QWidget):
+    def __init__(self):
+        super(DisplayImage, self).__init__()
+
+        self.setGeometry(100, 100, 500, 500)
         self.mainWidget = pg.ImageView()
         self.nextButton = qtw.QPushButton('Next')
         self.previousButton = qtw.QPushButton('Previous')
-
-        #reading and displaying data
-        self.cxi = fileTools.read_cxi(fileName, data=True)
-        self.imgData = self.cxi['data']
-        self.geometry = geomTools.read_geometry(geometry)
-        self.imageToDraw = imgTools.pixel_remap(self.imgData,self.geometry['x'],self.geometry['y'])
-        self.mainWidget.setImage(self.imageToDraw)
-
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
         self.layout.addWidget(self.nextButton)
         self.layout.addWidget(self.previousButton)
         self.setLayout(self.layout)
 
+        # reading and displaying data
+
+    def drawImage(self, fileName, eventNumber, geometry):
+        try:
+            self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True)
+            self.size = self.cxi['stack_shape'][0]
+            self.imgData = self.cxi['data']
+            try:
+                self.geometry = geomTools.read_geometry(geometry)
+                self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
+                self.mainWidget.setImage(self.imageToDraw)
+                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size))
+            except:
+                qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
+        except:
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
+
 
 class MainWindow(qtw.QMainWindow):
+    clickedNext = qtc.pyqtSignal(str, int, str)
+    clickedPrevious = qtc.pyqtSignal(str, int, str)
+
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+
 
         uic.loadUi("mainWindow.ui", self)
 
         # connecting elements to functions
         self.browseButton.clicked.connect(self.browseFiles)
-        self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
-        self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
+        self.browseButton_2.clicked.connect(self.browseGeom)
+        self.viewFileButton.clicked.connect(self.viewFiles)
+
+        self.imageViewer = None
+        self.fileSize = None
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(lambda: self.plotCurve(self.fileField.text(),
@@ -55,11 +73,10 @@ class MainWindow(qtw.QMainWindow):
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
 
+        self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
+        self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
 
-
-
-
-        #incrementing through eventnumbers
+        # incrementing through eventnumbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
         self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
 
@@ -84,34 +101,58 @@ class MainWindow(qtw.QMainWindow):
         self.fileField.setText(fname[0][0])
         self.eventNumber.setText("0")
         self.orderOfFit.setText("4")
-        self.imageViwer = DisplayImage(fname[0][0], 'p183_v23-gkk.geom')
-        self.imageViwer.show()
 
-    def nextEvent(self,eventNumber):
-        try:
-            self.eventNumber.setText(str(int(eventNumber)+1))
-            if self.buttonClicked =='plotCurve':
-                self.plotCurve(self.fileField.text(), self.eventNumber.text())
-            elif self.buttonClicked == 'plotFit':
-                self.plotFit(self.fileField.text(), self.eventNumber.text(),self.orderOfFit.text())
-        except:
-            qtw.QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+    def browseGeom(self):
+        """
+            This method gets triggered when the browse button is Clicked in the GUI
+        function: The function is to take in a text field where the value needs to be set and called in a dialog box with
+        file struture view starting at the 'root' and lets the user select the file they want and set the file path to
+        the test field.
+        """
+        dialog_box = qtw.QDialog()
+        geomName = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'geom Files (*.geom)')
+        self.fileField_2.setText(geomName[0][0])
 
-    def previousEvent(self,eventNumber):
+    def viewFiles(self):
+        self.imageViewer = DisplayImage()
+        self.imageViewer.drawImage(self.fileField.text(), 0, self.fileField_2.text())
+        self.totalEvents = self.imageViewer.size
+        self.clickedNext.connect(self.imageViewer.drawImage)
+        self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.show()
+
+    def nextEvent(self, eventNumber):
         try:
-            self.eventNumber.setText(str(int(eventNumber)-1))
+            if int(self.eventNumber.text()) < self.totalEvents:
+                self.eventNumber.setText(str(int(eventNumber) + 1))
+            #elif int(self.eventNumber.text()) == self.totalEvents-1:
+            else:
+                self.eventNumber.setText(str(0))
+                print(self.evenNumber.text())
+
             if self.buttonClicked == 'plotCurve':
                 self.plotCurve(self.fileField.text(), self.eventNumber.text())
             elif self.buttonClicked == 'plotFit':
                 self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+            self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
-            qtw.QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+
+    def previousEvent(self, eventNumber):
+        try:
+            self.eventNumber.setText(str(int(eventNumber) - 1))
+            if self.buttonClicked == 'plotCurve':
+                self.plotCurve(self.fileField.text(), self.eventNumber.text())
+            elif self.buttonClicked == 'plotFit':
+                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+            self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+        except:
+            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
         for key in eventsList:
             for i in eventsList[key]:
-
                 # f.write('%s //%i \n' % (key, i))
                 f.write(key)
                 f.write(' ')
@@ -264,7 +305,7 @@ class MainWindow(qtw.QMainWindow):
 
         return max_pixels
 
-    def plotCurve(self, file_name, event_number=1):
+    def plotCurve(self, file_name, event_number=0):
         try:
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
@@ -280,7 +321,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
-            self.buttonClicked='plotCurve'
+            self.buttonClicked = 'plotCurve'
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -290,9 +331,9 @@ class MainWindow(qtw.QMainWindow):
 
         except IndexError:
             qtw.QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
-                                 % self.eventNumber.text())
+                                     % self.eventNumber.text())
 
-    def plotFit(self, file_name, eventNumber=1, deg=4):
+    def plotFit(self, file_name, eventNumber=0, deg=4):
         """ fileName(str) : name of the file to be open
                 eventNumber(int) : event number for the file
                 deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
@@ -320,7 +361,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
-            self.buttonClicked='plotFit'
+            self.buttonClicked = 'plotFit'
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
