@@ -20,12 +20,8 @@ class DisplayImage(qtw.QWidget):
 
         self.setGeometry(100, 100, 500, 500)
         self.mainWidget = pg.ImageView()
-        self.nextButton = qtw.QPushButton('Next')
-        self.previousButton = qtw.QPushButton('Previous')
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
-        self.layout.addWidget(self.nextButton)
-        self.layout.addWidget(self.previousButton)
         self.setLayout(self.layout)
 
         # reading and displaying data
@@ -39,7 +35,7 @@ class DisplayImage(qtw.QWidget):
                 self.geometry = geomTools.read_geometry(geometry)
                 self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
                 self.mainWidget.setImage(self.imageToDraw)
-                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size))
+                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size-1))
             except:
                 qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
         except:
@@ -117,10 +113,6 @@ class MainWindow(qtw.QMainWindow):
         geomName = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'geom Files (*.geom)')
         self.fileField_2.setText(geomName[0][0])
         self.viewFileButton.setEnabled(True)
-        self.plotPixelIntensityButton.setEnabled(True)
-        self.fitPolynormialButton.setEnabled(True)
-        self.plotPeakPixelButton.setEnabled(True)
-
 
     def viewFiles(self):
         self.imageViewer = DisplayImage()
@@ -130,14 +122,16 @@ class MainWindow(qtw.QMainWindow):
         self.clickedPrevious.connect(self.imageViewer.drawImage)
         self.imageViewer.show()
 
+        self.plotPixelIntensityButton.setEnabled(True)
+        self.fitPolynormialButton.setEnabled(True)
+        self.plotPeakPixelButton.setEnabled(True)
+
     def nextEvent(self, eventNumber):
         try:
-            if int(self.eventNumber.text()) < self.totalEvents:
+            if int(self.eventNumber.text()) < self.totalEvents-1:
                 self.eventNumber.setText(str(int(eventNumber) + 1))
-            #elif int(self.eventNumber.text()) == self.totalEvents-1:
-            else:
+            elif int(self.eventNumber.text()) == self.totalEvents-1:
                 self.eventNumber.setText(str(0))
-                print(self.evenNumber.text())
 
             if self.buttonClicked == 'plotCurve':
                 self.plotCurve(self.fileField.text(), self.eventNumber.text())
@@ -149,7 +143,11 @@ class MainWindow(qtw.QMainWindow):
 
     def previousEvent(self, eventNumber):
         try:
-            self.eventNumber.setText(str(int(eventNumber) - 1))
+            if int(self.eventNumber.text()) > 0:
+                self.eventNumber.setText(str(int(eventNumber) - 1))
+            elif int(self.eventNumber.text()) == 0:
+                self.eventNumber.setText(str(self.totalEvents-1))
+
             if self.buttonClicked == 'plotCurve':
                 self.plotCurve(self.fileField.text(), self.eventNumber.text())
             elif self.buttonClicked == 'plotFit':
