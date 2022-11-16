@@ -18,7 +18,7 @@ class DisplayImage(qtw.QWidget):
     def __init__(self):
         super(DisplayImage, self).__init__()
 
-        self.setGeometry(100, 100, 500, 500)
+        self.setGeometry(10, 100, 600, 600)
         self.mainWidget = pg.ImageView()
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
@@ -51,7 +51,7 @@ class MainWindow(qtw.QMainWindow):
 
 
         uic.loadUi("mainWindow.ui", self)
-
+        self.setGeometry(700,100,800,700)
         # connecting elements to functions
         self.browseButton.clicked.connect(self.browseFiles)
         self.browseButton_2.clicked.connect(self.browseGeom)
@@ -73,6 +73,12 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
         self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
+
+        self.orderOfFit.editingFinished.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
+                                                                       self.orderOfFit.text()))
+        self.eventNumber.editingFinished.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
+                                                                        self.orderOfFit.text()))
+        self.eventNumber.editingFinished.connect(self.viewFiles)
 
         # incrementing through eventnumbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
@@ -116,7 +122,7 @@ class MainWindow(qtw.QMainWindow):
 
     def viewFiles(self):
         self.imageViewer = DisplayImage()
-        self.imageViewer.drawImage(self.fileField.text(), 0, self.fileField_2.text())
+        self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         self.totalEvents = self.imageViewer.size
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
