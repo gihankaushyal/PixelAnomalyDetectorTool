@@ -1,4 +1,6 @@
 # imports
+from builtins import Exception
+
 import h5py
 import numpy as np
 from PyQt5 import QtWidgets as qtw
@@ -101,6 +103,8 @@ class MainWindow(qtw.QMainWindow):
         self.fileField.setText(fname[0][0])
         self.eventNumber.setText("0")
         self.orderOfFit.setText("4")
+        self.browseButton_2.setEnabled(True)
+
 
     def browseGeom(self):
         """
@@ -112,6 +116,11 @@ class MainWindow(qtw.QMainWindow):
         dialog_box = qtw.QDialog()
         geomName = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'geom Files (*.geom)')
         self.fileField_2.setText(geomName[0][0])
+        self.viewFileButton.setEnabled(True)
+        self.plotPixelIntensityButton.setEnabled(True)
+        self.fitPolynormialButton.setEnabled(True)
+        self.plotPeakPixelButton.setEnabled(True)
+
 
     def viewFiles(self):
         self.imageViewer = DisplayImage()
@@ -322,6 +331,9 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.buttonClicked = 'plotCurve'
+            self.sortButton.setEnabled(True)
+            self.nextButton.setEnabled(True)
+            self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -362,6 +374,9 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
             self.buttonClicked = 'plotFit'
+            self.advanceSortButton.setEnabled(True)
+            self.nextButton.setEnabled(True)
+            self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
