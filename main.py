@@ -61,12 +61,10 @@ class MainWindow(qtw.QMainWindow):
         self.fileSize = None
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
-        self.plotPixelIntensityButton.clicked.connect(lambda: self.plotCurve(self.fileField.text(),
-                                                                             self.eventNumber.text()))
+        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
         # button for call the fit_curve() method to fit a 4th order polynomial for
         # the vertically average intensity profile
-        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
-                                                                       self.orderOfFit.text()))
+        self.fitPolynormialButton.clicked.connect(self.plotFit)
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
@@ -74,10 +72,8 @@ class MainWindow(qtw.QMainWindow):
         self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
         self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
 
-        self.orderOfFit.editingFinished.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
-                                                                       self.orderOfFit.text()))
-        self.eventNumber.editingFinished.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
-                                                                        self.orderOfFit.text()))
+        self.orderOfFit.editingFinished.connect(self.plotFit)
+        self.eventNumber.editingFinished.connect(self.curveToPlot)
         self.eventNumber.editingFinished.connect(self.viewFiles)
 
         # incrementing through eventnumbers
@@ -103,10 +99,7 @@ class MainWindow(qtw.QMainWindow):
         dialog_box = qtw.QDialog()
         fname = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
-        self.eventNumber.setText("0")
-        self.orderOfFit.setText("4")
         self.browseButton_2.setEnabled(True)
-
 
     def browseGeom(self):
         """
@@ -120,7 +113,17 @@ class MainWindow(qtw.QMainWindow):
         self.fileField_2.setText(geomName[0][0])
         self.viewFileButton.setEnabled(True)
 
+    def curveToPlot(self):
+        if self.buttonClicked=='plotCurve':
+            self.plotCurve()
+        elif self.buttonClicked == 'plotFit':
+            self.plotFit()
+
     def viewFiles(self):
+        if not self.eventNumber.text():
+            self.eventNumber.setEnabled(True)
+            self.eventNumber.setText("0")
+
         self.imageViewer = DisplayImage()
         self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         self.totalEvents = self.imageViewer.size
@@ -138,11 +141,7 @@ class MainWindow(qtw.QMainWindow):
                 self.eventNumber.setText(str(int(eventNumber) + 1))
             elif int(self.eventNumber.text()) == self.totalEvents-1:
                 self.eventNumber.setText(str(0))
-
-            if self.buttonClicked == 'plotCurve':
-                self.plotCurve(self.fileField.text(), self.eventNumber.text())
-            elif self.buttonClicked == 'plotFit':
-                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+            self.curveToPlot()
             self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
@@ -154,10 +153,7 @@ class MainWindow(qtw.QMainWindow):
             elif int(self.eventNumber.text()) == 0:
                 self.eventNumber.setText(str(self.totalEvents-1))
 
-            if self.buttonClicked == 'plotCurve':
-                self.plotCurve(self.fileField.text(), self.eventNumber.text())
-            elif self.buttonClicked == 'plotFit':
-                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+            self.curveToPlot()
             self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
@@ -318,12 +314,15 @@ class MainWindow(qtw.QMainWindow):
 
         return max_pixels
 
-    def plotCurve(self, file_name, event_number=0):
+    def plotCurve(self):
         try:
+            file_name = self.fileField.text()
+            event_number = int(self.eventNumber.text())
+
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            frame = data[int(event_number)]
+            frame = data[event_number]
 
             avgIntensities = []
 
@@ -335,6 +334,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.buttonClicked = 'plotCurve'
+
             self.sortButton.setEnabled(True)
             self.nextButton.setEnabled(True)
             self.previousButton.setEnabled(True)
@@ -349,20 +349,24 @@ class MainWindow(qtw.QMainWindow):
             qtw.QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
                                      % self.eventNumber.text())
 
-    def plotFit(self, file_name, eventNumber=0, deg=4):
+    def plotFit(self):
         """ fileName(str) : name of the file to be open
                 eventNumber(int) : event number for the file
                 deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         """
         try:
+            self.orderOfFit.setEnabled(True)
+            self.orderOfFit.setText("4")
+            file_name = self.fileField.text()
+            eventNumber = int(self.eventNumber.text())
+            avgIntensities = []
+            degry = int(self.orderOfFit.text())
+
             filename = file_name
             with h5py.File(filename, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
             frame = data[int(eventNumber)]
-
-            avgIntensities = []
-            degry = int(deg)
 
             for i in range(10, 186):
                 avgIntensities.append(np.average(frame[2112:2288, i]))
