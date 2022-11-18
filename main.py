@@ -43,6 +43,7 @@ class DisplayImage(qtw.QWidget):
 
 
 class MainWindow(qtw.QMainWindow):
+
     clickedNext = qtc.pyqtSignal(str, int, str)
     clickedPrevious = qtc.pyqtSignal(str, int, str)
 
@@ -59,6 +60,9 @@ class MainWindow(qtw.QMainWindow):
 
         self.imageViewer = None
         self.fileSize = None
+        self.totalEvents = None
+        self.buttonClicked = None
+
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
@@ -114,7 +118,11 @@ class MainWindow(qtw.QMainWindow):
         self.viewFileButton.setEnabled(True)
 
     def curveToPlot(self):
-        if self.buttonClicked=='plotCurve':
+
+        if self.buttonClicked is None:
+            pass
+            #qtw.QMessageBox.information(self,'Info','Plot a curve first!')
+        elif self.buttonClicked == 'plotCurve':
             self.plotCurve()
         elif self.buttonClicked == 'plotFit':
             self.plotFit()
@@ -141,7 +149,9 @@ class MainWindow(qtw.QMainWindow):
                 self.eventNumber.setText(str(int(eventNumber) + 1))
             elif int(self.eventNumber.text()) == self.totalEvents-1:
                 self.eventNumber.setText(str(0))
+
             self.curveToPlot()
+
             self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
@@ -154,6 +164,7 @@ class MainWindow(qtw.QMainWindow):
                 self.eventNumber.setText(str(self.totalEvents-1))
 
             self.curveToPlot()
+
             self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
@@ -333,6 +344,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
+
             self.buttonClicked = 'plotCurve'
 
             self.sortButton.setEnabled(True)
@@ -355,8 +367,10 @@ class MainWindow(qtw.QMainWindow):
                 deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         """
         try:
-            self.orderOfFit.setEnabled(True)
-            self.orderOfFit.setText("4")
+            if not self.orderOfFit.text():
+                self.orderOfFit.setEnabled(True)
+                self.orderOfFit.setText("4")
+
             file_name = self.fileField.text()
             eventNumber = int(self.eventNumber.text())
             avgIntensities = []
@@ -381,7 +395,9 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
+
             self.buttonClicked = 'plotFit'
+
             self.advanceSortButton.setEnabled(True)
             self.nextButton.setEnabled(True)
             self.previousButton.setEnabled(True)
@@ -410,6 +426,9 @@ class MainWindow(qtw.QMainWindow):
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+    def closeEvent(self, QCloseEvent):
+        self.imageViewer.close()
 
 
 # main .
