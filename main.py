@@ -190,6 +190,7 @@ class MainWindow(qtw.QMainWindow):
         """
 
         try:
+            tag = str(file_name).split('/')[-1].split('.')[0]
             goodEvents = {}
             badEvents = {}
             # exit()
@@ -224,8 +225,8 @@ class MainWindow(qtw.QMainWindow):
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
 
-            self.writeToFile(goodEvents, 'goodEventsGUI.list')
-            self.writeToFile(badEvents, 'badEventsGUI.list')
+            self.writeToFile(goodEvents, 'goodEvents-simpleSort-%s.list' % tag)
+            self.writeToFile(badEvents, 'badEvents-%s.list' % tag)
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
@@ -236,6 +237,7 @@ class MainWindow(qtw.QMainWindow):
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def advanceSortFrames(self, file_name):
+        tag = str(file_name).split('/')[-1].split('.')[0]
         goodEvents = {}
         badEvents = {}
 
@@ -274,8 +276,8 @@ class MainWindow(qtw.QMainWindow):
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
 
-            self.writeToFile(goodEvents, 'goodEvents-advanceSearch.list')
-            self.writeToFile(badEvents, 'badEvents-advanceSearch.list')
+            self.writeToFile(goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
+            self.writeToFile(badEvents, 'badEvents-advanceSort-%s.list' % tag)
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
