@@ -80,7 +80,8 @@ class sortTools:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def advanceSortFrames(self, file_name, orderOfFit):
-        tag = str(file_name).split('/')[-1].split('.')[0].split('-')[-1]
+        #based on the LCLS cheetah file naming conventions
+        tag = str(file_name).split('/')[-1].split('.')[0]
 
         goodEvents = {}
         badEvents = {}
