@@ -1,42 +1,92 @@
 # imports
+from builtins import Exception
+
 import h5py
 import numpy as np
-from PyQt5.QtWidgets import *
+from PyQt5 import QtWidgets as qtw
+from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 from PyQt5 import uic
 import sys
 
-class MainWindow(QMainWindow):
+import lib.cfel_filetools as fileTools
+import lib.cfel_geometry as geomTools
+import lib.cfel_imgtools as imgTools
+
+
+class DisplayImage(qtw.QWidget):
+    def __init__(self):
+        super(DisplayImage, self).__init__()
+
+        self.setGeometry(10, 100, 600, 600)
+        self.mainWidget = pg.ImageView()
+        self.layout = qtw.QVBoxLayout()
+        self.layout.addWidget(self.mainWidget)
+        self.setLayout(self.layout)
+
+        # reading and displaying data
+
+    def drawImage(self, fileName, eventNumber, geometry):
+        try:
+            self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True)
+            self.size = self.cxi['stack_shape'][0]
+            self.imgData = self.cxi['data']
+            try:
+                self.geometry = geomTools.read_geometry(geometry)
+                self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
+                self.mainWidget.setImage(self.imageToDraw)
+                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size-1))
+            except:
+                qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
+        except:
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
+
+
+class MainWindow(qtw.QMainWindow):
+
+    clickedNext = qtc.pyqtSignal(str, int, str)
+    clickedPrevious = qtc.pyqtSignal(str, int, str)
+
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        uic.loadUi("mainWindow.ui", self)
 
+        uic.loadUi("mainWindow.ui", self)
+        self.setGeometry(700,100,800,700)
         # connecting elements to functions
         self.browseButton.clicked.connect(self.browseFiles)
-        self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
-        self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
+        self.browseButton_2.clicked.connect(self.browseGeom)
+        self.viewFileButton.clicked.connect(self.viewFiles)
+
+        self.imageViewer = None
+        self.fileSize = None
+        self.totalEvents = None
+        self.buttonClicked = None
+
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
-        self.plotPixelIntensityButton.clicked.connect(lambda: self.plotCurve(self.fileField.text(),
-                                                                             self.eventNumber.text()))
+        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
         # button for call the fit_curve() method to fit a 4th order polynomial for
         # the vertically average intensity profile
-        self.fitPolynormialButton.clicked.connect(lambda: self.plotFit(self.fileField.text(), self.eventNumber.text(),
-                                                                       self.orderOfFit.text()))
+        self.fitPolynormialButton.clicked.connect(self.plotFit)
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
 
+        self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
+        self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
 
+        self.orderOfFit.editingFinished.connect(self.plotFit)
+        self.eventNumber.editingFinished.connect(self.curveToPlot)
+        self.eventNumber.editingFinished.connect(self.viewFiles)
 
-        #incrementing through eventnumbers
+        # incrementing through eventnumbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
         self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
 
         # graphing
         self.graphWidget = pg.PlotWidget()
-        self.layout = QHBoxLayout()
+        self.layout = qtw.QHBoxLayout()
         self.layout.addWidget(self.graphWidget)
         self.graphingSpace.setLayout(self.layout)
 
@@ -50,37 +100,79 @@ class MainWindow(QMainWindow):
         file struture view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        dialog_box = QDialog()
-        fname = QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
+        dialog_box = qtw.QDialog()
+        fname = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
-        self.eventNumber.setText("0")
-        self.orderOfFit.setText("4")
+        self.browseButton_2.setEnabled(True)
 
-    def nextEvent(self,eventNumber):
-        try:
-            self.eventNumber.setText(str(int(eventNumber)+1))
-            if self.buttonClicked =='plotCurve':
-                self.plotCurve(self.fileField.text(), self.eventNumber.text())
-            elif self.buttonClicked == 'plotFit':
-                self.plotFit(self.fileField.text(), self.eventNumber.text(),self.orderOfFit.text())
-        except:
-            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+    def browseGeom(self):
+        """
+            This method gets triggered when the browse button is Clicked in the GUI
+        function: The function is to take in a text field where the value needs to be set and called in a dialog box with
+        file struture view starting at the 'root' and lets the user select the file they want and set the file path to
+        the test field.
+        """
+        dialog_box = qtw.QDialog()
+        geomName = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'geom Files (*.geom)')
+        self.fileField_2.setText(geomName[0][0])
+        self.viewFileButton.setEnabled(True)
 
-    def previousEvent(self,eventNumber):
+    def curveToPlot(self):
+
+        if self.buttonClicked is None:
+            pass
+            #qtw.QMessageBox.information(self,'Info','Plot a curve first!')
+        elif self.buttonClicked == 'plotCurve':
+            self.plotCurve()
+        elif self.buttonClicked == 'plotFit':
+            self.plotFit()
+
+    def viewFiles(self):
+        if not self.eventNumber.text():
+            self.eventNumber.setEnabled(True)
+            self.eventNumber.setText("0")
+
+        self.imageViewer = DisplayImage()
+        self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+        self.totalEvents = self.imageViewer.size
+        self.clickedNext.connect(self.imageViewer.drawImage)
+        self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.show()
+
+        self.plotPixelIntensityButton.setEnabled(True)
+        self.fitPolynormialButton.setEnabled(True)
+        self.plotPeakPixelButton.setEnabled(True)
+
+    def nextEvent(self, eventNumber):
         try:
-            self.eventNumber.setText(str(int(eventNumber)-1))
-            if self.buttonClicked == 'plotCurve':
-                self.plotCurve(self.fileField.text(), self.eventNumber.text())
-            elif self.buttonClicked == 'plotFit':
-                self.plotFit(self.fileField.text(), self.eventNumber.text(), self.orderOfFit.text())
+            if int(self.eventNumber.text()) < self.totalEvents-1:
+                self.eventNumber.setText(str(int(eventNumber) + 1))
+            elif int(self.eventNumber.text()) == self.totalEvents-1:
+                self.eventNumber.setText(str(0))
+
+            self.curveToPlot()
+
+            self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         except:
-            QMessageBox.critical(self, 'Fail','Please Enter a valid input')
+            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+
+    def previousEvent(self, eventNumber):
+        try:
+            if int(self.eventNumber.text()) > 0:
+                self.eventNumber.setText(str(int(eventNumber) - 1))
+            elif int(self.eventNumber.text()) == 0:
+                self.eventNumber.setText(str(self.totalEvents-1))
+
+            self.curveToPlot()
+
+            self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+        except:
+            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
         for key in eventsList:
             for i in eventsList[key]:
-
                 # f.write('%s //%i \n' % (key, i))
                 f.write(key)
                 f.write(' ')
@@ -98,6 +190,7 @@ class MainWindow(QMainWindow):
         """
 
         try:
+            tag = str(file_name).split('/')[-1].split('.')[0]
             goodEvents = {}
             badEvents = {}
             # exit()
@@ -132,18 +225,19 @@ class MainWindow(QMainWindow):
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
 
-            self.writeToFile(goodEvents, 'goodEventsGUI.list')
-            self.writeToFile(badEvents, 'badEventsGUI.list')
+            self.writeToFile(goodEvents, 'goodEvents-simpleSort-%s.list' % tag)
+            self.writeToFile(badEvents, 'badEvents-%s.list' % tag)
 
-            QMessageBox.information(self, 'Success', "Done Sorting")
+            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
         except FileNotFoundError:
-            QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def advanceSortFrames(self, file_name):
+        tag = str(file_name).split('/')[-1].split('.')[0]
         goodEvents = {}
         badEvents = {}
 
@@ -169,9 +263,9 @@ class MainWindow(QMainWindow):
                     x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
                     x2 = (-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0])
                 except IndexError:
-                    QMessageBox.information(self, 'Error', 'Please try a higher order polynomial')
+                    qtw.QMessageBox.information(self, 'Error', 'Please try a higher order polynomial')
                 except ValueError:
-                    QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
+                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
                     continue
 
                 if x1 in range(130, 140):
@@ -182,16 +276,16 @@ class MainWindow(QMainWindow):
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
 
-            self.writeToFile(goodEvents, 'goodEvents-advanceSearch.list')
-            self.writeToFile(badEvents, 'badEvents-advanceSearch.list')
+            self.writeToFile(goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
+            self.writeToFile(badEvents, 'badEvents-advanceSort-%s.list' % tag)
 
-            QMessageBox.information(self, 'Success', "Done Sorting")
+            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
         except FileNotFoundError:
-            QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def returnMaxPixel(self, coeff, x_range):
         """
@@ -233,12 +327,15 @@ class MainWindow(QMainWindow):
 
         return max_pixels
 
-    def plotCurve(self, file_name, event_number=1):
+    def plotCurve(self):
         try:
+            file_name = self.fileField.text()
+            event_number = int(self.eventNumber.text())
+
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            frame = data[int(event_number)]
+            frame = data[event_number]
 
             avgIntensities = []
 
@@ -249,32 +346,43 @@ class MainWindow(QMainWindow):
             self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
-            self.buttonClicked='plotCurve'
+
+            self.buttonClicked = 'plotCurve'
+
+            self.sortButton.setEnabled(True)
+            self.nextButton.setEnabled(True)
+            self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
-            QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
         except IndexError:
-            QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
-                                 % self.eventNumber.text())
+            qtw.QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
+                                     % self.eventNumber.text())
 
-    def plotFit(self, file_name, eventNumber=1, deg=4):
+    def plotFit(self):
         """ fileName(str) : name of the file to be open
                 eventNumber(int) : event number for the file
                 deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         """
         try:
+            if not self.orderOfFit.text():
+                self.orderOfFit.setEnabled(True)
+                self.orderOfFit.setText("4")
+
+            file_name = self.fileField.text()
+            eventNumber = int(self.eventNumber.text())
+            avgIntensities = []
+            degry = int(self.orderOfFit.text())
+
             filename = file_name
             with h5py.File(filename, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
             frame = data[int(eventNumber)]
-
-            avgIntensities = []
-            degry = int(deg)
 
             for i in range(10, 186):
                 avgIntensities.append(np.average(frame[2112:2288, i]))
@@ -289,16 +397,21 @@ class MainWindow(QMainWindow):
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
-            self.buttonClicked='plotFit'
+
+            self.buttonClicked = 'plotFit'
+
+            self.advanceSortButton.setEnabled(True)
+            self.nextButton.setEnabled(True)
+            self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
-            QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
         except IndexError:
-            QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
+            qtw.QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
 
     def plotMaxPixels(self, file_name):
         try:
@@ -311,14 +424,17 @@ class MainWindow(QMainWindow):
             self.graphWidget.setLabel('bottom', "Frame Number")
 
         except FileNotFoundError:
-            QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
         except ValueError:
-            QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+    def closeEvent(self, QCloseEvent):
+        self.imageViewer.close()
 
 
 # main .
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
+    app = qtw.QApplication(sys.argv)
     w = MainWindow()
     sys.exit(app.exec_())
