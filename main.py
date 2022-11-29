@@ -41,6 +41,10 @@ class DisplayImage(qtw.QWidget):
         except:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
 
+class ML(qtw.QFrame):
+    def __int__(self):
+        super(ML, self).__int__()
+        uic.loadUi("machineLearningdGUI.ui", self)
 
 class MainWindow(qtw.QMainWindow):
 
@@ -75,6 +79,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
         self.advanceSortButton.clicked.connect(lambda: self.advanceSortFrames(self.fileField.text()))
+        self.MLButton.clicked.connect(self.machineLearning)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
@@ -142,6 +147,11 @@ class MainWindow(qtw.QMainWindow):
         self.plotPixelIntensityButton.setEnabled(True)
         self.fitPolynormialButton.setEnabled(True)
         self.plotPeakPixelButton.setEnabled(True)
+
+    def machineLearning(self):
+        print('You are here')
+        MLDialog = ML()
+        MLDialog.show()
 
     def nextEvent(self, eventNumber):
         try:
