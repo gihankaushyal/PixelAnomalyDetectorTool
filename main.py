@@ -3,10 +3,14 @@ from builtins import Exception
 
 import h5py
 import numpy as np
+import pandas as pd
+from pathlib import Path
+
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 from PyQt5 import uic
+
 import sys
 
 import lib.cfel_filetools as fileTools
@@ -35,28 +39,134 @@ class DisplayImage(qtw.QWidget):
                 self.geometry = geomTools.read_geometry(geometry)
                 self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
                 self.mainWidget.setImage(self.imageToDraw)
-                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size-1))
+                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size - 1))
             except:
                 qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
         except:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
 
-class ML(qtw.QFrame):
-    def __int__(self):
-        super(ML, self).__int__()
-        uic.loadUi("machineLearningdGUI.ui", self)
+
+class ML(qtw.QWidget):
+    def __init__(self):
+
+        super(ML, self).__init__()
+
+        uic.loadUi("machineLearningGUI.ui", self)
+
+        self.setWindowTitle('Machine Learning')
+
+        self.browseButton.clicked.connect(self.browseFiles)
+        self.checkBox.stateChanged.connect(self.checkBoxClicked)
+        self.trainButton.clicked.connect(self.train)
+        self.testButton.clicked.connect(self.test)
+
+    def browseFiles(self):
+        """
+            This method gets triggered when the browse button is Clicked in the GUI
+        function: The function is to take in a text field where the value needs to be set and called in a dialog box with
+        file struture view starting at the 'root' and lets the user select the file they want and set the file path to
+        the test field.
+        """
+
+        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+
+        self.parentDirectory.setText(fname)
+
+    def checkBoxClicked(self):
+        if self.checkBox.isChecked():
+            self.startRun.setEnabled(True)
+            self.endRun.setEnabled(True)
+        else:
+            self.startRun.setEnabled(False)
+            self.endRun.setEnabled(False)
+
+    def modelSelection(self):
+
+        modelSelected = self.comboBox.currentText()
+        if modelSelected == 'LogisticRegression':
+            from sklearn.linear_model import LogisticRegression
+            self.model = LogisticRegression()
+        elif modelSelected == 'KNeighborsClassifier':
+            from sklearn.neighbors import KNeighborsClassifier
+            self.model = KNeighborsClassifier(n_neighbors=1)
+        elif modelSelected == 'DecisionTreeClassifier':
+            from sklearn.tree import DecisionTreeClassifier
+            self.model = DecisionTreeClassifier()
+        elif modelSelected == 'RandomForestClassifier':
+            from sklearn.ensemble import RandomForestClassifier
+            self.model = RandomForestClassifier(n_estimators=200)
+        else:
+            qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
+
+    def dataPrep(self):
+
+        from sklearn.model_selection import train_test_split
+
+        try:
+            if self.checkBox.isChecked():
+                pass
+            else:
+                folder = self.parentDirectory.text()
+        except Exception as e:
+            qtw.QMessageBox.critical(self,'Fail',e)
+
+        files = Path(folder).glob('badEvents-advanceSearch-*.list')
+        dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+
+        for file in files:
+            try:
+                temp_df = pd.read_csv(str(file), delimiter=" ")
+                temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+                dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
+            except Exception as e:
+                qtw.QMessageBox.information(self, 'information', e)
+                continue
+        dataFrame_bad['Flag'] = 0
+
+        files = Path(folder).glob('goodEvents-advanceSearch-*.list')
+        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+
+        for file in files:
+            try:
+                temp_df = pd.read_csv(str(file), delimiter=" ")
+                temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+                dataFrame_good = pd.concat([dataFrame_good, temp_df])
+            except Exception as e:
+                qtw.QMessageBox.information(self, 'information', e)
+                continue
+        dataFrame_bad['Flag'] = 1
+
+        finalData = pd.concat([dataFrame_bad, dataFrame_good])
+
+        X = finalData[['InflectionPoint1', 'InflectionPoint2']]
+        y = finalData['Flag']
+
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
+
+    def train(self):
+        self.modelSelection()
+        self.dataPrep()
+        self.model.fit(self.X_train, self.y_train)
+        self.testButton.setEnabled(True)
+
+    def test(self):
+        from sklearn.metrics import classification_report, confusion_matrix
+        self.preditctions = self.model.predict(self.X_test)
+        self.confussionMetrix.setEnabled(True)
+        self.classificationReport.setEnabled(True)
+        self.confussionMetrix.setText(classification_report(self.y_test, self.predictions))
+        self.classificationReport.setText(confusion_matrix(self.y_test, self.predictions))
+
 
 class MainWindow(qtw.QMainWindow):
-
     clickedNext = qtc.pyqtSignal(str, int, str)
     clickedPrevious = qtc.pyqtSignal(str, int, str)
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-
         uic.loadUi("mainWindow.ui", self)
-        self.setGeometry(700,100,800,700)
+        self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
         self.browseButton.clicked.connect(self.browseFiles)
         self.browseButton_2.clicked.connect(self.browseGeom)
@@ -126,7 +236,7 @@ class MainWindow(qtw.QMainWindow):
 
         if self.buttonClicked is None:
             pass
-            #qtw.QMessageBox.information(self,'Info','Plot a curve first!')
+            # qtw.QMessageBox.information(self,'Info','Plot a curve first!')
         elif self.buttonClicked == 'plotCurve':
             self.plotCurve()
         elif self.buttonClicked == 'plotFit':
@@ -147,17 +257,18 @@ class MainWindow(qtw.QMainWindow):
         self.plotPixelIntensityButton.setEnabled(True)
         self.fitPolynormialButton.setEnabled(True)
         self.plotPeakPixelButton.setEnabled(True)
+        # self.MLButton.setEnabled(True)
 
     def machineLearning(self):
-        print('You are here')
-        MLDialog = ML()
-        MLDialog.show()
+
+        self.MLDialog = ML()
+        self.MLDialog.show()
 
     def nextEvent(self, eventNumber):
         try:
-            if int(self.eventNumber.text()) < self.totalEvents-1:
+            if int(self.eventNumber.text()) < self.totalEvents - 1:
                 self.eventNumber.setText(str(int(eventNumber) + 1))
-            elif int(self.eventNumber.text()) == self.totalEvents-1:
+            elif int(self.eventNumber.text()) == self.totalEvents - 1:
                 self.eventNumber.setText(str(0))
 
             self.curveToPlot()
@@ -171,7 +282,7 @@ class MainWindow(qtw.QMainWindow):
             if int(self.eventNumber.text()) > 0:
                 self.eventNumber.setText(str(int(eventNumber) - 1))
             elif int(self.eventNumber.text()) == 0:
-                self.eventNumber.setText(str(self.totalEvents-1))
+                self.eventNumber.setText(str(self.totalEvents - 1))
 
             self.curveToPlot()
 
