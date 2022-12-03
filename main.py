@@ -293,13 +293,24 @@ class MainWindow(qtw.QMainWindow):
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
         for key in eventsList:
-            for i in eventsList[key]:
-                # f.write('%s //%i \n' % (key, i))
-                f.write(key)
-                f.write(' ')
-                f.write('//')
-                f.write(str(i))
-                f.write('\n')
+            if len(eventsList[key])==3:
+                for (i,x1,x2) in eventsList[key]:
+                    f.write(key)
+                    f.write(' ')
+                    f.write('//')
+                    f.write(str(i))
+                    f.write(' ')
+                    f.write(x1)
+                    f.write(' ')
+                    f.write(x2)
+                    f.write('\n')
+            elif len(eventsList[key])==1:
+                for i in eventsList[key]:
+                    f.write(key)
+                    f.write(' ')
+                    f.write('//')
+                    f.write(str(i))
+                    f.write('\n')
 
         f.close()
 
@@ -389,10 +400,17 @@ class MainWindow(qtw.QMainWindow):
                     qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
                     continue
 
-                if x1 in range(130, 140):
-                    goodList.append(i)
+                if self.checkBox.isChecked():
+                    if x1 in range(130, 140):
+                        goodList.append((i,x1,x2))
+                    else:
+                        badList.append((i,x1,x2))
                 else:
-                    badList.append(i)
+                    if x1 in range(130, 140):
+                        goodList.append(i)
+                    else:
+                        badList.append(i)
+
 
             goodEvents[str(file_name)] = goodList
             badEvents[str(file_name)] = badList
