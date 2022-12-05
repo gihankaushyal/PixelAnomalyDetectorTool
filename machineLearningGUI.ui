@@ -200,7 +200,7 @@
    </item>
    <item>
     <property name="text">
-     <string>KNeghborsClassifier</string>
+     <string>KNeighborsClassifier</string>
     </property>
    </item>
    <item>
@@ -249,9 +249,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>330</y>
-     <width>280</width>
+     <x>50</x>
+     <y>320</y>
+     <width>151</width>
      <height>200</height>
     </rect>
    </property>
@@ -262,9 +262,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>410</x>
-     <y>330</y>
-     <width>280</width>
+     <x>320</x>
+     <y>320</y>
+     <width>381</width>
      <height>200</height>
     </rect>
    </property>
@@ -298,7 +298,7 @@
   <widget class="QLabel" name="label_8">
    <property name="geometry">
     <rect>
-     <x>160</x>
+     <x>70</x>
      <y>300</y>
      <width>121</width>
      <height>16</height>
@@ -311,7 +311,7 @@
   <widget class="QLabel" name="label_9">
    <property name="geometry">
     <rect>
-     <x>470</x>
+     <x>440</x>
      <y>300</y>
      <width>131</width>
      <height>16</height>
