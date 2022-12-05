@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QWidget" name="widget" native="true">
+  <widget class="QWidget" name="graphSpace" native="true">
    <property name="geometry">
     <rect>
      <x>10</x>
@@ -34,26 +34,6 @@
    </property>
    <property name="text">
     <string>Plot Inflection Points</string>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="inflectionPoint1">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>30</y>
-     <width>61</width>
-     <height>31</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="inflectionPoint2">
-   <property name="geometry">
-    <rect>
-     <x>480</x>
-     <y>30</y>
-     <width>61</width>
-     <height>31</height>
-    </rect>
    </property>
   </widget>
   <widget class="QLabel" name="label">
@@ -119,6 +99,26 @@
    </property>
    <property name="text">
     <string>Sort for ML</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="inflectionPoint1">
+   <property name="geometry">
+    <rect>
+     <x>390</x>
+     <y>30</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="inflectionPoint2">
+   <property name="geometry">
+    <rect>
+     <x>490</x>
+     <y>30</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
    </property>
   </widget>
  </widget>
