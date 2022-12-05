@@ -68,7 +68,7 @@
    </widget>
    <widget class="QPushButton" name="advanceSortButton">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="geometry">
      <rect>
