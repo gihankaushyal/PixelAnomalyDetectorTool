@@ -8,7 +8,13 @@ from pathlib import Path
 
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
+
 import pyqtgraph as pg
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+
 from PyQt5 import uic
 
 import sys
@@ -160,6 +166,7 @@ class ML(qtw.QWidget):
         self.confussionMetrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
         self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
+
 class AdvanceSorting(qtw.QWidget):
 
     readyToSaveGood = qtc.pyqtSignal(dict, str,str)
@@ -171,19 +178,24 @@ class AdvanceSorting(qtw.QWidget):
 
         self.badEvents = None
         self.goodEvents = None
-        uic.loadUi("AdvanceSortGUI.ui", self)
-        self.graphWidget = pg.PlotWidget()
-
         self.setWindowTitle('Advance Sorting')
+
+        uic.loadUi("AdvanceSortGUI.ui", self)
+
+        self.layout = qtw.QHBoxLayout()
+        self.figure = plt.figure()
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.layout.addWidget(self.canvas)
+        self.graphSpace.setLayout(self.layout)
+
         self.file_name = fileName
         self.orderOfFit = oft
+        self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.sortButton.clicked.connect(self.advanceSort)
 
     def advanceSort(self):
 
         tag = str(self.file_name).split('/')[-1].split('.')[0]
-        # print(self.inflectionPoint1.text())
-        # print(self.inflectionPoint2.text())
 
         self.goodEvents = {}
         self.badEvents = {}
@@ -210,9 +222,9 @@ class AdvanceSorting(qtw.QWidget):
                     x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
                     x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
                 except IndexError:
-                    qtw.QMessageBox.information(self, 'Error', 'Please try a higher order polynomial')
+                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
                 except ValueError:
-                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame')
+                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
                     continue
 
                 if self.checkBox.isChecked():
@@ -241,6 +253,47 @@ class AdvanceSorting(qtw.QWidget):
         except Exception as e:
             print(e)
             # qtw.QMessageBox.critical(self, 'Fail', e)
+
+    def plotInflectionPoints(self):
+
+        self.x1_list = []
+        self.x2_list = []
+
+        with h5py.File(self.file_name, "r") as f:
+            data = f['entry_1']['data_1']['data'][()]
+
+        for i in range(len(data)):
+            frame = data[i]
+
+            avgIntensities = []
+            for j in range(10, 186):
+                avgIntensities.append(np.average(frame[2112:2288, j]))
+
+            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
+            # calculating the inflection points (second derivative of the forth order polynomial)
+            # print(fit)
+            try:
+                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                self.x1_list.append(x1)
+                self.x2_list.append(x2)
+            except IndexError:
+                qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
+            except ValueError:
+                qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+                continue
+
+        self.figure.clear()
+        sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
+        sns.histplot(self.x2_list, label='x2',  kde=True, alpha=0.5)
+
+        # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
+        # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
+        plt.legend()
+
+        self.canvas.draw()
+
+
 
 
 class MainWindow(qtw.QMainWindow):
