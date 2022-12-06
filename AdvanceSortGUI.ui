@@ -76,6 +76,9 @@
    </property>
   </widget>
   <widget class="QPushButton" name="sortButton">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>570</x>
@@ -89,6 +92,9 @@
    </property>
   </widget>
   <widget class="QCheckBox" name="checkBox">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>590</x>
@@ -102,6 +108,9 @@
    </property>
   </widget>
   <widget class="QLineEdit" name="inflectionPoint1">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>390</x>
@@ -112,6 +121,9 @@
    </property>
   </widget>
   <widget class="QLineEdit" name="inflectionPoint2">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="geometry">
     <rect>
      <x>490</x>
