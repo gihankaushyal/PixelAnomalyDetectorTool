@@ -12,6 +12,8 @@ from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
+import cufflinks as cf
+from plotly.offline import iplot
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -168,16 +170,13 @@ class ML(qtw.QWidget):
 
 
 class AdvanceSorting(qtw.QWidget):
-
-    readyToSaveGood = qtc.pyqtSignal(dict, str,str)
-    readyToSaveBad = qtc.pyqtSignal(dict, str,str)
+    readyToSaveGood = qtc.pyqtSignal(dict, str, str)
+    readyToSaveBad = qtc.pyqtSignal(dict, str, str)
 
     def __init__(self, fileName, oft):
 
         super(AdvanceSorting, self).__init__()
 
-        self.badEvents = None
-        self.goodEvents = None
         self.setWindowTitle('Advance Sorting')
 
         uic.loadUi("AdvanceSortGUI.ui", self)
@@ -204,36 +203,20 @@ class AdvanceSorting(qtw.QWidget):
         goodList = []
         # badList to store all the events with detector artifacts for the file
         badList = []
+
         try:
-            with h5py.File(self.file_name, "r") as f:
-                data = f['entry_1']['data_1']['data'][()]
 
-            for i in range(len(data)):
-                frame = data[i]
-
-                avgIntensities = []
-                for j in range(10, 186):
-                    avgIntensities.append(np.average(frame[2112:2288, j]))
-
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
-                # calculating the inflection points (second derivative of the forth order polynomial)
-                # print(fit)
-                try:
-                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                except IndexError:
-                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
-                except ValueError:
-                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                    continue
-
+            for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
+                print(i, x1, x2)
                 if self.checkBox.isChecked():
-                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5, float(self.inflectionPoint1.text()) + 5):
+                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5,
+                                       float(self.inflectionPoint1.text()) + 5):
                         goodList.append((i, x1, x2))
                     else:
                         badList.append((i, x1, x2))
                 else:
-                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5, float(self.inflectionPoint1.text()) + 5):
+                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5,
+                                       float(self.inflectionPoint1.text()) + 5):
                         goodList.append(i)
                     else:
                         badList.append(i)
@@ -250,50 +233,63 @@ class AdvanceSorting(qtw.QWidget):
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
-        except Exception as e:
-            print(e)
-            # qtw.QMessageBox.critical(self, 'Fail', e)
+        except ValueError:
+            qtw.QMessageBox.critical(self, 'Fail', 'Please make sure you have entered values for Inflection points')
 
     def plotInflectionPoints(self):
 
         self.x1_list = []
         self.x2_list = []
 
-        with h5py.File(self.file_name, "r") as f:
-            data = f['entry_1']['data_1']['data'][()]
+        try:
+            with h5py.File(self.file_name, "r") as f:
+                self.data = f['entry_1']['data_1']['data'][()]
 
-        for i in range(len(data)):
-            frame = data[i]
+            for i in range(len(self.data)):
+                frame = self.data[i]
 
-            avgIntensities = []
-            for j in range(10, 186):
-                avgIntensities.append(np.average(frame[2112:2288, j]))
+                avgIntensities = []
+                for j in range(10, 186):
+                    avgIntensities.append(np.average(frame[2112:2288, j]))
 
-            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
-            # calculating the inflection points (second derivative of the forth order polynomial)
-            # print(fit)
-            try:
-                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                self.x1_list.append(x1)
-                self.x2_list.append(x2)
-            except IndexError:
-                qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
-            except ValueError:
-                qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                continue
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
+                # calculating the inflection points (second derivative of the forth order polynomial)
+                # print(fit)
+                try:
+                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    self.x1_list.append(x1)
+                    self.x2_list.append(x2)
+                except IndexError:
+                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
+                except ValueError:
+                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+                    continue
+
+        except Exception as e:
+            print(e)
+
+        self.inflectionPoint1.setEnabled(True)
+        self.inflectionPoint2.setEnabled(True)
+        self.sortButton.setEnabled(True)
+        self.checkBox.setEnabled(True)
 
         self.figure.clear()
-        sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
-        sns.histplot(self.x2_list, label='x2',  kde=True, alpha=0.5)
+        ## with ploty and cufflinks
+        # cf.go_offline()
+        # df = pd.DataFrame(data=self.x1_list, columns=['X1'])
+        # df['X2']=self.x2_list
+        # df['X2'].iplot(kind='hist')
 
-        # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
-        # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
+        ## with seabor
+        sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
+        sns.histplot(self.x2_list, label='x2', kde=True, alpha=0.5)
         plt.legend()
+        #
+        # # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
+        # # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
 
         self.canvas.draw()
-
-
 
 
 class MainWindow(qtw.QMainWindow):
@@ -516,6 +512,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortGUI.readyToSaveBad.connect(self.writeToFile)
+        self.MLButton.setEnabled(True)
 
     def returnMaxPixel(self, coeff, x_range):
         """
