@@ -68,7 +68,7 @@
    </widget>
    <widget class="QPushButton" name="advanceSortButton">
     <property name="enabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
@@ -307,39 +307,20 @@
    </widget>
    <widget class="QPushButton" name="MLButton">
     <property name="enabled">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
       <x>610</x>
       <y>160</y>
-      <width>101</width>
+      <width>111</width>
       <height>32</height>
      </rect>
     </property>
     <property name="text">
-     <string>ML</string>
+     <string>Train a Model</string>
     </property>
    </widget>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>22</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <addaction name="actionOpen"/>
-    <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-   </widget>
-   <addaction name="menuFile"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionQuit">
