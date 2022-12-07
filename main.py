@@ -12,8 +12,8 @@ from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
-import cufflinks as cf
-from plotly.offline import iplot
+# import cufflinks as cf
+# from plotly.offline import iplot
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -32,15 +32,23 @@ class DisplayImage(qtw.QWidget):
 
         self.setGeometry(10, 100, 600, 600)
         self.mainWidget = pg.ImageView()
+        self.foundPeaks = qtw.QPushButton(clicked=self.drawFoundPeaks)
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
+        self.layout.addWidget(self.foundPeaks)
+
+
+        self.foundPeaksCanvas = pg.ScatterPlotItem()
+        self.mainWidget.getView().addItem(self.foundPeaksCanvas)
+
         self.setLayout(self.layout)
+
 
         # reading and displaying data
 
     def drawImage(self, fileName, eventNumber, geometry):
         try:
-            self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True)
+            self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True, peaks=True)
             self.size = self.cxi['stack_shape'][0]
             self.imgData = self.cxi['data']
             try:
@@ -48,10 +56,36 @@ class DisplayImage(qtw.QWidget):
                 self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
                 self.mainWidget.setImage(self.imageToDraw)
                 self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size - 1))
+
             except:
                 qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
         except:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
+
+    def drawFoundPeaks(self):
+        self.peak_x = []
+        self.peak_y = []
+
+        # temp = fileTools.read_event()
+        self.n_peaks = self.cxi['n_peaks']
+        self.x_data = self.cxi['peakXPosRaw']
+        self.y_data = self.cxi['peakYPosRaw']
+
+        for i in range(self.n_peaks):
+            peak_fs = self.x_data[i]
+            peak_ss = self.y_data[i]
+
+            peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
+            self.peak_x.append(self.geometry['x'][peak_in_slab] + self.cxi['stack_shape'][1] / 2)
+            self.peak_y.append(self.geometry['y'][peak_in_slab] + self.cxi['stack_shape'][2] / 2)
+
+        print(self.peak_x)
+        print(self.peak_y)
+
+        plt.scatter(self.peak_x,self.peak_y)
+        plt.show()
+        # ring_pen = pg.mkPen('b', width=2)
+        # self.foundPeaksCanvas.setData(self.peak_x, self.peak_y, symbol='o', size=10, pen=ring_pen)
 
 
 class ML(qtw.QWidget):
