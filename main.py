@@ -32,21 +32,26 @@ class DisplayImage(qtw.QWidget):
 
         self.setGeometry(10, 100, 600, 600)
         self.mainWidget = pg.ImageView()
-        self.foundPeaks = qtw.QPushButton(clicked=self.drawFoundPeaks)
+        self.foundPeaks = qtw.QCheckBox('Found Peaks')
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
         self.layout.addWidget(self.foundPeaks)
 
+        self.foundPeaks.stateChanged.connect(lambda: self.drawImage(self.fileName, self.evenNumber, self.geometryName))
 
+        # adding a overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
         self.mainWidget.getView().addItem(self.foundPeaksCanvas)
 
         self.setLayout(self.layout)
 
-
         # reading and displaying data
 
     def drawImage(self, fileName, eventNumber, geometry):
+        # applying the geometry and displying the image
+        self.fileName = fileName
+        self.evenNumber = eventNumber
+        self.geometryName = geometry
         try:
             self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True, peaks=True)
             self.size = self.cxi['stack_shape'][0]
@@ -62,30 +67,36 @@ class DisplayImage(qtw.QWidget):
         except:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
 
-    def drawFoundPeaks(self):
-        self.peak_x = []
-        self.peak_y = []
+        if self.foundPeaks.isChecked():
+            self.peak_x = []
+            self.peak_y = []
 
-        # temp = fileTools.read_event()
-        self.n_peaks = self.cxi['n_peaks']
-        self.x_data = self.cxi['peakXPosRaw']
-        self.y_data = self.cxi['peakYPosRaw']
+            # temp = fileTools.read_event()
+            self.n_peaks = self.cxi['n_peaks']
+            self.x_data = self.cxi['peakXPosRaw']
+            self.y_data = self.cxi['peakYPosRaw']
 
-        for i in range(self.n_peaks):
-            peak_fs = self.x_data[i]
-            peak_ss = self.y_data[i]
+            for i in range(0, self.n_peaks):
+                peak_fs = self.x_data[i]
+                peak_ss = self.y_data[i]
 
-            peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
-            self.peak_x.append(self.geometry['x'][peak_in_slab] + self.cxi['stack_shape'][1] / 2)
-            self.peak_y.append(self.geometry['y'][peak_in_slab] + self.cxi['stack_shape'][2] / 2)
+                peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
+                self.peak_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                self.peak_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
 
-        print(self.peak_x)
-        print(self.peak_y)
+            # print(self.peak_x)
+            # print(self.peak_y)
+            # print('Image to draw shape', self.imageToDraw.shape)
+            #
+            # plt.scatter(self.peak_x,self.peak_y, marker='o', c='r')
+            # plt.show()
+            ring_pen = pg.mkPen('b', width=2)
+            self.foundPeaksCanvas.setData(self.peak_x, self.peak_y, symbol='o', size=10, pen=ring_pen,
+                                          brush=(0, 0, 0, 0),
+                                          pxMode=False)
 
-        plt.scatter(self.peak_x,self.peak_y)
-        plt.show()
-        # ring_pen = pg.mkPen('b', width=2)
-        # self.foundPeaksCanvas.setData(self.peak_x, self.peak_y, symbol='o', size=10, pen=ring_pen)
+        else:
+            self.foundPeaksCanvas.clear()
 
 
 class ML(qtw.QWidget):
@@ -362,7 +373,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
-        self.eventNumber.editingFinished.connect(self.viewFiles)
+        self.eventNumber.editingFinished.connect(self.selectDisplay)
 
         # incrementing through eventnumbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
@@ -411,6 +422,12 @@ class MainWindow(qtw.QMainWindow):
         elif self.buttonClicked == 'plotFit':
             self.plotFit()
 
+    def selectDisplay(self):
+        if self.imageViewer:
+            self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+        else:
+            self.viewFiles()
+
     def viewFiles(self):
         if not self.eventNumber.text():
             self.eventNumber.setEnabled(True)
@@ -419,14 +436,13 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer = DisplayImage()
         self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
         self.totalEvents = self.imageViewer.size
-        self.clickedNext.connect(self.imageViewer.drawImage)
-        self.clickedPrevious.connect(self.imageViewer.drawImage)
         self.imageViewer.show()
 
         self.plotPixelIntensityButton.setEnabled(True)
         self.fitPolynormialButton.setEnabled(True)
         self.plotPeakPixelButton.setEnabled(True)
-        # self.MLButton.setEnabled(True)
+        self.clickedNext.connect(self.imageViewer.drawImage)
+        self.clickedPrevious.connect(self.imageViewer.drawImage)
 
     def machineLearning(self):
 
@@ -443,6 +459,7 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
@@ -456,6 +473,7 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
@@ -693,10 +711,12 @@ class MainWindow(qtw.QMainWindow):
     def closeEvent(self, QCloseEvent):
         if self.imageViewer:
             self.imageViewer.close()
-        if self.mlDialog:
-            self.mlDialog.close()
+
         if self.sortGUI:
             self.sortGUI.close()
+
+        if self.mlDialog:
+            self.mlDialog.close()
 
 
 # main .
