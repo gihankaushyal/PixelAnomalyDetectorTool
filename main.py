@@ -148,6 +148,42 @@ class DisplayImage(qtw.QWidget):
                                           pxMode=False)
         else:
             self.foundPeaksCanvas.clear()
+
+    def showPanels(self):
+
+        if self.showPanelsCheckBox.isChecked():
+            # panel locations corrected for displayImage
+
+            for panelName in self.panelLocationsFromGeom.keys():
+                x_edges = []
+                y_edges = []
+
+                for i in range(4):
+                    edge_fs = self.panelLocationsFromGeom[panelName][i][0]
+                    edge_ss = self.panelLocationsFromGeom[panelName][i][1]
+                    peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
+                    x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                    y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+                x_edges.append(x_edges[0])
+                y_edges.append(y_edges[0])
+
+                self.panelsXandYLocations[panelName] = [x_edges, y_edges]
+
+            print(self.panelsXandYLocations)
+
+            pen = pg.mkPen('r', width=3)
+
+            self.panelEdgesCanvas.updateItems(False)
+            for value in self.panelsXandYLocations.values():
+                self.panelEdgesCanvas.setData(value[0], value[1], pen=pen, connect='all')
+                plt.plot(value[0], value[1])
+
+            plt.show()
+
+            # self.panelEdgesCanvas.setData(self.panelsXandYLocations.values()[0],self.panelsXandYLocations.values()[1])
+
+        else:
+            self.panelEdgesCanvas.clear()
         
 
 
