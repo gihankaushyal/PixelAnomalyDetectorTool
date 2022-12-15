@@ -22,81 +22,133 @@ from PyQt5 import uic
 import sys
 
 import lib.cfel_filetools as fileTools
-import lib.cfel_geometry as geomTools
+# import lib.cfel_geometry as geomTools
 import lib.cfel_imgtools as imgTools
+
+from lib.geometry_parser.GeometryFileParser import *
 
 
 class DisplayImage(qtw.QWidget):
-    def __init__(self):
+    def __init__(self, fileName, geometry):
         super(DisplayImage, self).__init__()
 
-        self.setGeometry(10, 100, 600, 600)
-        self.mainWidget = pg.ImageView()
-        self.foundPeaks = qtw.QCheckBox('Found Peaks')
-        self.layout = qtw.QVBoxLayout()
-        self.layout.addWidget(self.mainWidget)
-        self.layout.addWidget(self.foundPeaks)
+        # setting the size and location of the window
 
-        self.foundPeaks.stateChanged.connect(lambda: self.drawImage(self.fileName, self.evenNumber, self.geometryName))
+        self.setGeometry(10, 100, 600, 600)
+
+        # assigning the file name and the geometry
+        self.fileName = fileName
+        self.geometryName = geometry
+
+        self.eventNumber = None
+        self.imageToDraw = None
+        self.cxi = None
+        self.size = None
+
+        # main window for display the data
+        self.mainWidget = pg.ImageView()
+
+        # adding a checkBoxes
+        self.foundPeaksChekckBox = qtw.QCheckBox('Found Peaks')
+        self.showPanelsCheckBox = qtw.QCheckBox('Show Panels')
+
+        # adding a layout and add checkbox and the mainwindow to the layout
+        self.layout = qtw.QVBoxLayout()
+        self.layout2 = qtw.QHBoxLayout()
+        self.layout.addWidget(self.mainWidget)
+        self.layout2.addWidget(self.foundPeaksChekckBox)
+        self.layout2.addWidget(self.showPanelsCheckBox)
+
+
+        # reading the geometry file
+        try:
+            self.parser = GeometryFileParser(self.geometryName)
+        except FileNotFoundError:
+            qtw.QMessageBox.critical(self, 'Fail', self.geometryName)
+
+        self.geometry = self.parser.pixel_map_for_cxiview()
+
+        # connecting the checkBoxes to a method
+        self.foundPeaksChekckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
+        self.showPanelsCheckBox.stateChanged.connect(self.showPanels)
 
         # adding a overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
         self.mainWidget.getView().addItem(self.foundPeaksCanvas)
 
+        # adding a canvas for displaying panel edges
+        self.panelEdgesCanvas = pg.PlotDataItem()
+        self.mainWidget.getView().addItem(self.panelEdgesCanvas)
+
+        # adding a grid over the image for panel selection
+        self.panelLocationsFromGeom = {}
+        self.panelsXandYLocations = {}
+        for panelName in self.parser.dictionary['panels'].keys():
+            self.panelLocationsFromGeom[panelName] = [self.parser.dictionary['panels'][panelName]['min_fs'],
+                                                      self.parser.dictionary['panels'][panelName]['max_fs'],
+                                                      self.parser.dictionary['panels'][panelName]['min_ss'],
+                                                      self.parser.dictionary['panels'][panelName]['max_ss']]
+        # print(self.panelLocationsFromGeom)
+        for panelName in self.panelLocationsFromGeom.keys():
+
+            x1 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][2])
+            x2 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][3])
+            x3 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][3])
+            x4 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][2])
+            self.panelLocationsFromGeom[panelName]=[x1,x2,x3,x4]
+
+        # print(self.panelLocationsFromGeom)
+
         self.setLayout(self.layout)
+        self.setLayout(self.layout2)
 
         # reading and displaying data
 
-    def drawImage(self, fileName, eventNumber, geometry):
+    def drawImage(self, eventNumber):
         # applying the geometry and displying the image
-        self.fileName = fileName
-        self.evenNumber = eventNumber
-        self.geometryName = geometry
-        try:
-            self.cxi = fileTools.read_cxi(fileName, frameID=eventNumber, data=True, slab_size=True, peaks=True)
-            self.size = self.cxi['stack_shape'][0]
-            self.imgData = self.cxi['data']
-            try:
-                self.geometry = geomTools.read_geometry(geometry)
-                self.imageToDraw = imgTools.pixel_remap(self.imgData, self.geometry['x'], self.geometry['y'])
-                self.mainWidget.setImage(self.imageToDraw)
-                self.setWindowTitle("Showing %i of %i " % (eventNumber, self.size - 1))
+        self.eventNumber = eventNumber
 
-            except:
-                qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the geometry file, Please Try again!")
-        except:
+        try:
+            # reading the given eventNumber from the cxi file
+            self.cxi = fileTools.read_cxi(self.fileName, frameID=self.eventNumber, data=True, slab_size=True,
+                                          peaks=True)
+        except Exception as e:
+            print(e)
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
 
-        if self.foundPeaks.isChecked():
-            self.peak_x = []
-            self.peak_y = []
+        self.size = self.cxi['stack_shape'][0]
+        # reading data
+        imgData = self.cxi['data']
+        # converting data into a pixel map to display and applying geometry
+        self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
+        # showing the pixel map in the main window
+        self.mainWidget.setImage(self.imageToDraw)
+        # setting a window title with the eventNumber and the total number of event in the file
+        self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
+
+        if self.foundPeaksChekckBox.isChecked():
+            peaks_x = []
+            peaks_y = []
 
             # temp = fileTools.read_event()
-            self.n_peaks = self.cxi['n_peaks']
-            self.x_data = self.cxi['peakXPosRaw']
-            self.y_data = self.cxi['peakYPosRaw']
+            n_peaks = self.cxi['n_peaks']
+            x_data = self.cxi['peakXPosRaw']
+            y_data = self.cxi['peakYPosRaw']
 
-            for i in range(0, self.n_peaks):
-                peak_fs = self.x_data[i]
-                peak_ss = self.y_data[i]
+            for i in range(0, n_peaks):
+                peak_fs = x_data[i]
+                peak_ss = y_data[i]
 
                 peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
-                self.peak_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
-                self.peak_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+                peaks_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                peaks_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
 
-            # print(self.peak_x)
-            # print(self.peak_y)
-            # print('Image to draw shape', self.imageToDraw.shape)
-            #
-            # plt.scatter(self.peak_x,self.peak_y, marker='o', c='r')
-            # plt.show()
             ring_pen = pg.mkPen('b', width=2)
-            self.foundPeaksCanvas.setData(self.peak_x, self.peak_y, symbol='o', size=10, pen=ring_pen,
-                                          brush=(0, 0, 0, 0),
+            self.foundPeaksCanvas.setData(peaks_x, peaks_y, symbol='o', size=10, pen=ring_pen, brush=(0, 0, 0, 0),
                                           pxMode=False)
-
         else:
             self.foundPeaksCanvas.clear()
+        
 
 
 class ML(qtw.QWidget):
@@ -338,8 +390,8 @@ class AdvanceSorting(qtw.QWidget):
 
 
 class MainWindow(qtw.QMainWindow):
-    clickedNext = qtc.pyqtSignal(str, int, str)
-    clickedPrevious = qtc.pyqtSignal(str, int, str)
+    clickedNext = qtc.pyqtSignal(int)
+    clickedPrevious = qtc.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -351,11 +403,14 @@ class MainWindow(qtw.QMainWindow):
         self.browseButton_2.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
 
+        # initializing the popup windows
         self.imageViewer = None
+        self.sortGUI = None
+        self.mlDialog = None
+
         self.fileSize = None
         self.totalEvents = None
         self.buttonClicked = None
-        self.sortGUI = None
 
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
@@ -433,8 +488,8 @@ class MainWindow(qtw.QMainWindow):
             self.eventNumber.setEnabled(True)
             self.eventNumber.setText("0")
 
-        self.imageViewer = DisplayImage()
-        self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+        self.imageViewer = DisplayImage(self.fileField.text(), self.fileField_2.text())
+        self.imageViewer.drawImage(int(self.eventNumber.text()))
         self.totalEvents = self.imageViewer.size
         self.imageViewer.show()
 
@@ -458,7 +513,7 @@ class MainWindow(qtw.QMainWindow):
 
             self.curveToPlot()
 
-            self.clickedNext.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+            self.clickedNext.emit(int(self.eventNumber.text()))
 
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
@@ -472,7 +527,7 @@ class MainWindow(qtw.QMainWindow):
 
             self.curveToPlot()
 
-            self.clickedPrevious.emit(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+            self.clickedPrevious.emit(int(self.eventNumber.text()))
 
         except:
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
