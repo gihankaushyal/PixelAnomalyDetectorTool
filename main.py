@@ -29,12 +29,12 @@ from lib.geometry_parser.GeometryFileParser import *
 
 
 class DisplayImage(qtw.QWidget):
-    selectedPanel = qtc.pyqtSignal(str, dict)
-
+    panelSelected = qtc.pyqtSignal(dict)
     def __init__(self, fileName, geometry):
         super(DisplayImage, self).__init__()
 
         # setting the size and location of the window
+        self.outgoingDict = None
         self.setGeometry(10, 100, 600, 600)
 
         # assigning the file name and the geometry
@@ -49,12 +49,16 @@ class DisplayImage(qtw.QWidget):
         self.panelLocFromGeom = {}
         self.panelFsSs = {}
         self.panelsXYEdges = {}
+        self.outgoingDict = {}
 
         # main window for display the data
         self.mainWidget = pg.ImageView()
 
         # adding a checkBoxes
         self.foundPeaksChekckBox = qtw.QCheckBox('Found Peaks')
+
+        # connecting the checkBoxes to a method
+        self.foundPeaksChekckBox.stateChanged.connect(self.drawImage)
 
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
@@ -85,11 +89,7 @@ class DisplayImage(qtw.QWidget):
                 self.panelLocFromGeom[panelName] = [x1, x2, x3, x4]
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', self.geometryName, " was not found")
-
-        # connecting the checkBoxes to a method
-        self.foundPeaksChekckBox.stateChanged.connect(self.drawPeaks)
-        # self.showPanelsCheckBox.stateChanged.connect(self.showPanels)
+            qtw.QMessageBox.critical(self, 'Fail', self.geometryName, " was not found -reading geometery __init__")
 
         # adding an overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
@@ -129,11 +129,20 @@ class DisplayImage(qtw.QWidget):
             # setting a window title with the eventNumber and the total number of event in the file
             self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
 
+            if self.eventNumber == 0:
+                self.drawInitialPanel()
+
+            self.drawPeaks()
+
         except IndexError:
             # print(e)
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
 
     def drawPeaks(self):
+        '''
+
+        :return: draw circles around the found peaks extracted from the cxi file
+        '''
         try:
             if self.foundPeaksChekckBox.isChecked():
                 peaks_x = []
@@ -160,6 +169,36 @@ class DisplayImage(qtw.QWidget):
         except Exception as e:
             print(e, '-drawPeaks')
 
+    def drawInitialPanel(self):
+
+        try:
+            for panelName in self.panelLocFromGeom.keys():
+                x_edges = []
+                y_edges = []
+
+                for i in range(4):
+                    edge_fs = self.panelLocFromGeom[panelName][i][0]
+                    edge_ss = self.panelLocFromGeom[panelName][i][1]
+                    peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
+                    x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                    y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+                x_edges.append(x_edges[0])
+                y_edges.append(y_edges[0])
+
+                self.panelsXYEdges[panelName] = [x_edges, y_edges]
+
+            pen = pg.mkPen('r', width=3)
+            # plotting a square along the edges of the selected panel
+            self.panelEdgesCanvas.setData(self.panelsXYEdges['p6a0'][0],
+                                          self.panelsXYEdges['p6a0'][1], pen=pen)
+            self.outgoingDict = {'panel_name': 'p6a0',
+                                 'min_fs': self.panelFsSs['p6a0'][0], 'max_fs': self.panelFsSs['p6a0'][1],
+                                 'min_ss': self.panelFsSs['p6a0'][2], 'max_ss': self.panelFsSs['p6a0'][3]}
+
+            self.panelSelected.emit(self.outgoingDict)
+        except Exception as e:
+            print(e, '-darawInitialPanel')
+
     def selectPanel(self, event):
         '''
         Draw a boarder around the selected ASIIC
@@ -175,26 +214,6 @@ class DisplayImage(qtw.QWidget):
                 x_mouse = int(mouse_point.x())
                 y_mouse = int(mouse_point.y())
 
-                # print(x_mouse,y_mouse)
-
-                if not self.panelsXYEdges:
-
-                    for panelName in self.panelLocFromGeom.keys():
-                        x_edges = []
-                        y_edges = []
-
-                        for i in range(4):
-                            edge_fs = self.panelLocFromGeom[panelName][i][0]
-                            edge_ss = self.panelLocFromGeom[panelName][i][1]
-                            peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
-                            x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
-                            y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
-                        x_edges.append(x_edges[0])
-                        y_edges.append(y_edges[0])
-
-                        self.panelsXYEdges[panelName] = [x_edges, y_edges]
-
-                # print(self.panelsXYEdges)
                 for panelName in self.panelsXYEdges.keys():
                     if x_mouse in range(int(min(self.panelsXYEdges[panelName][0])),
                                         int(max(self.panelsXYEdges[panelName][0]))) \
@@ -204,12 +223,14 @@ class DisplayImage(qtw.QWidget):
                         # plotting a square along the edges of the selected panel
                         self.panelEdgesCanvas.setData(self.panelsXYEdges[panelName][0],
                                                       self.panelsXYEdges[panelName][1], pen=pen)
-                        print(self.panelFsSs[panelName])
+                        # print(self.panelFsSs[panelName])
 
-                        outgoingDict= {'min_fs': self.panelFsSs[panelName][0], 'max_fs': self.panelFsSs[panelName][1],
-                                       'min_ss': self.panelFsSs[panelName][2], 'max_ss': self.panelFsSs[panelName][3]}
-                        print(outgoingDict.keys())
-                        self.selectedPanel.emit(panelName, outgoingDict)
+                        self.outgoingDict = {'panel_name': panelName,
+                                             'min_fs': self.panelFsSs[panelName][0],
+                                             'max_fs': self.panelFsSs[panelName][1],
+                                             'min_ss': self.panelFsSs[panelName][2],
+                                             'max_ss': self.panelFsSs[panelName][3]}
+                        self.panelSelected.emit(self.outgoingDict)
                         break
         except Exception as e:
             print(e, "-SelectPanel")
@@ -560,6 +581,17 @@ class MainWindow(qtw.QMainWindow):
             self.viewFiles()
             print(" selectDisplay image viewr not exist")
 
+    def panelDetails(self, inDict):
+        """
+        :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
+        :return: Assigns panel deitail
+        """
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
     def viewFiles(self):
         if not self.eventNumber.text():
             self.eventNumber.setEnabled(True)
@@ -568,15 +600,23 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer = DisplayImage(self.fileField.text(), self.fileField_2.text())
         self.imageViewer.drawImage(int(self.eventNumber.text()))
         self.totalEvents = self.imageViewer.size
-        self.imageViewer.show()
+        # initial panel assignment
+        self.panelName = self.imageViewer.outgoingDict['panel_name']
+        self.min_fs = self.imageViewer.outgoingDict['min_fs']
+        self.max_fs = self.imageViewer.outgoingDict['max_fs']
+        self.min_ss = self.imageViewer.outgoingDict['min_ss']
+        self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
-        self.plotPixelIntensityButton.setEnabled(True)
-        self.fitPolynormialButton.setEnabled(True)
-        self.plotPeakPixelButton.setEnabled(True)
+        self.imageViewer.panelSelected.connect(self.panelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
-        #find a way to use this information
-        self.imageViewer.selectedPanel(self.curveToPlot)
+
+        self.imageViewer.show()
+
+        if not self.plotPixelIntensityButton.isEnabled():
+            self.plotPixelIntensityButton.setEnabled(True)
+            self.fitPolynormialButton.setEnabled(True)
+            self.plotPeakPixelButton.setEnabled(True)
 
     def machineLearning(self):
 
@@ -593,8 +633,8 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedNext.emit(int(self.eventNumber.text()))
-
-        except:
+        except Exception as e:
+            print(e, '-nextEvent()')
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def previousEvent(self, eventNumber):
@@ -607,8 +647,8 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedPrevious.emit(int(self.eventNumber.text()))
-
-        except:
+        except Exception as e:
+            print(e, '-previousEvent()')
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName, sortingForML='Not ML'):
@@ -744,6 +784,7 @@ class MainWindow(qtw.QMainWindow):
         try:
             file_name = self.fileField.text()
             event_number = int(self.eventNumber.text())
+            print(self.panelName)
 
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
@@ -752,19 +793,20 @@ class MainWindow(qtw.QMainWindow):
 
             avgIntensities = []
 
-            for i in range(10, 185):
-                avgIntensities.append(np.average(frame[2112:2288, i]))
+            for i in range(int(self.min_fs)+5, int(self.max_fs)-5):
+                avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             self.graphWidget.clear()
-            self.graphWidget.plot(list(np.linspace(10, 185, 175)), avgIntensities)
-            self.graphWidget.setTitle('average intensity over the selected panel', size='15pt')
+            self.graphWidget.plot(list(np.linspace(int(self.min_fs)+5, int(self.max_fs)-5,181)), avgIntensities)
+            self.graphWidget.setTitle('Average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
 
             self.buttonClicked = 'plotCurve'
 
-            self.sortButton.setEnabled(True)
-            self.nextButton.setEnabled(True)
-            self.previousButton.setEnabled(True)
+            if not self.sortButton.isEnabled():
+                self.sortButton.setEnabled(True)
+                self.nextButton.setEnabled(True)
+                self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % file_name)
@@ -798,15 +840,16 @@ class MainWindow(qtw.QMainWindow):
 
             frame = data[int(eventNumber)]
 
-            for i in range(10, 186):
-                avgIntensities.append(np.average(frame[2112:2288, i]))
+            for i in range(int(self.min_fs)+5, int(self.max_fs)-5):
+                avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
-            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=degry)
+            fit = np.polyfit(np.arange(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, deg=degry)
 
             self.graphWidget.clear()
-            self.graphWidget.plot(range(10, 186), avgIntensities, name='data')
-            self.graphWidget.plot(range(10, 186), np.polyval(fit, range(10, 186)), name='fit', pen=pg.mkPen(color='r',
-                                                                                                            width=2))
+            self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, name='data')
+            self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5),
+                                  np.polyval(fit, range(int(self.min_fs), int(self.max_fs))),
+                                  name='fit', pen=pg.mkPen(color='r', width=2))
             self.graphWidget.setTitle('fitting a polynomial to average intensity over the selected panel', size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
@@ -814,9 +857,10 @@ class MainWindow(qtw.QMainWindow):
 
             self.buttonClicked = 'plotFit'
 
-            self.advanceSortButton.setEnabled(True)
-            self.nextButton.setEnabled(True)
-            self.previousButton.setEnabled(True)
+            if not self.advanceSortButton.isEnabled():
+                self.advanceSortButton.setEnabled(True)
+                self.nextButton.setEnabled(True)
+                self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -825,7 +869,7 @@ class MainWindow(qtw.QMainWindow):
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
         except IndexError:
-            qtw.QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound')
+            qtw.QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound -plotFit()')
 
     def plotMaxPixels(self, file_name):
         try:
