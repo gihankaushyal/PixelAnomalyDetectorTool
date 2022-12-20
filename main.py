@@ -8,12 +8,13 @@ from pathlib import Path
 
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtWebEngineWidgets as qtwew
 
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
-# import cufflinks as cf
-# from plotly.offline import iplot
+import plotly.express as px
+
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -54,10 +55,10 @@ class DisplayImage(qtw.QWidget):
 
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
-        self.layout2 = qtw.QHBoxLayout()
+        # self.layout2 = qtw.QHBoxLayout()
         self.layout.addWidget(self.mainWidget)
-        self.layout2.addWidget(self.foundPeaksChekckBox)
-        self.layout2.addWidget(self.showPanelsCheckBox)
+        self.layout.addWidget(self.foundPeaksChekckBox)
+        self.layout.addWidget(self.showPanelsCheckBox)
 
 
         # reading the geometry file
@@ -90,17 +91,21 @@ class DisplayImage(qtw.QWidget):
                                                       self.parser.dictionary['panels'][panelName]['max_ss']]
         # print(self.panelLocationsFromGeom)
         for panelName in self.panelLocationsFromGeom.keys():
-
+            # bottom left conner
             x1 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][2])
+            # bottom right conner
             x2 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][3])
+            # top right conner
             x3 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][3])
+            # top left conner
             x4 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][2])
+
             self.panelLocationsFromGeom[panelName]=[x1,x2,x3,x4]
 
         # print(self.panelLocationsFromGeom)
 
         self.setLayout(self.layout)
-        self.setLayout(self.layout2)
+        # self.setLayout(self.layout2)
 
         # reading and displaying data
 
@@ -173,7 +178,7 @@ class DisplayImage(qtw.QWidget):
 
             pen = pg.mkPen('r', width=3)
 
-            self.panelEdgesCanvas.updateItems(False)
+            # iterating through each panel x,y coordinates and plotting them
             for value in self.panelsXandYLocations.values():
                 self.panelEdgesCanvas.setData(value[0], value[1], pen=pen, connect='all')
                 plt.plot(value[0], value[1])
@@ -314,16 +319,80 @@ class AdvanceSorting(qtw.QWidget):
 
         uic.loadUi("AdvanceSortGUI.ui", self)
 
+        # for plotting with matplotlib
+        # self.layout = qtw.QHBoxLayout()
+        # self.figure = plt.figure()
+        # self.canvas = FigureCanvasQTAgg(self.figure)
+        # self.layout.addWidget(self.canvas)
+        # self.graphSpace.setLayout(self.layout)
+
+        # for plotting with plotly
         self.layout = qtw.QHBoxLayout()
-        self.figure = plt.figure()
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.layout.addWidget(self.canvas)
+        self.browser = qtwew.QWebEngineView()
+        self.layout.addWidget(self.browser)
         self.graphSpace.setLayout(self.layout)
 
         self.file_name = fileName
         self.orderOfFit = oft
         self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.sortButton.clicked.connect(self.advanceSort)
+
+    def plotInflectionPoints(self):
+
+        x1_list = []
+        x2_list = []
+
+        try:
+            with h5py.File(self.file_name, "r") as f:
+                self.data = f['entry_1']['data_1']['data'][()]
+
+            for i in range(len(self.data)):
+                frame = self.data[i]
+
+                avgIntensities = []
+                for j in range(10, 186):
+                    avgIntensities.append(np.average(frame[2112:2288, j]))
+
+                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
+                # calculating the inflection points (second derivative of the forth order polynomial)
+                # print(fit)
+                try:
+                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
+                    x1_list.append(x1)
+                    x2_list.append(x2)
+                except IndexError:
+                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
+                except ValueError:
+                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+                    continue
+
+        except Exception as e:
+            print(e)
+
+        ## with ploty
+        df = pd.DataFrame()
+        df['Inflection_poit1']=x1_list
+        df['Inflection_poit2']=x2_list
+        fig = px.histogram(df,nbins=200,opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+
+        ## with seaborn
+        # self.figure.clear()
+        # sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
+        # sns.histplot(self.x2_list, label='x2', kde=True, alpha=0.5)
+        # plt.legend()
+        # #
+        # # # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
+        # # # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
+        #
+        # self.canvas.draw()
+
+        # Enabling button and check box after plotting
+        self.inflectionPoint1.setEnabled(True)
+        self.inflectionPoint2.setEnabled(True)
+        self.sortButton.setEnabled(True)
+        self.checkBox.setEnabled(True)
 
     def advanceSort(self):
 
@@ -368,61 +437,6 @@ class AdvanceSorting(qtw.QWidget):
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', 'Please make sure you have entered values for Inflection points')
-
-    def plotInflectionPoints(self):
-
-        self.x1_list = []
-        self.x2_list = []
-
-        try:
-            with h5py.File(self.file_name, "r") as f:
-                self.data = f['entry_1']['data_1']['data'][()]
-
-            for i in range(len(self.data)):
-                frame = self.data[i]
-
-                avgIntensities = []
-                for j in range(10, 186):
-                    avgIntensities.append(np.average(frame[2112:2288, j]))
-
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
-                # calculating the inflection points (second derivative of the forth order polynomial)
-                # print(fit)
-                try:
-                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                    self.x1_list.append(x1)
-                    self.x2_list.append(x2)
-                except IndexError:
-                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
-                except ValueError:
-                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                    continue
-
-        except Exception as e:
-            print(e)
-
-        self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint2.setEnabled(True)
-        self.sortButton.setEnabled(True)
-        self.checkBox.setEnabled(True)
-
-        self.figure.clear()
-        ## with ploty and cufflinks
-        # cf.go_offline()
-        # df = pd.DataFrame(data=self.x1_list, columns=['X1'])
-        # df['X2']=self.x2_list
-        # df['X2'].iplot(kind='hist')
-
-        ## with seabor
-        sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
-        sns.histplot(self.x2_list, label='x2', kde=True, alpha=0.5)
-        plt.legend()
-        #
-        # # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
-
-        self.canvas.draw()
 
 
 class MainWindow(qtw.QMainWindow):
