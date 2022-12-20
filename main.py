@@ -575,6 +575,7 @@ class MainWindow(qtw.QMainWindow):
         self.plotPeakPixelButton.setEnabled(True)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
+        #find a way to use this information
         self.imageViewer.selectedPanel(self.curveToPlot)
 
     def machineLearning(self):
