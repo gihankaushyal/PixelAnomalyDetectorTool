@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.express as px
 
-
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 from PyQt5 import uic
@@ -30,50 +29,69 @@ from lib.geometry_parser.GeometryFileParser import *
 
 
 class DisplayImage(qtw.QWidget):
+    selectedPanel = qtc.pyqtSignal(str, dict)
+
     def __init__(self, fileName, geometry):
         super(DisplayImage, self).__init__()
 
         # setting the size and location of the window
-
         self.setGeometry(10, 100, 600, 600)
 
         # assigning the file name and the geometry
         self.fileName = fileName
         self.geometryName = geometry
 
+        # class variables
         self.eventNumber = None
         self.imageToDraw = None
         self.cxi = None
         self.size = None
+        self.panelLocFromGeom = {}
+        self.panelFsSs = {}
+        self.panelsXYEdges = {}
 
         # main window for display the data
         self.mainWidget = pg.ImageView()
 
         # adding a checkBoxes
         self.foundPeaksChekckBox = qtw.QCheckBox('Found Peaks')
-        self.showPanelsCheckBox = qtw.QCheckBox('Show Panels')
 
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
-        # self.layout2 = qtw.QHBoxLayout()
         self.layout.addWidget(self.mainWidget)
         self.layout.addWidget(self.foundPeaksChekckBox)
-        self.layout.addWidget(self.showPanelsCheckBox)
-
 
         # reading the geometry file
         try:
             self.parser = GeometryFileParser(self.geometryName)
-        except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', self.geometryName)
+            self.geometry = self.parser.pixel_map_for_cxiview()
 
-        self.geometry = self.parser.pixel_map_for_cxiview()
+            for panelName in self.parser.dictionary['panels'].keys():
+                self.panelFsSs[panelName] = [self.parser.dictionary['panels'][panelName]['min_fs'],
+                                             self.parser.dictionary['panels'][panelName]['max_fs'],
+                                             self.parser.dictionary['panels'][panelName]['min_ss'],
+                                             self.parser.dictionary['panels'][panelName]['max_ss']]
+
+            for panelName in self.panelFsSs.keys():
+                # bottom left conner
+                x1 = (self.panelFsSs[panelName][0], self.panelFsSs[panelName][2])
+                # bottom right conner
+                x2 = (self.panelFsSs[panelName][0], self.panelFsSs[panelName][3])
+                # top right conner
+                x3 = (self.panelFsSs[panelName][1], self.panelFsSs[panelName][3])
+                # top left conner
+                x4 = (self.panelFsSs[panelName][1], self.panelFsSs[panelName][2])
+
+                self.panelLocFromGeom[panelName] = [x1, x2, x3, x4]
+
+        except FileNotFoundError:
+            qtw.QMessageBox.critical(self, 'Fail', self.geometryName, " was not found")
 
         # connecting the checkBoxes to a method
-        self.foundPeaksChekckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
-        self.showPanelsCheckBox.stateChanged.connect(self.showPanels)
+        self.foundPeaksChekckBox.stateChanged.connect(self.drawPeaks)
+        # self.showPanelsCheckBox.stateChanged.connect(self.showPanels)
 
-        # adding a overlapping canvas to the found peaks
+        # adding an overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
         self.mainWidget.getView().addItem(self.foundPeaksCanvas)
 
@@ -81,115 +99,120 @@ class DisplayImage(qtw.QWidget):
         self.panelEdgesCanvas = pg.PlotDataItem()
         self.mainWidget.getView().addItem(self.panelEdgesCanvas)
 
-        # adding a grid over the image for panel selection
-        self.panelLocationsFromGeom = {}
-        self.panelsXandYLocations = {}
-        for panelName in self.parser.dictionary['panels'].keys():
-            self.panelLocationsFromGeom[panelName] = [self.parser.dictionary['panels'][panelName]['min_fs'],
-                                                      self.parser.dictionary['panels'][panelName]['max_fs'],
-                                                      self.parser.dictionary['panels'][panelName]['min_ss'],
-                                                      self.parser.dictionary['panels'][panelName]['max_ss']]
-        # print(self.panelLocationsFromGeom)
-        for panelName in self.panelLocationsFromGeom.keys():
-            # bottom left conner
-            x1 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][2])
-            # bottom right conner
-            x2 = (self.panelLocationsFromGeom[panelName][0],self.panelLocationsFromGeom[panelName][3])
-            # top right conner
-            x3 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][3])
-            # top left conner
-            x4 = (self.panelLocationsFromGeom[panelName][1],self.panelLocationsFromGeom[panelName][2])
-
-            self.panelLocationsFromGeom[panelName]=[x1,x2,x3,x4]
-
-        # print(self.panelLocationsFromGeom)
+        # connecting a mouse clicked event to a select panel method
+        self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
 
         self.setLayout(self.layout)
-        # self.setLayout(self.layout2)
-
-        # reading and displaying data
 
     def drawImage(self, eventNumber):
-        # applying the geometry and displying the image
-        self.eventNumber = eventNumber
+        '''
+         reading and displaying data
+        :param eventNumber: event number to be displayed
+        :return: pixel map from the cxi file
+        '''
 
         try:
+            # applying the geometry and displaying the image
+            self.eventNumber = eventNumber
             # reading the given eventNumber from the cxi file
             self.cxi = fileTools.read_cxi(self.fileName, frameID=self.eventNumber, data=True, slab_size=True,
                                           peaks=True)
+            self.size = self.cxi['stack_shape'][0]
+            # reading data
+            imgData = self.cxi['data']
+            # converting data into a pixel map to display and applying geometry
+            self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
+            # showing the pixel map in the main window
+            self.mainWidget.setImage(self.imageToDraw)
+            # print(self.imageToDraw.shape)
+            # print(self.cxi['stack_shape'])
+            # setting a window title with the eventNumber and the total number of event in the file
+            self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
+
+        except IndexError:
+            # print(e)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
+
+    def drawPeaks(self):
+        try:
+            if self.foundPeaksChekckBox.isChecked():
+                peaks_x = []
+                peaks_y = []
+
+                # temp = fileTools.read_event()
+                n_peaks = self.cxi['n_peaks']
+                x_data = self.cxi['peakXPosRaw']
+                y_data = self.cxi['peakYPosRaw']
+
+                for i in range(0, n_peaks):
+                    peak_fs = x_data[i]
+                    peak_ss = y_data[i]
+
+                    peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
+                    peaks_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                    peaks_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+
+                ring_pen = pg.mkPen('b', width=2)
+                self.foundPeaksCanvas.setData(peaks_x, peaks_y, symbol='o', size=10, pen=ring_pen, brush=(0, 0, 0, 0),
+                                              pxMode=False)
+            else:
+                self.foundPeaksCanvas.clear()
         except Exception as e:
-            print(e)
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again!")
+            print(e, '-drawPeaks')
 
-        self.size = self.cxi['stack_shape'][0]
-        # reading data
-        imgData = self.cxi['data']
-        # converting data into a pixel map to display and applying geometry
-        self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
-        # showing the pixel map in the main window
-        self.mainWidget.setImage(self.imageToDraw)
-        # setting a window title with the eventNumber and the total number of event in the file
-        self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
+    def selectPanel(self, event):
+        '''
+        Draw a boarder around the selected ASIIC
+        :param event: A mouse clicked event
+        :return: Draw a Red boarder around the selected ASIIC
+        '''
 
-        if self.foundPeaksChekckBox.isChecked():
-            peaks_x = []
-            peaks_y = []
-
-            # temp = fileTools.read_event()
-            n_peaks = self.cxi['n_peaks']
-            x_data = self.cxi['peakXPosRaw']
-            y_data = self.cxi['peakYPosRaw']
-
-            for i in range(0, n_peaks):
-                peak_fs = x_data[i]
-                peak_ss = y_data[i]
-
-                peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
-                peaks_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
-                peaks_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
-
-            ring_pen = pg.mkPen('b', width=2)
-            self.foundPeaksCanvas.setData(peaks_x, peaks_y, symbol='o', size=10, pen=ring_pen, brush=(0, 0, 0, 0),
-                                          pxMode=False)
-        else:
-            self.foundPeaksCanvas.clear()
-
-    def showPanels(self):
-
-        if self.showPanelsCheckBox.isChecked():
+        try:
             # panel locations corrected for displayImage
+            pos = event.scenePos()
+            if self.mainWidget.getView().sceneBoundingRect().contains(pos):
+                mouse_point = self.mainWidget.getView().mapSceneToView(pos)
+                x_mouse = int(mouse_point.x())
+                y_mouse = int(mouse_point.y())
 
-            for panelName in self.panelLocationsFromGeom.keys():
-                x_edges = []
-                y_edges = []
+                # print(x_mouse,y_mouse)
 
-                for i in range(4):
-                    edge_fs = self.panelLocationsFromGeom[panelName][i][0]
-                    edge_ss = self.panelLocationsFromGeom[panelName][i][1]
-                    peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
-                    x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
-                    y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
-                x_edges.append(x_edges[0])
-                y_edges.append(y_edges[0])
+                if not self.panelsXYEdges:
 
-                self.panelsXandYLocations[panelName] = [x_edges, y_edges]
+                    for panelName in self.panelLocFromGeom.keys():
+                        x_edges = []
+                        y_edges = []
 
-            print(self.panelsXandYLocations)
+                        for i in range(4):
+                            edge_fs = self.panelLocFromGeom[panelName][i][0]
+                            edge_ss = self.panelLocFromGeom[panelName][i][1]
+                            peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
+                            x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
+                            y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+                        x_edges.append(x_edges[0])
+                        y_edges.append(y_edges[0])
 
-            pen = pg.mkPen('r', width=3)
+                        self.panelsXYEdges[panelName] = [x_edges, y_edges]
 
-            # iterating through each panel x,y coordinates and plotting them
-            for value in self.panelsXandYLocations.values():
-                self.panelEdgesCanvas.setData(value[0], value[1], pen=pen, connect='all')
-                plt.plot(value[0], value[1])
+                # print(self.panelsXYEdges)
+                for panelName in self.panelsXYEdges.keys():
+                    if x_mouse in range(int(min(self.panelsXYEdges[panelName][0])),
+                                        int(max(self.panelsXYEdges[panelName][0]))) \
+                            and y_mouse in range(int(min(self.panelsXYEdges[panelName][1])),
+                                                 int(max(self.panelsXYEdges[panelName][1]))):
+                        pen = pg.mkPen('r', width=3)
+                        # plotting a square along the edges of the selected panel
+                        self.panelEdgesCanvas.setData(self.panelsXYEdges[panelName][0],
+                                                      self.panelsXYEdges[panelName][1], pen=pen)
+                        print(self.panelFsSs[panelName])
 
-            plt.show()
-
-            # self.panelEdgesCanvas.setData(self.panelsXandYLocations.values()[0],self.panelsXandYLocations.values()[1])
-
-        else:
-            self.panelEdgesCanvas.clear()
-        
+                        outgoingDict= {'min_fs': self.panelFsSs[panelName][0], 'max_fs': self.panelFsSs[panelName][1],
+                                       'min_ss': self.panelFsSs[panelName][2], 'max_ss': self.panelFsSs[panelName][3]}
+                        print(outgoingDict.keys())
+                        self.selectedPanel.emit(panelName, outgoingDict)
+                        break
+        except Exception as e:
+            print(e, "-SelectPanel")
 
 
 class ML(qtw.QWidget):
@@ -334,7 +357,8 @@ class AdvanceSorting(qtw.QWidget):
 
         self.file_name = fileName
         self.orderOfFit = oft
-        self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
+        # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
+        self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.advanceSort)
 
     def plotInflectionPoints(self):
@@ -372,9 +396,9 @@ class AdvanceSorting(qtw.QWidget):
 
         ## with ploty
         df = pd.DataFrame()
-        df['Inflection_poit1']=x1_list
-        df['Inflection_poit2']=x2_list
-        fig = px.histogram(df,nbins=200,opacity=0.5)
+        df['Inflection_poit1'] = x1_list
+        df['Inflection_poit2'] = x2_list
+        fig = px.histogram(df, nbins=200, opacity=0.5)
         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
         ## with seaborn
@@ -409,7 +433,7 @@ class AdvanceSorting(qtw.QWidget):
         try:
 
             for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
-                print(i, x1, x2)
+                # print(i, x1, x2)
                 if self.checkBox.isChecked():
                     if x1 in np.arange(float(self.inflectionPoint1.text()) - 5,
                                        float(self.inflectionPoint1.text()) + 5):
@@ -520,6 +544,7 @@ class MainWindow(qtw.QMainWindow):
     def curveToPlot(self):
 
         if self.buttonClicked is None:
+            # print('curve to plot got triggered')
             pass
             # qtw.QMessageBox.information(self,'Info','Plot a curve first!')
         elif self.buttonClicked == 'plotCurve':
@@ -529,9 +554,11 @@ class MainWindow(qtw.QMainWindow):
 
     def selectDisplay(self):
         if self.imageViewer:
-            self.imageViewer.drawImage(self.fileField.text(), int(self.eventNumber.text()), self.fileField_2.text())
+            self.imageViewer.drawImage(int(self.eventNumber.text()))
+            print(" selectDisplay image viewr exist")
         else:
             self.viewFiles()
+            print(" selectDisplay image viewr not exist")
 
     def viewFiles(self):
         if not self.eventNumber.text():
@@ -548,6 +575,7 @@ class MainWindow(qtw.QMainWindow):
         self.plotPeakPixelButton.setEnabled(True)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.selectedPanel(self.curveToPlot)
 
     def machineLearning(self):
 
@@ -738,13 +766,14 @@ class MainWindow(qtw.QMainWindow):
             self.previousButton.setEnabled(True)
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % file_name)
 
         except ValueError:
-            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path -plotCurve")
 
         except IndexError:
-            qtw.QMessageBox.critical(self, 'Fail', 'Value you ,%s,  entered is out of bound for this cxi file'
+            qtw.QMessageBox.critical(self, 'Fail',
+                                     'Value you ,%s,  entered is out of bound for this cxi file -plotCurve'
                                      % self.eventNumber.text())
 
     def plotFit(self):
