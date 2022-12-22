@@ -264,6 +264,7 @@ class ML(qtw.QWidget):
 
         self.parentDirectory.setText(fname)
 
+    # model training using multiple runs needs to be implemented
     def checkBoxClicked(self):
         if self.checkBox.isChecked():
             self.startRun.setEnabled(True)
@@ -271,6 +272,17 @@ class ML(qtw.QWidget):
         else:
             self.startRun.setEnabled(False)
             self.endRun.setEnabled(False)
+
+    def readPanelDetails(self, inDict):
+        """
+                :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
+                :return: Assigns panel deitail
+                """
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
 
     def modelSelection(self):
 
@@ -290,7 +302,53 @@ class ML(qtw.QWidget):
         else:
             qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
 
-    def dataPrep(self):
+    # def dataPrep(self):
+    #
+    #     from sklearn.model_selection import train_test_split
+    #
+    #     try:
+    #         if self.checkBox.isChecked():
+    #             pass
+    #         else:
+    #             folder = self.parentDirectory.text()
+    #     except Exception as e:
+    #         qtw.QMessageBox.critical(self, 'Fail', e)
+    #
+    #     files = Path(folder).glob('badEvents-advanceSort-*-ML.list')
+    #     dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+    #
+    #     for file in files:
+    #
+    #         try:
+    #             temp_df = pd.read_csv(str(file), delimiter=" ")
+    #             temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+    #             dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
+    #         except Exception as e:
+    #             qtw.QMessageBox.information(self, 'information', e)
+    #             continue
+    #     dataFrame_bad['Flag'] = 0
+    #
+    #     files = Path(folder).glob('goodEvents-advanceSort-*-ML.list')
+    #     dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+    #
+    #     for file in files:
+    #         try:
+    #             temp_df = pd.read_csv(str(file), delimiter=" ")
+    #             temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+    #             dataFrame_good = pd.concat([dataFrame_good, temp_df])
+    #         except Exception as e:
+    #             qtw.QMessageBox.information(self, 'information', e)
+    #             continue
+    #     dataFrame_good['Flag'] = 1
+    #
+    #     finalData = pd.concat([dataFrame_bad, dataFrame_good])
+    #
+    #     X = finalData[['InflectionPoint1', 'InflectionPoint2']]
+    #     y = finalData['Flag']
+    #
+    #     self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
+
+    def dataPrep2(self):
 
         from sklearn.model_selection import train_test_split
 
@@ -302,43 +360,81 @@ class ML(qtw.QWidget):
         except Exception as e:
             qtw.QMessageBox.critical(self, 'Fail', e)
 
-        files = Path(folder).glob('badEvents-advanceSort-*-ML.list')
-        dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+        files = Path(folder).glob('badEvents-advanceSort-*.list')
+        dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
         for file in files:
 
             try:
                 temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+                temp_df.columns = ['FileName', 'EventNumber']
+
+                # reading the panel data from the file
+                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+                fileName = temp_df['FileName'].iloc[0]
+
+                with h5py.File(fileName, "r") as f:
+                    data = f['entry_1']['data_1']['data'][()]
+
+                tempList = list()
+                for i in list(temp_df['EventNumber']):
+                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs+5:self.max_fs-5]
+                    tempList.append(frame)
+
+                temp_df['Data'] = tempList
+
                 dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
             except Exception as e:
-                qtw.QMessageBox.information(self, 'information', e)
+                print(e, 'bad files reading error -dataprep2()')
+                # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_bad['Flag'] = 0
 
-        files = Path(folder).glob('goodEvents-advanceSort-*-ML.list')
-        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2'])
+        files = Path(folder).glob('goodEvents-advanceSort-*.list')
+        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber'])
 
         for file in files:
             try:
                 temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber', 'InflectionPoint1', 'InflectionPoint2']
+                temp_df.columns = ['FileName', 'EventNumber']
+
+                # reading the panel data from the file
+                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+                fileName = temp_df['FileName'].iloc[0]
+
+                with h5py.File(fileName, "r") as f:
+                    data = f['entry_1']['data_1']['data'][()]
+
+                tempList = list()
+                for i in list(temp_df['EventNumber']):
+                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+                    tempList.append(frame)
+
+                # print(temp_df)
+                temp_df['Data'] = tempList
+                # print(temp_df)
+
                 dataFrame_good = pd.concat([dataFrame_good, temp_df])
             except Exception as e:
-                qtw.QMessageBox.information(self, 'information', e)
+                print(e, 'good files reading error -dataprep2()')
+                # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_good['Flag'] = 1
 
         finalData = pd.concat([dataFrame_bad, dataFrame_good])
+        print('dataFrame_bad', dataFrame_bad)
+        print('dataFrame_good', dataFrame_good)
+        print('final data', finalData)
 
-        X = finalData[['InflectionPoint1', 'InflectionPoint2']]
+        X = finalData['Data']
         y = finalData['Flag']
 
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
 
     def train(self):
+        qtw.QMessageBox.information(self, 'info', "Training a modle from the panel selected %s" % self.panelName)
         self.modelSelection()
-        self.dataPrep()
+        self.dataPrep2()
         self.model.fit(self.X_train, self.y_train)
         self.testButton.setEnabled(True)
 
@@ -592,6 +688,8 @@ class MainWindow(qtw.QMainWindow):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        self.curveToPlot()
+
     def viewFiles(self):
         if not self.eventNumber.text():
             self.eventNumber.setEnabled(True)
@@ -621,7 +719,9 @@ class MainWindow(qtw.QMainWindow):
     def machineLearning(self):
 
         self.mlDialog = ML()
+        self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
         self.mlDialog.show()
+        self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
 
     def nextEvent(self, eventNumber):
         try:
@@ -784,7 +884,6 @@ class MainWindow(qtw.QMainWindow):
         try:
             file_name = self.fileField.text()
             event_number = int(self.eventNumber.text())
-            print(self.panelName)
 
             with h5py.File(file_name, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
@@ -797,7 +896,7 @@ class MainWindow(qtw.QMainWindow):
                 avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             self.graphWidget.clear()
             self.graphWidget.plot(list(np.linspace(int(self.min_fs)+5, int(self.max_fs)-5,181)), avgIntensities)
-            self.graphWidget.setTitle('Average intensity over the selected panel', size='15pt')
+            self.graphWidget.setTitle(str.capitalize('Average Intensity Over The Selected Panel- %s' % self.panelName), size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
 
@@ -848,9 +947,9 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.clear()
             self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, name='data')
             self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5),
-                                  np.polyval(fit, range(int(self.min_fs), int(self.max_fs))),
+                                  np.polyval(fit, range(int(self.min_fs)+5, int(self.max_fs)-5)),
                                   name='fit', pen=pg.mkPen(color='r', width=2))
-            self.graphWidget.setTitle('fitting a polynomial to average intensity over the selected panel', size='15pt')
+            self.graphWidget.setTitle(str.capitalize('Fitting A Polynomial To Average Intensity Over The Selected Panel- %s' % self.panelName), size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
