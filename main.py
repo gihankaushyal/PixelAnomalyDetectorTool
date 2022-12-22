@@ -1,15 +1,15 @@
 # imports
 from builtins import Exception
-
+# basic stuff
 import h5py
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
+# Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtWebEngineWidgets as qtwew
-
+# Graphing stuff
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -243,16 +243,15 @@ class ML(qtw.QWidget):
         super(ML, self).__init__()
 
         self.model = None
+        uic.loadUi("machineLearningGUI.ui", self)
+
+        self.setWindowTitle('Machine Learning')
+
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
-
-        uic.loadUi("machineLearningGUI.ui", self)
-
-        self.setWindowTitle('Machine Learning')
-
         self.browseButton.clicked.connect(self.browseFiles)
         self.checkBox.stateChanged.connect(self.checkBoxClicked)
         self.trainButton.clicked.connect(self.train)
@@ -388,6 +387,7 @@ class ML(qtw.QWidget):
                 for i in list(temp_df['EventNumber']):
                     frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs+5:self.max_fs-5]
                     tempList.append(frame.flatten())
+                    # tempList.append(np.ravel(frame))
 
                 temp_df['Data'] = tempList
 
@@ -467,6 +467,8 @@ class AdvanceSorting(qtw.QWidget):
 
         super(AdvanceSorting, self).__init__()
 
+        self.badEvents = None
+        self.goodEvents = None
         self.setWindowTitle('Advance Sorting')
 
         uic.loadUi("AdvanceSortGUI.ui", self)
@@ -550,21 +552,21 @@ class AdvanceSorting(qtw.QWidget):
         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
         # print(df['Inflection_poit1'])
-        print(df['Inflection_poit1'].max())
-        print(df['Inflection_poit1'].idxmax())
-        # print(df['Inflection_poit2'])
-        print(df['Inflection_poit2'].max())
-        print(df['Inflection_poit2'].idxmax())
+        # print(df['Inflection_poit1'].max())
+        # print(df['Inflection_poit1'].idxmax())
+        # # print(df['Inflection_poit2'])
+        # print(df['Inflection_poit2'].max())
+        # print(df['Inflection_poit2'].idxmax())
 
 
         ## with seaborn
         # self.figure.clear()
-        # sns.histplot(self.x1_list, label='x1', kde=True, alpha=0.5)
-        # sns.histplot(self.x2_list, label='x2', kde=True, alpha=0.5)
+        # sns.histplot(self.self.x1_list, label='x1', kde=True, alpha=0.5)
+        # sns.histplot(self.self.x2_list, label='x2', kde=True, alpha=0.5)
         # plt.legend()
         # #
-        # # # plt.hist(self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # # plt.hist(self.x2_list,bins=30,label='x2', alpha=0.5)
+        # # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
+        # # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
         #
         # self.canvas.draw()
 
@@ -608,10 +610,10 @@ class AdvanceSorting(qtw.QWidget):
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
-        except ValueError:
-            qtw.QMessageBox.critical(self, 'Fail', ValueError)
-        except AttributeError:
-            qtw.QMessageBox.critical(self, 'Fail', AttributeError)
+        except ValueError as e:
+            qtw.QMessageBox.critical(self, 'Fail', e)
+        except AttributeError as e:
+            qtw.QMessageBox.critical(self, 'Fail', e)
 
 
 class MainWindow(qtw.QMainWindow):
@@ -683,15 +685,17 @@ class MainWindow(qtw.QMainWindow):
         # restting the main window for the next cxi file
         if self.imageViewer:
             self.imageViewer.close()
+            self.graphWidget.clear()
+            self.eventNumber.setText("0")
             self.plotPixelIntensityButton.setEnabled(False)
             self.fitPolynormialButton.setEnabled(False)
             self.plotPeakPixelButton.setEnabled(False)
             self.advanceSortButton.setEnabled(False)
             self.sortButton.setEnabled(False)
-            self.eventNumber.setText("0")
             self.nextButton.setEnabled(False)
             self.previousButton.setEnabled(False)
-            self.graphWidget.clear()
+            self.orderOfFit.setEnabled(False)
+            
         if self.sortGUI:
             self.sortGUI.close()
 
@@ -739,6 +743,7 @@ class MainWindow(qtw.QMainWindow):
         :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
         :return: Assigns panel deitail
         """
+        self.panelDict = inDict
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
@@ -776,7 +781,7 @@ class MainWindow(qtw.QMainWindow):
 
     def machineLearning(self):
 
-        self.mlDialog = ML(self.imageViewer.outgoingDict)
+        self.mlDialog = ML(self.panelDict)
         self.mlDialog.show()
         self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
 
@@ -877,7 +882,7 @@ class MainWindow(qtw.QMainWindow):
 
     def advanceSortFrames(self):
 
-        self.sortGUI = AdvanceSorting(self.fileField.text(), self.orderOfFit.text(), self.imageViewer.outgoingDict)
+        self.sortGUI = AdvanceSorting(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
         self.sortGUI.show()
         self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
 
