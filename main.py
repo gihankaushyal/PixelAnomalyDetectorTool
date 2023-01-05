@@ -231,18 +231,24 @@ class DisplayImage(qtw.QWidget):
                                              'min_ss': self.panelFsSs[panelName][2],
                                              'max_ss': self.panelFsSs[panelName][3]}
                         self.panelSelected.emit(self.outgoingDict)
-                        break
+                        # break
         except Exception as e:
             print(e, "-SelectPanel")
 
 
 class ML(qtw.QWidget):
 
-    def __init__(self):
+    def __init__(self, inDict):
 
         super(ML, self).__init__()
 
         self.model = None
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
         uic.loadUi("machineLearningGUI.ui", self)
 
         self.setWindowTitle('Machine Learning')
@@ -360,6 +366,7 @@ class ML(qtw.QWidget):
         except Exception as e:
             qtw.QMessageBox.critical(self, 'Fail', e)
 
+        # Bad Events
         files = Path(folder).glob('badEvents-advanceSort-*.list')
         dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
@@ -376,22 +383,23 @@ class ML(qtw.QWidget):
                 with h5py.File(fileName, "r") as f:
                     data = f['entry_1']['data_1']['data'][()]
 
-                tempList = list()
+                tempList = []
                 for i in list(temp_df['EventNumber']):
                     frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs+5:self.max_fs-5]
-                    tempList.append(frame)
+                    tempList.append(frame.flatten())
 
                 temp_df['Data'] = tempList
 
                 dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
             except Exception as e:
-                print(e, 'bad files reading error -dataprep2()')
+                print(e, 'bad file: %s,  reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_bad['Flag'] = 0
 
+        # Good Events
         files = Path(folder).glob('goodEvents-advanceSort-*.list')
-        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber'])
+        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
         for file in files:
             try:
@@ -408,28 +416,26 @@ class ML(qtw.QWidget):
                 tempList = list()
                 for i in list(temp_df['EventNumber']):
                     frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                    tempList.append(frame)
+                    tempList.append(frame.flatten())
 
-                # print(temp_df)
                 temp_df['Data'] = tempList
-                # print(temp_df)
 
                 dataFrame_good = pd.concat([dataFrame_good, temp_df])
             except Exception as e:
-                print(e, 'good files reading error -dataprep2()')
+                print(e, 'good file: %s, reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_good['Flag'] = 1
 
         finalData = pd.concat([dataFrame_bad, dataFrame_good])
-        print('dataFrame_bad', dataFrame_bad)
-        print('dataFrame_good', dataFrame_good)
-        print('final data', finalData)
+        finalData = pd.concat([finalData['FileName'], finalData['EventNumber'], finalData.pop('Data').apply(pd.Series),
+                               finalData['Flag']], axis=1)
 
-        X = finalData['Data']
+        # print(finalData.columns)
+        X = finalData.drop(['FileName','EventNumber','Flag'], axis=1)
         y = finalData['Flag']
 
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.3)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.25)
 
     def train(self):
         qtw.QMessageBox.information(self, 'info', "Training a modle from the panel selected %s" % self.panelName)
@@ -448,10 +454,10 @@ class ML(qtw.QWidget):
 
 
 class AdvanceSorting(qtw.QWidget):
-    readyToSaveGood = qtc.pyqtSignal(dict, str, str)
-    readyToSaveBad = qtc.pyqtSignal(dict, str, str)
+    readyToSaveGood = qtc.pyqtSignal(dict, str)
+    readyToSaveBad = qtc.pyqtSignal(dict, str)
 
-    def __init__(self, fileName, oft):
+    def __init__(self, fileName, oft, inDict):
 
         super(AdvanceSorting, self).__init__()
 
@@ -474,14 +480,33 @@ class AdvanceSorting(qtw.QWidget):
 
         self.file_name = fileName
         self.orderOfFit = oft
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.advanceSort)
 
+    def readPanelDetails(self, inDict):
+        """
+                :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
+                :return: Assigns panel deitail
+                """
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
+        self.plotInflectionPoints()
+
     def plotInflectionPoints(self):
 
-        x1_list = []
-        x2_list = []
+        self.x1_list = []
+        self.x2_list = []
 
         try:
             with h5py.File(self.file_name, "r") as f:
@@ -491,17 +516,17 @@ class AdvanceSorting(qtw.QWidget):
                 frame = self.data[i]
 
                 avgIntensities = []
-                for j in range(10, 186):
-                    avgIntensities.append(np.average(frame[2112:2288, j]))
+                for j in range(self.min_fs+5, self.max_fs-5):
+                    avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
 
-                fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=int(self.orderOfFit))
+                fit = np.polyfit(np.arange(self.min_fs+5, self.max_fs-5), avgIntensities, deg=int(self.orderOfFit))
                 # calculating the inflection points (second derivative of the forth order polynomial)
                 # print(fit)
                 try:
-                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]))
-                    x1_list.append(x1)
-                    x2_list.append(x2)
+                    x1 = np.round_((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),2)
+                    x2 = np.round_((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),2)
+                    self.x1_list.append(x1)
+                    self.x2_list.append(x2)
                 except IndexError:
                     qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
                 except ValueError:
@@ -513,8 +538,8 @@ class AdvanceSorting(qtw.QWidget):
 
         ## with ploty
         df = pd.DataFrame()
-        df['Inflection_poit1'] = x1_list
-        df['Inflection_poit2'] = x2_list
+        df['Inflection_poit1'] = self.x1_list
+        df['Inflection_poit2'] = self.x2_list
         fig = px.histogram(df, nbins=200, opacity=0.5)
         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
@@ -550,34 +575,27 @@ class AdvanceSorting(qtw.QWidget):
         try:
 
             for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
-                # print(i, x1, x2)
-                if self.checkBox.isChecked():
-                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5,
-                                       float(self.inflectionPoint1.text()) + 5):
-                        goodList.append((i, x1, x2))
-                    else:
-                        badList.append((i, x1, x2))
+
+                if (float(self.inflectionPoint1.text()) - 15) <= x1 <= (float(self.inflectionPoint1.text()) + 15)  \
+                        and \
+                        (float(self.inflectionPoint2.text()) - 15) <= x2 <= (float(self.inflectionPoint2.text()) + 15):
+
+                    goodList.append(i)
                 else:
-                    if x1 in np.arange(float(self.inflectionPoint1.text()) - 5,
-                                       float(self.inflectionPoint1.text()) + 5):
-                        goodList.append(i)
-                    else:
-                        badList.append(i)
+                    badList.append(i)
 
             self.goodEvents[str(self.file_name)] = goodList
             self.badEvents[str(self.file_name)] = badList
 
-            if self.checkBox.isChecked():
-                self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s-ML.list' % tag, 'ML')
-                self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s-ML.list' % tag, 'ML')
-            else:
-                self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag, 'Not ML')
-                self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag, 'Not ML')
+            self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
+            self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag)
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
         except ValueError:
-            qtw.QMessageBox.critical(self, 'Fail', 'Please make sure you have entered values for Inflection points')
+            qtw.QMessageBox.critical(self, 'Fail', ValueError)
+        except AttributeError:
+            qtw.QMessageBox.critical(self, 'Fail', AttributeError)
 
 
 class MainWindow(qtw.QMainWindow):
@@ -646,6 +664,24 @@ class MainWindow(qtw.QMainWindow):
         self.fileField.setText(fname[0][0])
         self.browseButton_2.setEnabled(True)
 
+        # restting the main window for the next cxi file
+        if self.imageViewer:
+            self.imageViewer.close()
+            self.plotPixelIntensityButton.setEnabled(False)
+            self.fitPolynormialButton.setEnabled(False)
+            self.plotPeakPixelButton.setEnabled(False)
+            self.advanceSortButton.setEnabled(False)
+            self.sortButton.setEnabled(False)
+            self.eventNumber.setText("0")
+            self.nextButton.setEnabled(False)
+            self.previousButton.setEnabled(False)
+            self.graphWidget.clear()
+        if self.sortGUI:
+            self.sortGUI.close()
+
+        if self.mlDialog:
+            self.mlDialog.close()
+
     def browseGeom(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -672,10 +708,10 @@ class MainWindow(qtw.QMainWindow):
     def selectDisplay(self):
         if self.imageViewer:
             self.imageViewer.drawImage(int(self.eventNumber.text()))
-            print(" selectDisplay image viewr exist")
+            # print(" selectDisplay image viewr exist")
         else:
             self.viewFiles()
-            print(" selectDisplay image viewr not exist")
+            # print(" selectDisplay image viewr not exist")
 
     def panelDetails(self, inDict):
         """
@@ -698,6 +734,7 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer = DisplayImage(self.fileField.text(), self.fileField_2.text())
         self.imageViewer.drawImage(int(self.eventNumber.text()))
         self.totalEvents = self.imageViewer.size
+
         # initial panel assignment
         self.panelName = self.imageViewer.outgoingDict['panel_name']
         self.min_fs = self.imageViewer.outgoingDict['min_fs']
@@ -718,8 +755,7 @@ class MainWindow(qtw.QMainWindow):
 
     def machineLearning(self):
 
-        self.mlDialog = ML()
-        self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
+        self.mlDialog = ML(self.imageViewer.outgoingDict)
         self.mlDialog.show()
         self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
 
@@ -751,29 +787,16 @@ class MainWindow(qtw.QMainWindow):
             print(e, '-previousEvent()')
             qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
-    def writeToFile(self, eventsList, fileName, sortingForML='Not ML'):
+    def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
 
-        for key in eventsList:
-
-            if sortingForML == 'ML':
-                for (i, x1, x2) in eventsList[key]:
-                    f.write(key)
-                    f.write(' ')
-                    f.write('//')
-                    f.write(str(i))
-                    f.write(' ')
-                    f.write(str(x1))
-                    f.write(' ')
-                    f.write(str(x2))
-                    f.write('\n')
-            elif sortingForML == 'Not ML':
-                for i in eventsList[key]:
-                    f.write(key)
-                    f.write(' ')
-                    f.write('//')
-                    f.write(str(i))
-                    f.write('\n')
+        for key in eventsList.keys():
+            for i in eventsList[key]:
+                f.write(key)
+                f.write(' ')
+                f.write('//')
+                f.write(str(i))
+                f.write('\n')
 
         f.close()
 
@@ -833,8 +856,9 @@ class MainWindow(qtw.QMainWindow):
 
     def advanceSortFrames(self):
 
-        self.sortGUI = AdvanceSorting(self.fileField.text(), self.orderOfFit.text())
+        self.sortGUI = AdvanceSorting(self.fileField.text(), self.orderOfFit.text(), self.imageViewer.outgoingDict)
         self.sortGUI.show()
+        self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
 
         self.sortGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortGUI.readyToSaveBad.connect(self.writeToFile)
