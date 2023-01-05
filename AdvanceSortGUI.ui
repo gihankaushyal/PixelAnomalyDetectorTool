@@ -27,7 +27,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>30</y>
+     <y>25</y>
      <width>171</width>
      <height>32</height>
     </rect>
@@ -39,40 +39,40 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>210</x>
-     <y>40</y>
-     <width>141</width>
+     <x>230</x>
+     <y>30</y>
+     <width>121</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Select Inflection Points:</string>
+    <string>Median Values for:</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
-     <x>500</x>
+     <x>470</x>
      <y>10</y>
-     <width>20</width>
+     <width>111</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>x2</string>
+    <string>Inflection Point2</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>400</x>
+     <x>350</x>
      <y>10</y>
-     <width>20</width>
+     <width>101</width>
      <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>x1</string>
+    <string>Inflection Point1</string>
    </property>
   </widget>
   <widget class="QPushButton" name="sortButton">
@@ -97,9 +97,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>390</x>
+     <x>370</x>
      <y>30</y>
-     <width>40</width>
+     <width>60</width>
      <height>20</height>
     </rect>
    </property>
@@ -112,7 +112,7 @@
     <rect>
      <x>490</x>
      <y>30</y>
-     <width>40</width>
+     <width>60</width>
      <height>20</height>
     </rect>
    </property>
