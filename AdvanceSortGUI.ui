@@ -91,22 +91,6 @@
     <string>Sort</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="checkBox">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>590</x>
-     <y>50</y>
-     <width>101</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Sort for ML</string>
-   </property>
-  </widget>
   <widget class="QLineEdit" name="inflectionPoint1">
    <property name="enabled">
     <bool>false</bool>
