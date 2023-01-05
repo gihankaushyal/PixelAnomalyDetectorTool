@@ -257,6 +257,7 @@ class ML(qtw.QWidget):
         self.checkBox.stateChanged.connect(self.checkBoxClicked)
         self.trainButton.clicked.connect(self.train)
         self.testButton.clicked.connect(self.test)
+        self.comboBox.activated.connect(self.rest)
 
     def browseFiles(self):
         """
@@ -452,6 +453,11 @@ class ML(qtw.QWidget):
         self.confussionMetrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
         self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
+    def rest(self):
+        self.confussionMetrix.clear()
+        self.classificationReport.clear()
+        self.testButton.setEnabled(False)
+
 
 class AdvanceSorting(qtw.QWidget):
     readyToSaveGood = qtc.pyqtSignal(dict, str)
@@ -542,6 +548,13 @@ class AdvanceSorting(qtw.QWidget):
         df['Inflection_poit2'] = self.x2_list
         fig = px.histogram(df, nbins=200, opacity=0.5)
         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+        # print(np.median(df['Inflection_poit1']))
+        # print(np.median(df['Inflection_poit2']))
+        # print(np.average(df['Inflection_poit1']))
+        # print(np.std(df['Inflection_poit1']))
+        print(df['Inflection_poit1'])
+        print(df['Inflection_poit2'])
+
 
         ## with seaborn
         # self.figure.clear()
@@ -556,9 +569,11 @@ class AdvanceSorting(qtw.QWidget):
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
+        self.inflectionPoint1.setText(str(np.round_(np.median(df['Inflection_poit1']), 2)))
         self.inflectionPoint2.setEnabled(True)
+        self.inflectionPoint2.setText(str(np.round_(np.median(df['Inflection_poit2']), 2)))
         self.sortButton.setEnabled(True)
-        self.checkBox.setEnabled(True)
+
 
     def advanceSort(self):
 
@@ -695,6 +710,8 @@ class MainWindow(qtw.QMainWindow):
         self.viewFileButton.setEnabled(True)
 
     def curveToPlot(self):
+        if int(self.eventNumber.text()) >= self.totalEvents:
+            self.eventNumber.setText(str(self.totalEvents -1))
 
         if self.buttonClicked is None:
             # print('curve to plot got triggered')
@@ -706,6 +723,9 @@ class MainWindow(qtw.QMainWindow):
             self.plotFit()
 
     def selectDisplay(self):
+        if int(self.eventNumber.text()) >= self.totalEvents:
+            self.eventNumber.setText(str(self.totalEvents -1))
+
         if self.imageViewer:
             self.imageViewer.drawImage(int(self.eventNumber.text()))
             # print(" selectDisplay image viewr exist")
