@@ -529,8 +529,8 @@ class AdvanceSorting(qtw.QWidget):
                 # calculating the inflection points (second derivative of the forth order polynomial)
                 # print(fit)
                 try:
-                    x1 = np.round_((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),2)
-                    x2 = np.round_((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),2)
+                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
+                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
                     self.x1_list.append(x1)
                     self.x2_list.append(x2)
                 except IndexError:
@@ -540,7 +540,7 @@ class AdvanceSorting(qtw.QWidget):
                     continue
 
         except Exception as e:
-            print(e)
+            print(e, '-plotInflectionPoint')
 
         ## with ploty
         df = pd.DataFrame()
@@ -548,12 +548,13 @@ class AdvanceSorting(qtw.QWidget):
         df['Inflection_poit2'] = self.x2_list
         fig = px.histogram(df, nbins=200, opacity=0.5)
         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-        # print(np.median(df['Inflection_poit1']))
-        # print(np.median(df['Inflection_poit2']))
-        # print(np.average(df['Inflection_poit1']))
-        # print(np.std(df['Inflection_poit1']))
-        print(df['Inflection_poit1'])
-        print(df['Inflection_poit2'])
+
+        # print(df['Inflection_poit1'])
+        print(df['Inflection_poit1'].max())
+        print(df['Inflection_poit1'].idxmax())
+        # print(df['Inflection_poit2'])
+        print(df['Inflection_poit2'].max())
+        print(df['Inflection_poit2'].idxmax())
 
 
         ## with seaborn
