@@ -1,4 +1,5 @@
 # imports
+import warnings
 from builtins import Exception
 # basic stuff
 import h5py
@@ -530,18 +531,37 @@ class AdvanceSorting(qtw.QWidget):
                 fit = np.polyfit(np.arange(self.min_fs+5, self.max_fs-5), avgIntensities, deg=int(self.orderOfFit))
                 # calculating the inflection points (second derivative of the forth order polynomial)
                 # print(fit)
-                try:
-                    x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
-                    x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
-                    self.x1_list.append(x1)
-                    self.x2_list.append(x2)
-                except IndexError:
-                    qtw.QMessageBox.information(self, 'Error', 'Please try a different order polynomial')
-                except ValueError:
-                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                    continue
-                except RuntimeWarning as e:
-                    qtw.QMessageBox.warning(self, 'Warning', e)
+                # this piece of code would convert a numpy runtime warning to an exception
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("error")
+                    try:
+
+                        x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+                                   2)
+                        x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+                                   2)
+
+                        self.x1_list.append(x1)
+                        self.x2_list.append(x2)
+                    except IndexError as e:
+                        msg = qtw.QMessageBox()
+                        msg.setText(str(e).capitalize())
+                        msg.setInformativeText('Try entering a different order for the polynomial')
+                        msg.setIcon(qtw.QMessageBox.Critical)
+                        msg.exec_()
+                    except ValueError:
+                        qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+                        continue
+                    except Warning as e:
+                        msg = qtw.QMessageBox()
+                        msg.setText(str(e).capitalize())
+                        msg.setInformativeText('Error occured while trying to calculate the squrt of %i' \
+                                               % (36 * fit[1] * fit[1] - 96 * fit[0] * fit[2]))
+                        msg.setIcon(qtw.QMessageBox.Warning)
+                        msg.exec_()
+                        # mgs=qtw.QMessageBox.information(self, 'Error', str(e))
+                        # mgs.setInformativeText('test')
+                        continue
 
         except Exception as e:
             print(e, '-plotInflectionPoint')
@@ -574,9 +594,9 @@ class AdvanceSorting(qtw.QWidget):
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_poit1']), 2)))
+        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_poit1'].dropna()), 2)))
         self.inflectionPoint2.setEnabled(True)
-        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2']), 2)))
+        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
 
     def advanceSort(self):
@@ -612,9 +632,9 @@ class AdvanceSorting(qtw.QWidget):
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
         except ValueError as e:
-            qtw.QMessageBox.critical(self, 'Fail', e)
+            qtw.QMessageBox.critical(self, 'Fail', str(e))
         except AttributeError as e:
-            qtw.QMessageBox.critical(self, 'Fail', e)
+            qtw.QMessageBox.critical(self, 'Fail', str(e))
 
 
 class MainWindow(qtw.QMainWindow):
