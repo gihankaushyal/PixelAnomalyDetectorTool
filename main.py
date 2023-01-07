@@ -440,11 +440,26 @@ class ML(qtw.QWidget):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.25)
 
     def train(self):
-        qtw.QMessageBox.information(self, 'info', "Training a modle from the panel selected %s" % self.panelName)
-        self.modelSelection()
-        self.dataPrep2()
-        self.model.fit(self.X_train, self.y_train)
-        self.testButton.setEnabled(True)
+        msg = qtw.QMessageBox()
+        # msg.setGeometry(800,300, 1500,1000)
+        msg.setWindowTitle('Question')
+        msg.setText("Pannel Selected: %s                                             " %self.panelName)
+        msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
+                               'selected: %s panel. Would you wish to continue?' %self.panelName)
+        msg.setIcon(qtw.QMessageBox.Question)
+        msg.setStandardButtons(qtw.QMessageBox.Yes|qtw.QMessageBox.No)
+        msg.setDefaultButton(qtw.QMessageBox.Yes)
+        msg.buttonClicked.connect(self.buttonClicked)
+        msg.exec_()
+
+    def buttonClicked(self, i):
+        if i.text() == 'Yes':
+            self.modelSelection()
+            self.dataPrep2()
+            self.model.fit(self.X_train, self.y_train)
+            self.testButton.setEnabled(True)
+        else:
+            print('No was clicked')
 
     def test(self):
         from sklearn.metrics import classification_report, confusion_matrix
@@ -689,6 +704,9 @@ class MainWindow(qtw.QMainWindow):
         self.graphingSpace.setLayout(self.layout)
 
         self.setWindowTitle("Detector Analyser")
+
+        self.MLButton.setEnabled(True)
+
         self.show()
 
     def browseFiles(self):
