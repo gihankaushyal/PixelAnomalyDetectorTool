@@ -540,6 +540,8 @@ class AdvanceSorting(qtw.QWidget):
                 except ValueError:
                     qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
                     continue
+                except RuntimeWarning as e:
+                    qtw.QMessageBox.warning(self, 'Warning', e)
 
         except Exception as e:
             print(e, '-plotInflectionPoint')
@@ -572,11 +574,10 @@ class AdvanceSorting(qtw.QWidget):
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint1.setText(str(np.round_(np.median(df['Inflection_poit1']), 2)))
+        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_poit1']), 2)))
         self.inflectionPoint2.setEnabled(True)
-        self.inflectionPoint2.setText(str(np.round_(np.median(df['Inflection_poit2']), 2)))
+        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2']), 2)))
         self.sortButton.setEnabled(True)
-
 
     def advanceSort(self):
 
@@ -694,6 +695,7 @@ class MainWindow(qtw.QMainWindow):
             self.sortButton.setEnabled(False)
             self.nextButton.setEnabled(False)
             self.previousButton.setEnabled(False)
+            self.MLButton.setEnabled(False)
             self.orderOfFit.setEnabled(False)
             
         if self.sortGUI:
@@ -743,7 +745,7 @@ class MainWindow(qtw.QMainWindow):
         :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
         :return: Assigns panel deitail
         """
-        self.panelDict = inDict
+        # self.panelDict = inDict
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
@@ -762,6 +764,7 @@ class MainWindow(qtw.QMainWindow):
         self.totalEvents = self.imageViewer.size
 
         # initial panel assignment
+        self.panelDict = self.imageViewer.outgoingDict
         self.panelName = self.imageViewer.outgoingDict['panel_name']
         self.min_fs = self.imageViewer.outgoingDict['min_fs']
         self.max_fs = self.imageViewer.outgoingDict['max_fs']
@@ -999,7 +1002,8 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5),
                                   np.polyval(fit, range(int(self.min_fs)+5, int(self.max_fs)-5)),
                                   name='fit', pen=pg.mkPen(color='r', width=2))
-            self.graphWidget.setTitle(str.capitalize('Fitting A Polynomial To Average Intensity Over The Selected Panel- %s' % self.panelName), size='15pt')
+            self.graphWidget.setTitle(str.capitalize('Fitting A Polynomial To Average Intensity Over The Selected '
+                                                     'Panel- %s' % self.panelName), size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
             self.graphWidget.addLegend()
