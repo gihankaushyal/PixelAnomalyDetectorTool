@@ -458,8 +458,6 @@ class ML(qtw.QWidget):
             self.dataPrep2()
             self.model.fit(self.X_train, self.y_train)
             self.testButton.setEnabled(True)
-        else:
-            print('No was clicked')
 
     def test(self):
         from sklearn.metrics import classification_report, confusion_matrix
@@ -475,17 +473,17 @@ class ML(qtw.QWidget):
         self.testButton.setEnabled(False)
 
 
-class AdvanceSorting(qtw.QWidget):
+class SortingForML(qtw.QWidget):
     readyToSaveGood = qtc.pyqtSignal(dict, str)
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, fileName, oft, inDict):
 
-        super(AdvanceSorting, self).__init__()
+        super(SortingForML, self).__init__()
 
         self.badEvents = None
         self.goodEvents = None
-        self.setWindowTitle('Advance Sorting')
+        self.setWindowTitle('Sorting for Machine Learning')
 
         uic.loadUi("AdvanceSortGUI.ui", self)
 
@@ -510,9 +508,15 @@ class AdvanceSorting(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        # setting initial values for spinBoxes (value ranges for inflection points)
+        self.doubleSpinBoxIF1.setValue(15)
+        self.doubleSpinBoxIF2.setValue(15)
+        self.doubleSpinBoxIF1.setSingleStep(0.01)
+        self.doubleSpinBoxIF2.setSingleStep(0.01)
+
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.plotInflectionPoints()
-        self.sortButton.clicked.connect(self.advanceSort)
+        self.sortButton.clicked.connect(self.sort)
 
     def readPanelDetails(self, inDict):
         """
@@ -614,7 +618,7 @@ class AdvanceSorting(qtw.QWidget):
         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
 
-    def advanceSort(self):
+    def sort(self):
 
         tag = str(self.file_name).split('/')[-1].split('.')[0]
 
@@ -630,9 +634,9 @@ class AdvanceSorting(qtw.QWidget):
 
             for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
 
-                if (float(self.inflectionPoint1.text()) - 15) <= x1 <= (float(self.inflectionPoint1.text()) + 15)  \
+                if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value())  \
                         and \
-                        (float(self.inflectionPoint2.text()) - 15) <= x2 <= (float(self.inflectionPoint2.text()) + 15):
+                        (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
 
                     goodList.append(i)
                 else:
@@ -685,8 +689,8 @@ class MainWindow(qtw.QMainWindow):
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
 
-        self.sortButton.clicked.connect(lambda: self.sortFrames(self.fileField.text()))
-        self.advanceSortButton.clicked.connect(self.advanceSortFrames)
+        self.sortButton.clicked.connect(self.sort)
+        self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
@@ -729,7 +733,7 @@ class MainWindow(qtw.QMainWindow):
             self.plotPixelIntensityButton.setEnabled(False)
             self.fitPolynormialButton.setEnabled(False)
             self.plotPeakPixelButton.setEnabled(False)
-            self.advanceSortButton.setEnabled(False)
+            self.sortForMLButton.setEnabled(False)
             self.sortButton.setEnabled(False)
             self.nextButton.setEnabled(False)
             self.previousButton.setEnabled(False)
@@ -867,69 +871,72 @@ class MainWindow(qtw.QMainWindow):
 
         f.close()
 
-    def sortFrames(self, file_name):
-        """
-            this method only works on single cxi file. for multiple files code needs to be changed
-            function for sorting good frames from the bad frames based on the average intensity ratio of the peak of the
-            curve vs crest of the curve
-        """
+    # def sortFrames(self, file_name):
+    #     """
+    #         this method only works on single cxi file. for multiple files code needs to be changed
+    #         function for sorting good frames from the bad frames based on the average intensity ratio of the peak of the
+    #         curve vs crest of the curve
+    #     """
+    #
+    #     try:
+    #         tag = str(file_name).split('/')[-1].split('.')[0]
+    #         goodEvents = {}
+    #         badEvents = {}
+    #         # exit()
+    #         # goodList to store all the events with expected pixel intensities for the file
+    #         goodList = []
+    #
+    #         # badList to store all the events with detector artifacts for the file
+    #         badList = []
+    #
+    #         with h5py.File(file_name, "r") as f:
+    #             data = f['entry_1']['data_1']['data'][()]
+    #
+    #         for i in range(0, len(data)):
+    #             frame = data[i]
+    #
+    #             peakMeanIntensities = []
+    #             for j in range(60, 80):
+    #                 peakMeanIntensities.append(np.average(frame[2112:2288, j]))
+    #
+    #             crestMeanIntensities = []
+    #             for k in range(165, 185):
+    #                 crestMeanIntensities.append(np.average(frame[2112:2288, k]))
+    #
+    #             peakMean = np.average(peakMeanIntensities)
+    #             crestMean = np.average(crestMeanIntensities)
+    #
+    #             if peakMean / crestMean > 1.3:
+    #                 goodList.append(i)
+    #             else:
+    #                 badList.append(i)
+    #
+    #         goodEvents[str(file_name)] = goodList
+    #         badEvents[str(file_name)] = badList
+    #
+    #         self.writeToFile(goodEvents, 'goodEvents-simpleSort-%s.list' % tag)
+    #         self.writeToFile(badEvents, 'badEvents-%s.list' % tag)
+    #
+    #         qtw.QMessageBox.information(self, 'Success', "Done Sorting")
+    #
+    #     except FileNotFoundError:
+    #         qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+    #
+    #     except ValueError:
+    #         qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
-        try:
-            tag = str(file_name).split('/')[-1].split('.')[0]
-            goodEvents = {}
-            badEvents = {}
-            # exit()
-            # goodList to store all the events with expected pixel intensities for the file
-            goodList = []
+    def sortForML(self):
 
-            # badList to store all the events with detector artifacts for the file
-            badList = []
-
-            with h5py.File(file_name, "r") as f:
-                data = f['entry_1']['data_1']['data'][()]
-
-            for i in range(0, len(data)):
-                frame = data[i]
-
-                peakMeanIntensities = []
-                for j in range(60, 80):
-                    peakMeanIntensities.append(np.average(frame[2112:2288, j]))
-
-                crestMeanIntensities = []
-                for k in range(165, 185):
-                    crestMeanIntensities.append(np.average(frame[2112:2288, k]))
-
-                peakMean = np.average(peakMeanIntensities)
-                crestMean = np.average(crestMeanIntensities)
-
-                if peakMean / crestMean > 1.3:
-                    goodList.append(i)
-                else:
-                    badList.append(i)
-
-            goodEvents[str(file_name)] = goodList
-            badEvents[str(file_name)] = badList
-
-            self.writeToFile(goodEvents, 'goodEvents-simpleSort-%s.list' % tag)
-            self.writeToFile(badEvents, 'badEvents-%s.list' % tag)
-
-            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
-
-        except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
-
-        except ValueError:
-            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
-
-    def advanceSortFrames(self):
-
-        self.sortGUI = AdvanceSorting(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
         self.sortGUI.show()
         self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
 
         self.sortGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
+
+    def sort(self):
+        pass
 
     def returnMaxPixel(self, coeff, x_range):
         """
@@ -1048,8 +1055,8 @@ class MainWindow(qtw.QMainWindow):
 
             self.buttonClicked = 'plotFit'
 
-            if not self.advanceSortButton.isEnabled():
-                self.advanceSortButton.setEnabled(True)
+            if not self.sortForMLButton.isEnabled():
+                self.sortForMLButton.setEnabled(True)
                 self.nextButton.setEnabled(True)
                 self.previousButton.setEnabled(True)
 
