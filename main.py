@@ -237,6 +237,189 @@ class DisplayImage(qtw.QWidget):
             print(e, "-SelectPanel")
 
 
+class SortingForML(qtw.QWidget):
+    readyToSaveGood = qtc.pyqtSignal(dict, str)
+    readyToSaveBad = qtc.pyqtSignal(dict, str)
+
+    def __init__(self, fileName, oft, inDict):
+
+        super(SortingForML, self).__init__()
+
+        self.badEvents = None
+        self.goodEvents = None
+        self.setWindowTitle('Sorting for Machine Learning')
+
+        uic.loadUi("sortForMLGUI.ui", self)
+
+        # for plotting with matplotlib
+        # self.layout = qtw.QHBoxLayout()
+        # self.figure = plt.figure()
+        # self.canvas = FigureCanvasQTAgg(self.figure)
+        # self.layout.addWidget(self.canvas)
+        # self.graphSpace.setLayout(self.layout)
+
+        # for plotting with plotly
+        self.layout = qtw.QHBoxLayout()
+        self.browser = qtwew.QWebEngineView()
+        self.layout.addWidget(self.browser)
+        self.graphSpace.setLayout(self.layout)
+
+        self.file_name = fileName
+        self.orderOfFit = oft
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
+        # setting initial values for spinBoxes (value ranges for inflection points)
+        self.doubleSpinBoxIF1.setValue(15)
+        self.doubleSpinBoxIF2.setValue(15)
+        self.doubleSpinBoxIF1.setSingleStep(0.01)
+        self.doubleSpinBoxIF2.setSingleStep(0.01)
+
+        # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
+        self.plotInflectionPoints()
+        self.sortButton.clicked.connect(self.sort)
+
+    def readPanelDetails(self, inDict):
+        """
+                :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
+                :return: Assigns panel deitail
+                """
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
+        self.plotInflectionPoints()
+
+    def plotInflectionPoints(self):
+
+        self.x1_list = []
+        self.x2_list = []
+
+        try:
+            with h5py.File(self.file_name, "r") as f:
+                self.data = f['entry_1']['data_1']['data'][()]
+
+            for i in range(len(self.data)):
+                frame = self.data[i]
+
+                avgIntensities = []
+                for j in range(self.min_fs+5, self.max_fs-5):
+                    avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
+
+                fit = np.polyfit(np.arange(self.min_fs+5, self.max_fs-5), avgIntensities, deg=int(self.orderOfFit))
+                # calculating the inflection points (second derivative of the forth order polynomial)
+                # print(fit)
+                # this piece of code would convert a numpy runtime warning to an exception
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("error")
+                    try:
+
+                        x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+                                   2)
+                        x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+                                   2)
+
+                        self.x1_list.append(x1)
+                        self.x2_list.append(x2)
+                    except IndexError as e:
+                        msg = qtw.QMessageBox()
+                        msg.setText(str(e).capitalize())
+                        msg.setInformativeText('Try entering a different order for the polynomial')
+                        msg.setIcon(qtw.QMessageBox.Critical)
+                        msg.exec_()
+                    except ValueError:
+                        qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+                        continue
+                    except Warning as e:
+                        msg = qtw.QMessageBox()
+                        msg.setText(str(e).capitalize())
+                        msg.setInformativeText('Error occured while trying to calculate the squrt of %i' \
+                                               % (36 * fit[1] * fit[1] - 96 * fit[0] * fit[2]))
+                        msg.setIcon(qtw.QMessageBox.Warning)
+                        msg.exec_()
+                        # mgs=qtw.QMessageBox.information(self, 'Error', str(e))
+                        # mgs.setInformativeText('test')
+                        continue
+
+        except Exception as e:
+            print(e, '-plotInflectionPoint')
+
+        ## with ploty
+        df = pd.DataFrame()
+        df['Inflection_poit1'] = self.x1_list
+        df['Inflection_poit2'] = self.x2_list
+        fig = px.histogram(df, nbins=200, opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+
+        # print(df['Inflection_poit1'])
+        # print(df['Inflection_poit1'].max())
+        # print(df['Inflection_poit1'].idxmax())
+        # # print(df['Inflection_poit2'])
+        # print(df['Inflection_poit2'].max())
+        # print(df['Inflection_poit2'].idxmax())
+
+
+        ## with seaborn
+        # self.figure.clear()
+        # sns.histplot(self.self.x1_list, label='x1', kde=True, alpha=0.5)
+        # sns.histplot(self.self.x2_list, label='x2', kde=True, alpha=0.5)
+        # plt.legend()
+        # #
+        # # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
+        # # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
+        #
+        # self.canvas.draw()
+
+        # Enabling button and check box after plotting
+        self.inflectionPoint1.setEnabled(True)
+        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_poit1'].dropna()), 2)))
+        self.inflectionPoint2.setEnabled(True)
+        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2'].dropna()), 2)))
+        self.sortButton.setEnabled(True)
+
+    def sort(self):
+
+        tag = str(self.file_name).split('/')[-1].split('.')[0]
+
+        self.goodEvents = {}
+        self.badEvents = {}
+
+        # goodList to store all the events with expected pixel intensities for the file
+        goodList = []
+        # badList to store all the events with detector artifacts for the file
+        badList = []
+
+        try:
+
+            for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
+
+                if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value())  \
+                        and \
+                        (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
+
+                    goodList.append(i)
+                else:
+                    badList.append(i)
+
+            self.goodEvents[str(self.file_name)] = goodList
+            self.badEvents[str(self.file_name)] = badList
+
+            self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
+            self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag)
+
+            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
+
+        except ValueError as e:
+            qtw.QMessageBox.critical(self, 'Fail', str(e))
+        except AttributeError as e:
+            qtw.QMessageBox.critical(self, 'Fail', str(e))
+
+
 class ML(qtw.QWidget):
 
     def __init__(self, inDict):
@@ -453,11 +636,15 @@ class ML(qtw.QWidget):
         msg.exec_()
 
     def buttonClicked(self, i):
-        if i.text() == 'Yes':
+        # print(i.text())
+        if i.text() == '&Yes':
+            # print('yes is clicked')
             self.modelSelection()
             self.dataPrep2()
             self.model.fit(self.X_train, self.y_train)
             self.testButton.setEnabled(True)
+        else:
+            print('No is clicked')
 
     def test(self):
         from sklearn.metrics import classification_report, confusion_matrix
@@ -473,187 +660,15 @@ class ML(qtw.QWidget):
         self.testButton.setEnabled(False)
 
 
-class SortingForML(qtw.QWidget):
-    readyToSaveGood = qtc.pyqtSignal(dict, str)
-    readyToSaveBad = qtc.pyqtSignal(dict, str)
+class SortData(qtw.QWidget):
+    def __init__(self, model, inDict):
+        super(SortData,self).__init__()
 
-    def __init__(self, fileName, oft, inDict):
+        uic.loadUi('sortDataGUI.ui',self)
+        self.setWindowTitle('Sort Data')
 
-        super(SortingForML, self).__init__()
-
-        self.badEvents = None
-        self.goodEvents = None
-        self.setWindowTitle('Sorting for Machine Learning')
-
-        uic.loadUi("AdvanceSortGUI.ui", self)
-
-        # for plotting with matplotlib
-        # self.layout = qtw.QHBoxLayout()
-        # self.figure = plt.figure()
-        # self.canvas = FigureCanvasQTAgg(self.figure)
-        # self.layout.addWidget(self.canvas)
-        # self.graphSpace.setLayout(self.layout)
-
-        # for plotting with plotly
-        self.layout = qtw.QHBoxLayout()
-        self.browser = qtwew.QWebEngineView()
-        self.layout.addWidget(self.browser)
-        self.graphSpace.setLayout(self.layout)
-
-        self.file_name = fileName
-        self.orderOfFit = oft
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-        # setting initial values for spinBoxes (value ranges for inflection points)
-        self.doubleSpinBoxIF1.setValue(15)
-        self.doubleSpinBoxIF2.setValue(15)
-        self.doubleSpinBoxIF1.setSingleStep(0.01)
-        self.doubleSpinBoxIF2.setSingleStep(0.01)
-
-        # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
-        self.plotInflectionPoints()
-        self.sortButton.clicked.connect(self.sort)
-
-    def readPanelDetails(self, inDict):
-        """
-                :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
-                :return: Assigns panel deitail
-                """
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-        self.plotInflectionPoints()
-
-    def plotInflectionPoints(self):
-
-        self.x1_list = []
-        self.x2_list = []
-
-        try:
-            with h5py.File(self.file_name, "r") as f:
-                self.data = f['entry_1']['data_1']['data'][()]
-
-            for i in range(len(self.data)):
-                frame = self.data[i]
-
-                avgIntensities = []
-                for j in range(self.min_fs+5, self.max_fs-5):
-                    avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
-
-                fit = np.polyfit(np.arange(self.min_fs+5, self.max_fs-5), avgIntensities, deg=int(self.orderOfFit))
-                # calculating the inflection points (second derivative of the forth order polynomial)
-                # print(fit)
-                # this piece of code would convert a numpy runtime warning to an exception
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("error")
-                    try:
-
-                        x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
-                                   2)
-                        x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
-                                   2)
-
-                        self.x1_list.append(x1)
-                        self.x2_list.append(x2)
-                    except IndexError as e:
-                        msg = qtw.QMessageBox()
-                        msg.setText(str(e).capitalize())
-                        msg.setInformativeText('Try entering a different order for the polynomial')
-                        msg.setIcon(qtw.QMessageBox.Critical)
-                        msg.exec_()
-                    except ValueError:
-                        qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                        continue
-                    except Warning as e:
-                        msg = qtw.QMessageBox()
-                        msg.setText(str(e).capitalize())
-                        msg.setInformativeText('Error occured while trying to calculate the squrt of %i' \
-                                               % (36 * fit[1] * fit[1] - 96 * fit[0] * fit[2]))
-                        msg.setIcon(qtw.QMessageBox.Warning)
-                        msg.exec_()
-                        # mgs=qtw.QMessageBox.information(self, 'Error', str(e))
-                        # mgs.setInformativeText('test')
-                        continue
-
-        except Exception as e:
-            print(e, '-plotInflectionPoint')
-
-        ## with ploty
-        df = pd.DataFrame()
-        df['Inflection_poit1'] = self.x1_list
-        df['Inflection_poit2'] = self.x2_list
-        fig = px.histogram(df, nbins=200, opacity=0.5)
-        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-
-        # print(df['Inflection_poit1'])
-        # print(df['Inflection_poit1'].max())
-        # print(df['Inflection_poit1'].idxmax())
-        # # print(df['Inflection_poit2'])
-        # print(df['Inflection_poit2'].max())
-        # print(df['Inflection_poit2'].idxmax())
-
-
-        ## with seaborn
-        # self.figure.clear()
-        # sns.histplot(self.self.x1_list, label='x1', kde=True, alpha=0.5)
-        # sns.histplot(self.self.x2_list, label='x2', kde=True, alpha=0.5)
-        # plt.legend()
-        # #
-        # # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
-        #
-        # self.canvas.draw()
-
-        # Enabling button and check box after plotting
-        self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_poit1'].dropna()), 2)))
-        self.inflectionPoint2.setEnabled(True)
-        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_poit2'].dropna()), 2)))
-        self.sortButton.setEnabled(True)
-
-    def sort(self):
-
-        tag = str(self.file_name).split('/')[-1].split('.')[0]
-
-        self.goodEvents = {}
-        self.badEvents = {}
-
-        # goodList to store all the events with expected pixel intensities for the file
-        goodList = []
-        # badList to store all the events with detector artifacts for the file
-        badList = []
-
-        try:
-
-            for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
-
-                if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value())  \
-                        and \
-                        (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
-
-                    goodList.append(i)
-                else:
-                    badList.append(i)
-
-            self.goodEvents[str(self.file_name)] = goodList
-            self.badEvents[str(self.file_name)] = badList
-
-            self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
-            self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag)
-
-            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
-
-        except ValueError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
-        except AttributeError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
+        self.model = model
+        self.panelDict = inDict
 
 
 class MainWindow(qtw.QMainWindow):
@@ -673,7 +688,7 @@ class MainWindow(qtw.QMainWindow):
         # initializing the popup windows
         self.imageViewer = None
         self.sortGUI = None
-        self.mlDialog = None
+        self.mlGUI = None
 
         self.fileSize = None
         self.totalEvents = None
@@ -709,7 +724,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.setWindowTitle("Detector Analyser")
 
-        self.MLButton.setEnabled(True)
+        # self.MLButton.setEnabled(True)
 
         self.show()
 
@@ -743,8 +758,8 @@ class MainWindow(qtw.QMainWindow):
         if self.sortGUI:
             self.sortGUI.close()
 
-        if self.mlDialog:
-            self.mlDialog.close()
+        if self.mlGUI:
+            self.mlGUI.close()
 
     def browseGeom(self):
         """
@@ -824,12 +839,6 @@ class MainWindow(qtw.QMainWindow):
             self.fitPolynormialButton.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
 
-    def machineLearning(self):
-
-        self.mlDialog = ML(self.panelDict)
-        self.mlDialog.show()
-        self.imageViewer.panelSelected.connect(self.mlDialog.readPanelDetails)
-
     def nextEvent(self, eventNumber):
         try:
             if int(self.eventNumber.text()) < self.totalEvents - 1:
@@ -870,6 +879,16 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
+
+    def sortForML(self):
+
+        self.sortGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortGUI.show()
+        self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
+
+        self.sortGUI.readyToSaveGood.connect(self.writeToFile)
+        self.sortGUI.readyToSaveBad.connect(self.writeToFile)
+        self.MLButton.setEnabled(True)
 
     # def sortFrames(self, file_name):
     #     """
@@ -925,18 +944,16 @@ class MainWindow(qtw.QMainWindow):
     #     except ValueError:
     #         qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
-    def sortForML(self):
+    def machineLearning(self):
+        self.mlGUI = ML(self.panelDict)
+        self.mlGUI.show()
+        self.imageViewer.panelSelected.connect(self.mlGUI.readPanelDetails)
 
-        self.sortGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
-        self.sortGUI.show()
-        self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
-
-        self.sortGUI.readyToSaveGood.connect(self.writeToFile)
-        self.sortGUI.readyToSaveBad.connect(self.writeToFile)
-        self.MLButton.setEnabled(True)
+        self.sortButton.setEnabled(True)
 
     def sort(self):
-        pass
+        self.sortDataGUI=SortData(self.mlGUI.model, self.panelDict)
+        self.sortDataGUI.show()
 
     def returnMaxPixel(self, coeff, x_range):
         """
@@ -1001,7 +1018,6 @@ class MainWindow(qtw.QMainWindow):
             self.buttonClicked = 'plotCurve'
 
             if not self.sortButton.isEnabled():
-                self.sortButton.setEnabled(True)
                 self.nextButton.setEnabled(True)
                 self.previousButton.setEnabled(True)
 
@@ -1092,8 +1108,8 @@ class MainWindow(qtw.QMainWindow):
         if self.sortGUI:
             self.sortGUI.close()
 
-        if self.mlDialog:
-            self.mlDialog.close()
+        if self.mlGUI:
+            self.mlGUI.close()
 
 
 # main .
