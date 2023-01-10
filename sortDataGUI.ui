@@ -62,7 +62,7 @@
     <string>Available *.cxi files in the folder</string>
    </property>
   </widget>
-  <widget class="QTextEdit" name="textEdit">
+  <widget class="QTextEdit" name="availableFiles">
    <property name="geometry">
     <rect>
      <x>30</x>
@@ -98,7 +98,7 @@
     <string>Sorting </string>
    </property>
   </widget>
-  <widget class="QTextEdit" name="textEdit_2">
+  <widget class="QTextEdit" name="goodEvents">
    <property name="geometry">
     <rect>
      <x>40</x>
@@ -108,7 +108,7 @@
     </rect>
    </property>
   </widget>
-  <widget class="QTextEdit" name="textEdit_3">
+  <widget class="QTextEdit" name="badEvents">
    <property name="geometry">
     <rect>
      <x>410</x>
