@@ -1,4 +1,5 @@
 # imports
+import time
 import warnings
 from builtins import Exception
 # basic stuff
@@ -616,7 +617,7 @@ class ML(qtw.QWidget):
         finalData = pd.concat([finalData['FileName'], finalData['EventNumber'], finalData.pop('Data').apply(pd.Series),
                                finalData['Flag']], axis=1)
 
-        # print(finalData.columns)
+
         X = finalData.drop(['FileName','EventNumber','Flag'], axis=1)
         y = finalData['Flag']
 
@@ -647,6 +648,7 @@ class ML(qtw.QWidget):
             print('No is clicked')
 
     def test(self):
+
         from sklearn.metrics import classification_report, confusion_matrix
         self.predictions = self.model.predict(self.X_test)
         self.confussionMetrix.setEnabled(True)
@@ -661,6 +663,9 @@ class ML(qtw.QWidget):
 
 
 class SortData(qtw.QWidget):
+    readyToSaveGood = qtc.pyqtSignal(dict, str)
+    readyToSaveBad = qtc.pyqtSignal(dict, str)
+
     def __init__(self, model, inDict):
         super(SortData,self).__init__()
 
@@ -668,7 +673,99 @@ class SortData(qtw.QWidget):
         self.setWindowTitle('Sort Data')
 
         self.model = model
-        self.panelDict = inDict
+        self.panelName = inDict['panel_name']
+        self.min_fs = inDict['min_fs']
+        self.max_fs = inDict['max_fs']
+        self.min_ss = inDict['min_ss']
+        self.max_ss = inDict['max_ss']
+
+        self.browseButton.clicked.connect(self.browseFiles)
+        self.sortButton.clicked.connect(self.sort)
+
+    def browseFiles(self):
+        """
+                    This method gets triggered when the browse button is Clicked in the GUI
+                function: The function is to take in a text field where the value needs to be set and called in a dialog box with
+                file struture view starting at the 'root' and lets the user select the file they want and set the file path to
+                the test field.
+                """
+
+        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+
+        self.folderPath.setText(fname)
+
+        self.showFiles()
+
+    def showFiles(self):
+        folder = self.folderPath.text()
+
+        files = Path(folder).glob('*.cxi')
+        # print(files)
+        for file in files:
+            self.availableFiles.append(str(file))
+        # print(files)
+
+    def sort(self):
+        msg = qtw.QMessageBox()
+        # msg.setGeometry(800,300, 1500,1000)
+        msg.setWindowTitle('Question')
+        msg.setText("Pannel Selected: %s                                             " % self.panelName)
+        msg.setInformativeText('Please Note! Machine Learning model was trained based on the data from the %s panel. '
+                               'Make sure that you are sorting based on %s panel. If not, train a new modle for your '
+                               'frame of choise. Would you wish to continue?' % (self.panelName, self.panelName))
+        msg.setIcon(qtw.QMessageBox.Question)
+        msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+        msg.setDefaultButton(qtw.QMessageBox.Yes)
+        msg.buttonClicked.connect(self.buttonClicked)
+        msg.exec_()
+
+    def buttonClicked(self, i):
+
+        if i.text() == '&Yes':
+
+            folder = self.folderPath.text()
+
+            files = Path(folder).glob('*.cxi')
+            for file in files:
+
+                self.goodEvents.clear()
+                self.badEvents.clear()
+
+                tag = str(file).split('/')[-1].split('.')[0]
+                # print(tag)
+                self.goodEventsDict = {}
+                self.badEventsDict = {}
+
+                # goodList to store all the events with expected pixel intensities for the file
+                goodList = []
+                # badList to store all the events with detector artifacts for the file
+                badList = []
+
+                self.label_3.setText("Sorting %s" %str(file).split('/')[-1])
+                with h5py.File(file, "r") as f:
+                    data = f['entry_1']['data_1']['data'][()]
+
+                for i in range(data.shape[0]):
+
+                    frame = data[i][self.min_ss:self.max_ss,self.min_fs+5:self.max_fs-5].flatten()
+
+                    predictions = self.model.predict(frame.reshape(1,31675))
+
+                    if predictions:
+                        self.goodEvents.append(str(i))
+                        goodList.append(i)
+                    else:
+                        self.badEvents.append(str(i))
+                        badList.append(i)
+
+                self.goodEventsDict[str(file)] = goodList
+                self.badEventsDict[str(file)] = badList
+
+                self.readyToSaveGood.emit(self.goodEventsDict, 'goodEvents-modelSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEventsDict, 'badEvents-modelSort-%s.list' % tag)
+
+        else:
+            print('no is clicked')
 
 
 class MainWindow(qtw.QMainWindow):
@@ -687,8 +784,9 @@ class MainWindow(qtw.QMainWindow):
 
         # initializing the popup windows
         self.imageViewer = None
-        self.sortGUI = None
+        self.sortForMLGUI = None
         self.mlGUI = None
+        self.sortDataGUI = None
 
         self.fileSize = None
         self.totalEvents = None
@@ -755,11 +853,14 @@ class MainWindow(qtw.QMainWindow):
             self.MLButton.setEnabled(False)
             self.orderOfFit.setEnabled(False)
             
-        if self.sortGUI:
-            self.sortGUI.close()
+        if self.sortForMLGUI:
+            self.sortForMLGUI.close()
 
         if self.mlGUI:
             self.mlGUI.close()
+
+        if self.sortForMLGUI:
+            self.sortForMLGUI.close()
 
     def browseGeom(self):
         """
@@ -802,7 +903,7 @@ class MainWindow(qtw.QMainWindow):
         :param inDict: Dictionery with ASIIC/panel information coming from the signal once the user clicked on a panel
         :return: Assigns panel deitail
         """
-        # self.panelDict = inDict
+        self.panelDict = inDict
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
@@ -882,12 +983,12 @@ class MainWindow(qtw.QMainWindow):
 
     def sortForML(self):
 
-        self.sortGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
-        self.sortGUI.show()
-        self.imageViewer.panelSelected.connect(self.sortGUI.readPanelDetails)
+        self.sortForMLGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortForMLGUI.show()
+        self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
 
-        self.sortGUI.readyToSaveGood.connect(self.writeToFile)
-        self.sortGUI.readyToSaveBad.connect(self.writeToFile)
+        self.sortForMLGUI.readyToSaveGood.connect(self.writeToFile)
+        self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
 
     # def sortFrames(self, file_name):
@@ -952,8 +1053,11 @@ class MainWindow(qtw.QMainWindow):
         self.sortButton.setEnabled(True)
 
     def sort(self):
-        self.sortDataGUI=SortData(self.mlGUI.model, self.panelDict)
+        self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
         self.sortDataGUI.show()
+
+        self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
+        self.sortDataGUI.readyToSaveBad.connect(self.writeToFile)
 
     def returnMaxPixel(self, coeff, x_range):
         """
@@ -1105,11 +1209,14 @@ class MainWindow(qtw.QMainWindow):
         if self.imageViewer:
             self.imageViewer.close()
 
-        if self.sortGUI:
-            self.sortGUI.close()
+        if self.sortForMLGUI:
+            self.sortForMLGUI.close()
 
         if self.mlGUI:
             self.mlGUI.close()
+
+        if self.sortDataGUI:
+            self.ssortDataGUI.close()
 
 
 # main .
