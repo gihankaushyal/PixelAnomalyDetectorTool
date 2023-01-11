@@ -709,10 +709,10 @@ class SortData(qtw.QWidget):
         msg = qtw.QMessageBox()
         # msg.setGeometry(800,300, 1500,1000)
         msg.setWindowTitle('Question')
-        msg.setText("Pannel Selected: %s                                             " % self.panelName)
+        msg.setText("Panel Selected: %s                                             " % self.panelName)
         msg.setInformativeText('Please Note! Machine Learning model was trained based on the data from the %s panel. '
-                               'Make sure that you are sorting based on %s panel. If not, train a new modle for your '
-                               'frame of choise. Would you wish to continue?' % (self.panelName, self.panelName))
+                               'Make sure that you are sorting based on %s panel. If not, train a new model for your '
+                               'frame of choice. Would you wish to continue?' % (self.panelName, self.panelName))
         msg.setIcon(qtw.QMessageBox.Question)
         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
         msg.setDefaultButton(qtw.QMessageBox.Yes)
@@ -1216,7 +1216,7 @@ class MainWindow(qtw.QMainWindow):
             self.mlGUI.close()
 
         if self.sortDataGUI:
-            self.ssortDataGUI.close()
+            self.sortDataGUI.close()
 
 
 # main .
