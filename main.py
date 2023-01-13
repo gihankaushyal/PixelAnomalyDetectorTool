@@ -136,9 +136,15 @@ class DisplayImage(qtw.QWidget):
 
             self.drawPeaks()
 
-        except IndexError:
+        except IndexError as e:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Information')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawImage()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
             # print(e)
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
+            # qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
 
     def drawPeaks(self):
         '''
@@ -169,7 +175,13 @@ class DisplayImage(qtw.QWidget):
             else:
                 self.foundPeaksCanvas.clear()
         except Exception as e:
-            print(e, '-drawPeaks')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawPeaks()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-drawPeaks')
 
     def drawInitialPanel(self):
 
@@ -199,7 +211,13 @@ class DisplayImage(qtw.QWidget):
 
             self.panelSelected.emit(self.outgoingDict)
         except Exception as e:
-            print(e, '-darawInitialPanel')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawInitialPenel()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-darawInitialPanel')
 
     def selectPanel(self, event):
         '''
@@ -235,7 +253,13 @@ class DisplayImage(qtw.QWidget):
                         self.panelSelected.emit(self.outgoingDict)
                         # break
         except Exception as e:
-            print(e, "-SelectPanel")
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "selectPanel()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, "-SelectPanel")
 
 
 class SortingForML(qtw.QWidget):
@@ -418,10 +442,15 @@ class SortingForML(qtw.QWidget):
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
-        except ValueError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
-        except AttributeError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
+        except Exception as e:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "sort()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # qtw.QMessageBox.critical(self, 'Fail', str(e))
+
 
 
 class ML(qtw.QWidget):
@@ -552,7 +581,13 @@ class ML(qtw.QWidget):
             else:
                 folder = self.parentDirectory.text()
         except Exception as e:
-            qtw.QMessageBox.critical(self, 'Fail', e)
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "dataPrep2()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # qtw.QMessageBox.critical(self, 'Fail', e)
 
         # Bad Events
         files = Path(folder).glob('badEvents-advanceSort-*.list')
@@ -581,7 +616,13 @@ class ML(qtw.QWidget):
 
                 dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
             except Exception as e:
-                print(e, 'bad file: %s,  reading error -dataprep2()' % file)
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while reading bad events file %s                                  " % str(file))
+                msg.setInformativeText(str(e), "dataPrep2()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
+                # print(e, 'bad file: %s,  reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_bad['Flag'] = 0
@@ -611,7 +652,14 @@ class ML(qtw.QWidget):
 
                 dataFrame_good = pd.concat([dataFrame_good, temp_df])
             except Exception as e:
-                print(e, 'good file: %s, reading error -dataprep2()' % file)
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText(
+                    "An error occurred while reading good events file %s                                  " % str(file))
+                msg.setInformativeText(str(e), "dataPrep2()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
+                # print(e, 'good file: %s, reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_good['Flag'] = 1
@@ -925,12 +973,13 @@ class MainWindow(qtw.QMainWindow):
         self.totalEvents = self.imageViewer.size
 
         # initial panel assignment
-        self.panelDict = self.imageViewer.outgoingDict
-        self.panelName = self.imageViewer.outgoingDict['panel_name']
-        self.min_fs = self.imageViewer.outgoingDict['min_fs']
-        self.max_fs = self.imageViewer.outgoingDict['max_fs']
-        self.min_ss = self.imageViewer.outgoingDict['min_ss']
-        self.max_ss = self.imageViewer.outgoingDict['max_ss']
+        if self.imageViewer.outgoingDict:
+            self.panelDict = self.imageViewer.outgoingDict
+            self.panelName = self.imageViewer.outgoingDict['panel_name']
+            self.min_fs = self.imageViewer.outgoingDict['min_fs']
+            self.max_fs = self.imageViewer.outgoingDict['max_fs']
+            self.min_ss = self.imageViewer.outgoingDict['min_ss']
+            self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
         self.imageViewer.panelSelected.connect(self.panelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
@@ -954,8 +1003,15 @@ class MainWindow(qtw.QMainWindow):
 
             self.clickedNext.emit(int(self.eventNumber.text()))
         except Exception as e:
-            print(e, '-nextEvent()')
-            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText(
+                "An error occurred while reading bad events file                                  " )
+            msg.setInformativeText(str(e), "nextEvent()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-nextEvent()')
+            # qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def previousEvent(self, eventNumber):
         try:
@@ -968,8 +1024,15 @@ class MainWindow(qtw.QMainWindow):
 
             self.clickedPrevious.emit(int(self.eventNumber.text()))
         except Exception as e:
-            print(e, '-previousEvent()')
-            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText(
+                "An error occurred while reading bad events file                                  ")
+            msg.setInformativeText(str(e), "previousEvent()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-previousEvent()')
+            # qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
