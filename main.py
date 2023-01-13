@@ -253,17 +253,17 @@ class SortingForML(qtw.QWidget):
         uic.loadUi("sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
-        # self.layout = qtw.QHBoxLayout()
-        # self.figure = plt.figure()
-        # self.canvas = FigureCanvasQTAgg(self.figure)
-        # self.layout.addWidget(self.canvas)
-        # self.graphSpace.setLayout(self.layout)
+        self.layout = qtw.QHBoxLayout()
+        self.figure = plt.figure()
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.layout.addWidget(self.canvas)
+        self.graphSpace.setLayout(self.layout)
 
         # for plotting with plotly
-        self.layout = qtw.QHBoxLayout()
-        self.browser = qtwew.QWebEngineView()
-        self.layout.addWidget(self.browser)
-        self.graphSpace.setLayout(self.layout)
+        # self.layout = qtw.QHBoxLayout()
+        # self.browser = qtwew.QWebEngineView()
+        # self.layout.addWidget(self.browser)
+        # self.graphSpace.setLayout(self.layout)
 
         self.file_name = fileName
         self.orderOfFit = oft
@@ -350,12 +350,12 @@ class SortingForML(qtw.QWidget):
         except Exception as e:
             print(e, '-plotInflectionPoint')
 
-        ## with ploty
-        df = pd.DataFrame()
-        df['Inflection_poit1'] = self.x1_list
-        df['Inflection_poit2'] = self.x2_list
-        fig = px.histogram(df, nbins=200, opacity=0.5)
-        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+        # with ploty
+        # df = pd.DataFrame()
+        # df['Inflection_poit1'] = self.x1_list
+        # df['Inflection_poit2'] = self.x2_list
+        # fig = px.histogram(df, nbins=200, opacity=0.5)
+        # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
         # print(df['Inflection_poit1'])
         # print(df['Inflection_poit1'].max())
@@ -365,16 +365,19 @@ class SortingForML(qtw.QWidget):
         # print(df['Inflection_poit2'].idxmax())
 
 
-        ## with seaborn
-        # self.figure.clear()
-        # sns.histplot(self.self.x1_list, label='x1', kde=True, alpha=0.5)
-        # sns.histplot(self.self.x2_list, label='x2', kde=True, alpha=0.5)
-        # plt.legend()
-        # #
-        # # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
-        #
-        # self.canvas.draw()
+        # with seaborn
+        df = pd.DataFrame()
+        df['Inflection_poit1'] = self.x1_list
+        df['Inflection_poit2'] = self.x2_list
+        self.figure.clear()
+        sns.histplot(df['Inflection_poit1'], label='x1', kde=True, alpha=0.5)
+        sns.histplot(df['Inflection_poit2'], label='x2', kde=True, alpha=0.5)
+        plt.legend()
+
+        # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
+        # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
+
+        self.canvas.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
@@ -833,8 +836,8 @@ class MainWindow(qtw.QMainWindow):
         file struture view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        dialog_box = qtw.QDialog()
-        fname = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'CXI Files (*.cxi)')
+        # dialog_box = qtw.QDialog()
+        fname = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.fileField.setText(fname[0][0])
         self.browseButton_2.setEnabled(True)
 
@@ -869,8 +872,8 @@ class MainWindow(qtw.QMainWindow):
         file struture view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        dialog_box = qtw.QDialog()
-        geomName = qtw.QFileDialog.getOpenFileNames(dialog_box, 'Open File', ' ', 'geom Files (*.geom)')
+        # dialog_box = qtw.QDialog()
+        geomName = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'geom Files (*.geom)')
         self.fileField_2.setText(geomName[0][0])
         self.viewFileButton.setEnabled(True)
 
