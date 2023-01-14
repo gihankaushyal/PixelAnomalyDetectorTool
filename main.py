@@ -396,8 +396,8 @@ class SortingForML(qtw.QWidget):
         df = pd.DataFrame()
         df['Inflection_poit1'] = self.x1_list
         df['Inflection_poit2'] = self.x2_list
-        sns.histplot(df['Inflection_poit1'], label='x1', kde=True, alpha=0.5)
-        sns.histplot(df['Inflection_poit2'], label='x2', kde=True, alpha=0.5)
+        sns.histplot(df['Inflection_poit1'], label='InflectionPoint1', kde=True, alpha=0.5)
+        sns.histplot(df['Inflection_poit2'], label='InflectionPoint2', kde=True, alpha=0.5)
         plt.legend()
         #
         # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
@@ -731,6 +731,8 @@ class SortData(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        self.tableWidget.setColumnWidth(0,400)
+
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.sort)
 
@@ -781,20 +783,18 @@ class SortData(qtw.QWidget):
             files = Path(folder).glob('*.cxi')
             for file in files:
 
-                self.goodEvents.clear()
-                self.badEvents.clear()
 
                 tag = str(file).split('/')[-1].split('.')[0]
                 # print(tag)
-                self.goodEventsDict = {}
-                self.badEventsDict = {}
+                self.goodEvents = {}
+                self.badEvents = {}
 
                 # goodList to store all the events with expected pixel intensities for the file
                 goodList = []
                 # badList to store all the events with detector artifacts for the file
                 badList = []
 
-                self.label_3.setText("Sorting %s" %str(file).split('/')[-1])
+                # self.label_3.setText("Sorting %s" %str(file).split('/')[-1])
                 with h5py.File(file, "r") as f:
                     data = f['entry_1']['data_1']['data'][()]
 
@@ -805,17 +805,26 @@ class SortData(qtw.QWidget):
                     predictions = self.model.predict(frame.reshape(1,31675))
 
                     if predictions:
-                        self.goodEvents.append(str(i))
+                        # self.goodEvents.append(str(i))
                         goodList.append(i)
                     else:
-                        self.badEvents.append(str(i))
+                        # self.badEvents.append(str(i))
                         badList.append(i)
 
-                self.goodEventsDict[str(file)] = goodList
-                self.badEventsDict[str(file)] = badList
+                self.goodEvents[str(file)] = goodList
+                self.badEvents[str(file)] = badList
 
-                self.readyToSaveGood.emit(self.goodEventsDict, 'goodEvents-modelSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEventsDict, 'badEvents-modelSort-%s.list' % tag)
+                self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-modelSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, 'badEvents-modelSort-%s.list' % tag)
+
+            row = 0
+            print(len(self.goodEvents))
+            # self.tableWidget.rowCount(len(self.goodEvents))
+            # for fileName in self.goodEvents:
+            #     self.tableWidget.setItem(row,0,qtw.QTableWidgetItem(fileName))
+            #     self.tableWidget.setItem(row,1,qtw.QTableWidgetItem(len(self.goodEvents[fileName])))
+            #     self.tableWidget.setItem(row,2,qtw.QTableWidgetItem(len(self.baddEvents[fileName])))
+
 
         else:
             print('no is clicked')
