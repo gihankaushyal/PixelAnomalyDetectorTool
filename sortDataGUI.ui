@@ -109,12 +109,12 @@
    </property>
    <column>
     <property name="text">
-     <string>New Column</string>
+     <string>File Name</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>File Name</string>
+     <string>Good Events</string>
     </property>
    </column>
    <column>
