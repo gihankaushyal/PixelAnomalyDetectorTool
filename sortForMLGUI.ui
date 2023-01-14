@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>767</width>
-    <height>473</height>
+    <height>509</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <x>10</x>
      <y>100</y>
      <width>741</width>
-     <height>361</height>
+     <height>391</height>
     </rect>
    </property>
   </widget>
@@ -122,6 +122,19 @@
      <width>68</width>
      <height>24</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_4">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>60</y>
+     <width>301</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Based on the distribution, suggested ranges for:</string>
    </property>
   </widget>
  </widget>
