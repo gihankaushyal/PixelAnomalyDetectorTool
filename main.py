@@ -713,6 +713,7 @@ class SortData(qtw.QWidget):
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, model, inDict):
+
         super(SortData,self).__init__()
 
         uic.loadUi('sortDataGUI.ui',self)
@@ -725,7 +726,8 @@ class SortData(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
-        self.tableWidget.setColumnWidth(0,500)
+        self.tableWidget = self.findChild(qtw.QTableWidget, 'tableWidget')
+        self.tableWidget.setColumnWidth(0,350)
 
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.sort)
@@ -748,11 +750,11 @@ class SortData(qtw.QWidget):
         folder = self.folderPath.text()
 
         files = Path(folder).glob('*.cxi')
-        # print(files)
+
         self.availableFiles.clear()
         for file in files:
-            self.availableFiles.append(str(file))
-        # print(files)
+            self.availableFiles.append(str(file).split('/')[-1])
+
 
     def sort(self):
         msg = qtw.QMessageBox()
@@ -776,11 +778,13 @@ class SortData(qtw.QWidget):
 
             files = Path(folder).glob('*.cxi')
             row = 0
+            self.tableWidget.setRowCount(len(list(files)))
+            print(type(files))
+            files = Path(folder).glob('*.cxi')
             for file in files:
 
-
                 tag = str(file).split('/')[-1].split('.')[0]
-                # print(tag)
+
                 self.goodEvents = {}
                 self.badEvents = {}
 
@@ -800,10 +804,8 @@ class SortData(qtw.QWidget):
                     predictions = self.model.predict(frame.reshape(1,31675))
 
                     if predictions:
-                        # self.goodEvents.append(str(i))
                         goodList.append(i)
                     else:
-                        # self.badEvents.append(str(i))
                         badList.append(i)
 
                 self.goodEvents[str(file)] = goodList
@@ -812,12 +814,10 @@ class SortData(qtw.QWidget):
                 self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-modelSort-%s.list' % tag)
                 self.readyToSaveBad.emit(self.badEvents, 'badEvents-modelSort-%s.list' % tag)
 
-                print(len(self.goodEvents))
-                # self.tableWidget.rowCount(len(self.goodEvents))
-                # for fileName in self.goodEvents:
-                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file)))
-                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(len(self.goodEvents[str(file)])))
-                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(len(self.badEvents[str(file)])))
+
+                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
+                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
+                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
                 row += 1
 
 
