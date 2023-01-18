@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # imports
+import random
 import time
 import warnings
 from builtins import Exception
@@ -286,10 +287,10 @@ class SortingForML(qtw.QWidget):
         self.graphSpace.setLayout(self.layout)
 
         # for plotting with plotly
-        self.layout = qtw.QHBoxLayout()
-        self.browser = qtwew.QWebEngineView()
-        self.layout.addWidget(self.browser)
-        self.graphSpace.setLayout(self.layout)
+        # self.layout = qtw.QHBoxLayout()
+        # self.browser = qtwew.QWebEngineView()
+        # self.layout.addWidget(self.browser)
+        # self.graphSpace.setLayout(self.layout)
 
         self.file_name = fileName
         self.orderOfFit = oft
@@ -383,26 +384,19 @@ class SortingForML(qtw.QWidget):
         # fig = px.histogram(df, nbins=200, opacity=0.5)
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        # print(df['Inflection_poit1'])
-        # print(df['Inflection_poit1'].max())
-        # print(df['Inflection_poit1'].idxmax())
-        # # print(df['Inflection_poit2'])
-        # print(df['Inflection_poit2'].max())
-        # print(df['Inflection_poit2'].idxmax())
-
-
         ## with seaborn
         self.figure.clear()
         df = pd.DataFrame()
         df['Inflection_poit1'] = self.x1_list
         df['Inflection_poit2'] = self.x2_list
-        sns.histplot(df['Inflection_poit1'], label='InflectionPoint1', kde=True, alpha=0.5)
-        sns.histplot(df['Inflection_poit2'], label='InflectionPoint2', kde=True, alpha=0.5)
+        # sns.histplot(df['Inflection_poit1'], label='InflectionPoint1', kde=True, alpha=0.5, palette='GnBu', binrange=(-300,300))
+        # sns.histplot(df['Inflection_poit2'], label='InflectionPoint2', kde=True, alpha=0.5, palette='GnBu', binrange=(-300,300)
+        colors = ['red','green','blue','violate','pink']
+        random.shuffle(colors)
+        for column in df.columns:
+            sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        plt.xticks()
         plt.legend()
-        #
-        # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
-
         self.canvas.draw()
 
         # Enabling button and check box after plotting
@@ -679,7 +673,7 @@ class ML(qtw.QWidget):
         msg = qtw.QMessageBox()
         # msg.setGeometry(800,300, 1500,1000)
         msg.setWindowTitle('Question')
-        msg.setText("Pannel Selected: %s                                             " %self.panelName)
+        msg.setText("Panel Selected: %s                                             " %self.panelName)
         msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
                                'selected: %s panel. Would you wish to continue?' %self.panelName)
         msg.setIcon(qtw.QMessageBox.Question)
@@ -731,7 +725,7 @@ class SortData(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
-        self.tableWidget.setColumnWidth(0,400)
+        self.tableWidget.setColumnWidth(0,500)
 
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.sort)
@@ -781,6 +775,7 @@ class SortData(qtw.QWidget):
             folder = self.folderPath.text()
 
             files = Path(folder).glob('*.cxi')
+            row = 0
             for file in files:
 
 
@@ -817,13 +812,13 @@ class SortData(qtw.QWidget):
                 self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-modelSort-%s.list' % tag)
                 self.readyToSaveBad.emit(self.badEvents, 'badEvents-modelSort-%s.list' % tag)
 
-            row = 0
-            print(len(self.goodEvents))
-            # self.tableWidget.rowCount(len(self.goodEvents))
-            # for fileName in self.goodEvents:
-            #     self.tableWidget.setItem(row,0,qtw.QTableWidgetItem(fileName))
-            #     self.tableWidget.setItem(row,1,qtw.QTableWidgetItem(len(self.goodEvents[fileName])))
-            #     self.tableWidget.setItem(row,2,qtw.QTableWidgetItem(len(self.baddEvents[fileName])))
+                print(len(self.goodEvents))
+                # self.tableWidget.rowCount(len(self.goodEvents))
+                # for fileName in self.goodEvents:
+                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file)))
+                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(len(self.goodEvents[str(file)])))
+                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(len(self.badEvents[str(file)])))
+                row += 1
 
 
         else:
