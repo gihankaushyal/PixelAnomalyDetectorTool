@@ -377,12 +377,13 @@ class SortingForML(qtw.QWidget):
         except Exception as e:
             print(e, '-plotInflectionPoint')
 
-        ## with ploty
+
         # df = pd.DataFrame()
         # df['Inflection_poit1'] = self.x1_list
         # df['Inflection_poit2'] = self.x2_list
         # fig = px.histogram(df, nbins=200, opacity=0.5)
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+
 
         ## with seaborn
         self.figure.clear()
@@ -397,6 +398,7 @@ class SortingForML(qtw.QWidget):
             sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
         plt.xticks()
         plt.legend()
+
         self.canvas.draw()
 
         # Enabling button and check box after plotting
