@@ -137,7 +137,7 @@
      <string>Plot Pixel Intensity</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="fitPolynormialButton">
+   <widget class="QPushButton" name="passButton">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -150,7 +150,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Fit Polynormial</string>
+     <string>pass</string>
     </property>
    </widget>
    <widget class="QPushButton" name="plotPeakPixelButton">
@@ -319,6 +319,22 @@
     </property>
     <property name="text">
      <string>Train a Model</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="poltFitCheckBox">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>640</y>
+      <width>87</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Plot a Fit</string>
     </property>
    </widget>
   </widget>

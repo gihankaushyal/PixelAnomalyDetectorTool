@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 # imports
+import random
 import time
 import warnings
 from builtins import Exception
@@ -136,9 +139,15 @@ class DisplayImage(qtw.QWidget):
 
             self.drawPeaks()
 
-        except IndexError:
+        except IndexError as e:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Information')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawImage()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
             # print(e)
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
+            # qtw.QMessageBox.critical(self, 'Fail', "Couldn't read the cxi file, Please Try again! -drawImage")
 
     def drawPeaks(self):
         '''
@@ -169,7 +178,13 @@ class DisplayImage(qtw.QWidget):
             else:
                 self.foundPeaksCanvas.clear()
         except Exception as e:
-            print(e, '-drawPeaks')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawPeaks()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-drawPeaks')
 
     def drawInitialPanel(self):
 
@@ -199,7 +214,13 @@ class DisplayImage(qtw.QWidget):
 
             self.panelSelected.emit(self.outgoingDict)
         except Exception as e:
-            print(e, '-darawInitialPanel')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "drawInitialPenel()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-darawInitialPanel')
 
     def selectPanel(self, event):
         '''
@@ -235,7 +256,13 @@ class DisplayImage(qtw.QWidget):
                         self.panelSelected.emit(self.outgoingDict)
                         # break
         except Exception as e:
-            print(e, "-SelectPanel")
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "selectPanel()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, "-SelectPanel")
 
 
 class SortingForML(qtw.QWidget):
@@ -276,8 +303,8 @@ class SortingForML(qtw.QWidget):
         # setting initial values for spinBoxes (value ranges for inflection points)
         self.doubleSpinBoxIF1.setValue(15)
         self.doubleSpinBoxIF2.setValue(15)
-        self.doubleSpinBoxIF1.setSingleStep(0.01)
-        self.doubleSpinBoxIF2.setSingleStep(0.01)
+        self.doubleSpinBoxIF1.setSingleStep(0.50)
+        self.doubleSpinBoxIF2.setSingleStep(0.50)
 
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.plotInflectionPoints()
@@ -350,32 +377,27 @@ class SortingForML(qtw.QWidget):
         except Exception as e:
             print(e, '-plotInflectionPoint')
 
-        # with ploty
+
         # df = pd.DataFrame()
         # df['Inflection_poit1'] = self.x1_list
         # df['Inflection_poit2'] = self.x2_list
         # fig = px.histogram(df, nbins=200, opacity=0.5)
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        # print(df['Inflection_poit1'])
-        # print(df['Inflection_poit1'].max())
-        # print(df['Inflection_poit1'].idxmax())
-        # # print(df['Inflection_poit2'])
-        # print(df['Inflection_poit2'].max())
-        # print(df['Inflection_poit2'].idxmax())
 
-
-        # with seaborn
+        ## with seaborn
+        self.figure.clear()
         df = pd.DataFrame()
         df['Inflection_poit1'] = self.x1_list
         df['Inflection_poit2'] = self.x2_list
-        self.figure.clear()
-        sns.histplot(df['Inflection_poit1'], label='x1', kde=True, alpha=0.5)
-        sns.histplot(df['Inflection_poit2'], label='x2', kde=True, alpha=0.5)
+        # sns.histplot(df['Inflection_poit1'], label='InflectionPoint1', kde=True, alpha=0.5, palette='GnBu', binrange=(-300,300))
+        # sns.histplot(df['Inflection_poit2'], label='InflectionPoint2', kde=True, alpha=0.5, palette='GnBu', binrange=(-300,300)
+        colors = ['red','green','blue','violate','pink']
+        random.shuffle(colors)
+        for column in df.columns:
+            sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        plt.xticks()
         plt.legend()
-
-        # # plt.hist(self.self.x1_list,bins=30,label='x1', alpha=0.5)
-        # # plt.hist(self.self.x2_list,bins=30,label='x2', alpha=0.5)
 
         self.canvas.draw()
 
@@ -418,10 +440,14 @@ class SortingForML(qtw.QWidget):
 
             qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
-        except ValueError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
-        except AttributeError as e:
-            qtw.QMessageBox.critical(self, 'Fail', str(e))
+        except Exception as e:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "sort()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # qtw.QMessageBox.critical(self, 'Fail', str(e))
 
 
 class ML(qtw.QWidget):
@@ -444,7 +470,7 @@ class ML(qtw.QWidget):
         self.checkBox.stateChanged.connect(self.checkBoxClicked)
         self.trainButton.clicked.connect(self.train)
         self.testButton.clicked.connect(self.test)
-        self.comboBox.activated.connect(self.rest)
+        self.comboBox.activated.connect(self.reset)
 
     def browseFiles(self):
         """
@@ -552,7 +578,13 @@ class ML(qtw.QWidget):
             else:
                 folder = self.parentDirectory.text()
         except Exception as e:
-            qtw.QMessageBox.critical(self, 'Fail', e)
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText("An error occurred while reading %s                                  " % self.fileName)
+            msg.setInformativeText(str(e), "dataPrep2()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # qtw.QMessageBox.critical(self, 'Fail', e)
 
         # Bad Events
         files = Path(folder).glob('badEvents-advanceSort-*.list')
@@ -581,7 +613,13 @@ class ML(qtw.QWidget):
 
                 dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
             except Exception as e:
-                print(e, 'bad file: %s,  reading error -dataprep2()' % file)
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while reading bad events file %s                                  " % str(file))
+                msg.setInformativeText(str(e), "dataPrep2()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
+                # print(e, 'bad file: %s,  reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_bad['Flag'] = 0
@@ -611,7 +649,14 @@ class ML(qtw.QWidget):
 
                 dataFrame_good = pd.concat([dataFrame_good, temp_df])
             except Exception as e:
-                print(e, 'good file: %s, reading error -dataprep2()' % file)
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText(
+                    "An error occurred while reading good events file %s                                  " % str(file))
+                msg.setInformativeText(str(e), "dataPrep2()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
+                # print(e, 'good file: %s, reading error -dataprep2()' % file)
                 # qtw.QMessageBox.information(self, 'information', e)
                 continue
         dataFrame_good['Flag'] = 1
@@ -630,7 +675,7 @@ class ML(qtw.QWidget):
         msg = qtw.QMessageBox()
         # msg.setGeometry(800,300, 1500,1000)
         msg.setWindowTitle('Question')
-        msg.setText("Pannel Selected: %s                                             " %self.panelName)
+        msg.setText("Panel Selected: %s                                             " %self.panelName)
         msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
                                'selected: %s panel. Would you wish to continue?' %self.panelName)
         msg.setIcon(qtw.QMessageBox.Question)
@@ -659,7 +704,7 @@ class ML(qtw.QWidget):
         self.confussionMetrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
         self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
-    def rest(self):
+    def reset(self):
         self.confussionMetrix.clear()
         self.classificationReport.clear()
         self.testButton.setEnabled(False)
@@ -670,6 +715,7 @@ class SortData(qtw.QWidget):
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, model, inDict):
+
         super(SortData,self).__init__()
 
         uic.loadUi('sortDataGUI.ui',self)
@@ -681,6 +727,9 @@ class SortData(qtw.QWidget):
         self.max_fs = inDict['max_fs']
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
+
+        self.tableWidget = self.findChild(qtw.QTableWidget, 'tableWidget')
+        self.tableWidget.setColumnWidth(0,350)
 
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.sort)
@@ -703,10 +752,11 @@ class SortData(qtw.QWidget):
         folder = self.folderPath.text()
 
         files = Path(folder).glob('*.cxi')
-        # print(files)
+
+        self.availableFiles.clear()
         for file in files:
-            self.availableFiles.append(str(file))
-        # print(files)
+            self.availableFiles.append(str(file).split('/')[-1])
+
 
     def sort(self):
         msg = qtw.QMessageBox()
@@ -729,22 +779,23 @@ class SortData(qtw.QWidget):
             folder = self.folderPath.text()
 
             files = Path(folder).glob('*.cxi')
+            row = 0
+            self.tableWidget.setRowCount(len(list(files)))
+            print(type(files))
+            files = Path(folder).glob('*.cxi')
             for file in files:
 
-                self.goodEvents.clear()
-                self.badEvents.clear()
-
                 tag = str(file).split('/')[-1].split('.')[0]
-                # print(tag)
-                self.goodEventsDict = {}
-                self.badEventsDict = {}
+
+                self.goodEvents = {}
+                self.badEvents = {}
 
                 # goodList to store all the events with expected pixel intensities for the file
                 goodList = []
                 # badList to store all the events with detector artifacts for the file
                 badList = []
 
-                self.label_3.setText("Sorting %s" %str(file).split('/')[-1])
+                # self.label_3.setText("Sorting %s" %str(file).split('/')[-1])
                 with h5py.File(file, "r") as f:
                     data = f['entry_1']['data_1']['data'][()]
 
@@ -755,17 +806,22 @@ class SortData(qtw.QWidget):
                     predictions = self.model.predict(frame.reshape(1,31675))
 
                     if predictions:
-                        self.goodEvents.append(str(i))
                         goodList.append(i)
                     else:
-                        self.badEvents.append(str(i))
                         badList.append(i)
 
-                self.goodEventsDict[str(file)] = goodList
-                self.badEventsDict[str(file)] = badList
+                self.goodEvents[str(file)] = goodList
+                self.badEvents[str(file)] = badList
 
-                self.readyToSaveGood.emit(self.goodEventsDict, 'goodEvents-modelSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEventsDict, 'badEvents-modelSort-%s.list' % tag)
+                self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-modelSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, 'badEvents-modelSort-%s.list' % tag)
+
+
+                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
+                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
+                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
+                row += 1
+
 
         else:
             print('no is clicked')
@@ -800,7 +856,8 @@ class MainWindow(qtw.QMainWindow):
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
         # button for call the fit_curve() method to fit a 4th order polynomial for
         # the vertically average intensity profile
-        self.fitPolynormialButton.clicked.connect(self.plotFit)
+        # self.fitPolynormialButton.clicked.connect(self.plotFit)
+        self.poltFitCheckBox.clicked.connect(self.plotFit)
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
@@ -925,12 +982,13 @@ class MainWindow(qtw.QMainWindow):
         self.totalEvents = self.imageViewer.size
 
         # initial panel assignment
-        self.panelDict = self.imageViewer.outgoingDict
-        self.panelName = self.imageViewer.outgoingDict['panel_name']
-        self.min_fs = self.imageViewer.outgoingDict['min_fs']
-        self.max_fs = self.imageViewer.outgoingDict['max_fs']
-        self.min_ss = self.imageViewer.outgoingDict['min_ss']
-        self.max_ss = self.imageViewer.outgoingDict['max_ss']
+        if self.imageViewer.outgoingDict:
+            self.panelDict = self.imageViewer.outgoingDict
+            self.panelName = self.imageViewer.outgoingDict['panel_name']
+            self.min_fs = self.imageViewer.outgoingDict['min_fs']
+            self.max_fs = self.imageViewer.outgoingDict['max_fs']
+            self.min_ss = self.imageViewer.outgoingDict['min_ss']
+            self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
         self.imageViewer.panelSelected.connect(self.panelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
@@ -940,7 +998,8 @@ class MainWindow(qtw.QMainWindow):
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
-            self.fitPolynormialButton.setEnabled(True)
+            # self.fitPolynormialButton.setEnabled(True)
+            self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
 
     def nextEvent(self, eventNumber):
@@ -954,8 +1013,15 @@ class MainWindow(qtw.QMainWindow):
 
             self.clickedNext.emit(int(self.eventNumber.text()))
         except Exception as e:
-            print(e, '-nextEvent()')
-            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText(
+                "An error occurred while reading bad events file                                  " )
+            msg.setInformativeText(str(e), "nextEvent()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-nextEvent()')
+            # qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def previousEvent(self, eventNumber):
         try:
@@ -968,8 +1034,15 @@ class MainWindow(qtw.QMainWindow):
 
             self.clickedPrevious.emit(int(self.eventNumber.text()))
         except Exception as e:
-            print(e, '-previousEvent()')
-            qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Error')
+            msg.setText(
+                "An error occurred while reading bad events file                                  ")
+            msg.setInformativeText(str(e), "previousEvent()")
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
+            # print(e, '-previousEvent()')
+            # qtw.QMessageBox.critical(self, 'Fail', 'Please Enter a valid input')
 
     def writeToFile(self, eventsList, fileName):
         f = open(fileName, 'w')
@@ -1117,8 +1190,9 @@ class MainWindow(qtw.QMainWindow):
             for i in range(int(self.min_fs)+5, int(self.max_fs)-5):
                 avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             self.graphWidget.clear()
-            self.graphWidget.plot(list(np.linspace(int(self.min_fs)+5, int(self.max_fs)-5,181)), avgIntensities)
-            self.graphWidget.setTitle(str.capitalize('Average Intensity Over The Selected Panel- %s' % self.panelName), size='15pt')
+            # self.graphWidget.plot(list(np.linspace(int(self.min_fs)+5, int(self.max_fs)-5,181)), avgIntensities)
+            self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, name='data')
+            # self.graphWidget.setTitle(str.capitalize('Average Intensity Over The Selected Panel- %s' % self.panelName), size='15pt')
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
 
@@ -1144,61 +1218,66 @@ class MainWindow(qtw.QMainWindow):
                 eventNumber(int) : event number for the file
                 deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         """
-        try:
-            if not self.orderOfFit.text():
-                self.orderOfFit.setEnabled(True)
-                self.orderOfFit.setText("4")
+        if self.poltFitCheckBox.isChecked():
+            try:
+                if not self.orderOfFit.text():
+                    self.orderOfFit.setEnabled(True)
+                    self.orderOfFit.setText("4")
 
-            file_name = self.fileField.text()
-            eventNumber = int(self.eventNumber.text())
-            avgIntensities = []
-            degry = int(self.orderOfFit.text())
+                file_name = self.fileField.text()
+                eventNumber = int(self.eventNumber.text())
+                avgIntensities = []
+                degry = int(self.orderOfFit.text())
 
-            filename = file_name
-            with h5py.File(filename, "r") as f:
-                data = f['entry_1']['data_1']['data'][()]
+                filename = file_name
+                with h5py.File(filename, "r") as f:
+                    data = f['entry_1']['data_1']['data'][()]
 
-            frame = data[int(eventNumber)]
+                frame = data[int(eventNumber)]
 
-            for i in range(int(self.min_fs)+5, int(self.max_fs)-5):
-                avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+                for i in range(int(self.min_fs)+5, int(self.max_fs)-5):
+                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
-            fit = np.polyfit(np.arange(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, deg=degry)
+                fit = np.polyfit(np.arange(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, deg=degry)
 
-            self.graphWidget.clear()
-            self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, name='data')
-            self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5),
-                                  np.polyval(fit, range(int(self.min_fs)+5, int(self.max_fs)-5)),
-                                  name='fit', pen=pg.mkPen(color='r', width=2))
-            self.graphWidget.setTitle(str.capitalize('Fitting A Polynomial To Average Intensity Over The Selected '
-                                                     'Panel- %s' % self.panelName), size='15pt')
-            self.graphWidget.setLabel('left', "Avg. Pixel intensity")
-            self.graphWidget.setLabel('bottom', "Pixel Number")
-            self.graphWidget.addLegend()
+                self.graphWidget.clear()
+                self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5), avgIntensities, name='data')
+                self.graphWidget.plot(range(int(self.min_fs)+5, int(self.max_fs)-5),
+                                      np.polyval(fit, range(int(self.min_fs)+5, int(self.max_fs)-5)),
+                                      name='fit', pen=pg.mkPen(color='r', width=2))
+                # self.graphWidget.setTitle(str.capitalize('Fitting A Polynomial To Average Intensity Over The Selected '
+                #                                          'Panel- %s' % self.panelName), size='15pt')
 
-            self.buttonClicked = 'plotFit'
+                self.graphWidget.setLabel('left', "Avg. Pixel intensity")
+                self.graphWidget.setLabel('bottom', "Pixel Number")
+                self.graphWidget.addLegend()
 
-            if not self.sortForMLButton.isEnabled():
-                self.sortForMLButton.setEnabled(True)
-                self.nextButton.setEnabled(True)
-                self.previousButton.setEnabled(True)
+                self.buttonClicked = 'plotFit'
 
-        except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+                if not self.sortForMLButton.isEnabled():
+                    self.sortForMLButton.setEnabled(True)
+                    self.nextButton.setEnabled(True)
+                    self.previousButton.setEnabled(True)
 
-        except ValueError:
-            qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+            except FileNotFoundError:
+                qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
-        except IndexError:
-            qtw.QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound -plotFit()')
+            except ValueError:
+                qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+            except IndexError:
+                qtw.QMessageBox.critical(self, 'Fail', 'Value you entered is out of bound -plotFit()')
+
+        else:
+            self.plotCurve()
 
     def plotMaxPixels(self, file_name):
         try:
-            y = self.returnMaxPixelsList(file_name, deg=6)
+            y = self.returnMaxPixelsList(file_name, deg=int(self.orderOfFit.text()))
             x = range(len(y))
             self.graphWidget.clear()
             self.graphWidget.plot(x, y, pen=None, symbol='o')
-            self.graphWidget.setTitle('change of the pixel with the highest average intensity', size='15pt')
+            # self.graphWidget.setTitle('change of the pixel with the highest average intensity', size='15pt')
             self.graphWidget.setLabel('left', "Pixel Number")
             self.graphWidget.setLabel('bottom', "Frame Number")
 
