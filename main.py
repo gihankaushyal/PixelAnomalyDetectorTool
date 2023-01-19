@@ -12,12 +12,14 @@ from pathlib import Path
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtGui as qtg
 # from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
 # import plotly.express as px
+from PyQt5.QtCore import pyqtSlot
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
@@ -61,7 +63,7 @@ class DisplayImage(qtw.QWidget):
         self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
 
         # connecting the checkBoxes to a method
-        self.foundPeaksCheckBox.stateChanged.connect(self.drawImage)
+        self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
 
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
@@ -107,6 +109,7 @@ class DisplayImage(qtw.QWidget):
 
         self.setLayout(self.layout)
 
+    @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
          reading and displaying data
@@ -217,6 +220,7 @@ class DisplayImage(qtw.QWidget):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
+    # @pyqtSlot(pg.GraphicsScene.mouseMoveEvent)
     def selectPanel(self, event):
         """
         Draw a boarder around the selected ASIIC
@@ -226,6 +230,7 @@ class DisplayImage(qtw.QWidget):
 
         try:
             # panel locations corrected for displayImage
+
             pos = event.scenePos()
             if self.mainWidget.getView().sceneBoundingRect().contains(pos):
                 mouse_point = self.mainWidget.getView().mapSceneToView(pos)
@@ -307,6 +312,7 @@ class SortingForML(qtw.QWidget):
         self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.sort)
 
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
                 :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
@@ -405,6 +411,7 @@ class SortingForML(qtw.QWidget):
         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
 
+    @pyqtSlot()
     def sort(self):
         """
 
@@ -480,6 +487,7 @@ class ML(qtw.QWidget):
         self.testButton.clicked.connect(self.test)
         self.comboBox.activated.connect(self.reset)
 
+    @pyqtSlot()
     def browseFiles(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -493,6 +501,7 @@ class ML(qtw.QWidget):
         self.parentDirectory.setText(fname)
 
     # model training using multiple runs needs to be implemented
+    @pyqtSlot()
     def checkBoxClicked(self):
         """
 
@@ -505,6 +514,7 @@ class ML(qtw.QWidget):
             self.startRun.setEnabled(False)
             self.endRun.setEnabled(False)
 
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
          :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
@@ -649,6 +659,7 @@ class ML(qtw.QWidget):
         self.X_test = pd.concat([X_good_test, X_bad_test])
         self.y_test = pd.concat([y_good_test, y_bad_test])
 
+    @pyqtSlot()
     def buttonClicked(self):
         """
         This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
@@ -667,6 +678,7 @@ class ML(qtw.QWidget):
         msg.buttonClicked.connect(self.train)
         msg.exec_()
 
+    # @pyqtSlot(qtc.QSig)
     def train(self, i):
         """
         Method to train the user selected model using the data from the selected ASCII
@@ -682,6 +694,7 @@ class ML(qtw.QWidget):
         else:
             print('No is clicked')
 
+    @pyqtSlot()
     def test(self):
         """
         Method to test the validity of the trained model
@@ -695,6 +708,7 @@ class ML(qtw.QWidget):
         self.confusionMatrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
         self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
+    @pyqtSlot()
     def reset(self):
         """
         Method to clear out the output from the test()
@@ -732,6 +746,7 @@ class SortData(qtw.QWidget):
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.buttonClicked)
 
+    @pyqtSlot()
     def browseFiles(self):
         """
         This method gets triggered when the browse button is Clicked in the GUI
@@ -746,6 +761,7 @@ class SortData(qtw.QWidget):
 
         self.showFiles()
 
+    @pyqtSlot()
     def showFiles(self):
         """
 
@@ -758,6 +774,7 @@ class SortData(qtw.QWidget):
         for file in files:
             self.availableFiles.append(str(file).split('/')[-1])
 
+    @pyqtSlot()
     def buttonClicked(self):
         """
         Asks a user a Question/ Waring about the model that was trained
@@ -776,6 +793,7 @@ class SortData(qtw.QWidget):
         msg.buttonClicked.connect(self.sort)
         msg.exec_()
 
+    @pyqtSlot(qtc.pyqtSignal)
     def sort(self, i):
         """
                 Sort *cxi files using the trained model
@@ -789,7 +807,7 @@ class SortData(qtw.QWidget):
             files = Path(folder).glob('*.cxi')
             row = 0
             self.tableWidget.setRowCount(len(list(files)))
-            print(type(files))
+
             files = Path(folder).glob('*.cxi')
             for file in files:
 
@@ -851,7 +869,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.fileSize = None
         self.totalEvents = None
-        self.plotName = None
+        self.plotName = 'plotCurve'
 
         self.panelDict = None
         self.panelName = None
@@ -890,6 +908,7 @@ class MainWindow(qtw.QMainWindow):
         self.setWindowTitle("Detector Analyser")
         self.show()
 
+    @pyqtSlot()
     def browseFiles(self):
         """
         This method gets triggered when the browse button is Clicked in the GUI
@@ -926,6 +945,7 @@ class MainWindow(qtw.QMainWindow):
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
 
+    @pyqtSlot()
     def browseGeom(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -938,6 +958,7 @@ class MainWindow(qtw.QMainWindow):
         self.fileField_2.setText(geomName[0][0])
         self.viewFileButton.setEnabled(True)
 
+    @pyqtSlot()
     def curveToPlot(self):
         """
         A method to select the type of curve to be plotted in the self.graphingSpace
@@ -947,12 +968,20 @@ class MainWindow(qtw.QMainWindow):
             self.eventNumber.setText(str(self.totalEvents - 1))
 
         if self.plotName is None:
-            qtw.QMessageBox.information(self, 'Information', 'Plot a curve first!')
+            # qtw.QMessageBox.information(self, 'Information', 'Plot a curve first!')
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Information')
+            msg.setText("Plot a curve first                                                                    ")
+            msg.setInformativeText('If you are thinking of changing to a different ASCII, please plot a Pixel '
+                                   'intensity curve first')
+            msg.setIcon(qtw.QMessageBox.Information)
+            msg.exec_()
         elif self.plotName == 'plotCurve':
             self.plotCurve()
         elif self.plotName == 'plotFit':
             self.plotFit()
 
+    @pyqtSlot()
     def selectDisplay(self):
         """
         Based on the conditions this method calls to draw next/previous image from the *cxi file or create a new view to
@@ -967,6 +996,7 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.viewFiles()
 
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
@@ -981,6 +1011,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.curveToPlot()
 
+    @pyqtSlot()
     def viewFiles(self):
         """
         Spawn an instance of DisplayImage to display the *cxi file
@@ -996,7 +1027,7 @@ class MainWindow(qtw.QMainWindow):
         self.totalEvents = self.imageViewer.size
 
         # initial panel assignment
-        if self.imageViewer.outgoingDict:
+        if not self.panelDict:
             self.panelDict = self.imageViewer.outgoingDict
             self.panelName = self.imageViewer.outgoingDict['panel_name']
             self.min_fs = self.imageViewer.outgoingDict['min_fs']
@@ -1015,6 +1046,7 @@ class MainWindow(qtw.QMainWindow):
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
 
+    @pyqtSlot(str)
     def nextEvent(self, eventNumber):
         """
         A method to increment an event
@@ -1039,12 +1071,13 @@ class MainWindow(qtw.QMainWindow):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
+    @pyqtSlot(str)
     def previousEvent(self, eventNumber):
         """
-                A method to decrement an event
-                :param eventNumber: Existing event number
-                :return: Existing event number -1
-                """
+        A method to decrement an event
+        :param eventNumber: Existing event number
+        :return: Existing event number -1
+        """
         try:
             if int(self.eventNumber.text()) > 0:
                 self.eventNumber.setText(str(int(eventNumber) - 1))
@@ -1063,6 +1096,7 @@ class MainWindow(qtw.QMainWindow):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
+    @pyqtSlot(dict,str)
     def writeToFile(self, eventsList, fileName):
         """
         A method to save sorted events
@@ -1082,6 +1116,7 @@ class MainWindow(qtw.QMainWindow):
 
         f.close()
 
+    @pyqtSlot()
     def sortForML(self):
         """
         Spawn an instance of the SortingForML
@@ -1096,6 +1131,7 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
 
+    @pyqtSlot()
     def machineLearning(self):
         """
         Spawn an instance of ML.
@@ -1107,6 +1143,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortButton.setEnabled(True)
 
+    @pyqtSlot()
     def sort(self):
         """
         Spawn an instance of SortData.
@@ -1158,6 +1195,7 @@ class MainWindow(qtw.QMainWindow):
 
         return max_pixels
 
+    @pyqtSlot()
     def plotCurve(self):
         """
         A method to plot the vertically averaged intensity profile for the selected panel (Default: p6a0)
@@ -1198,6 +1236,7 @@ class MainWindow(qtw.QMainWindow):
                                      'Value you ,%s,  entered is out of bound for this cxi file -plotCurve'
                                      % self.eventNumber.text())
 
+    @pyqtSlot()
     def plotFit(self):
         """
         A method plot the polynomial fit
@@ -1255,6 +1294,7 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.plotCurve()
 
+    @pyqtSlot(str)
     def plotMaxPixels(self, file_name):
         """
         :param file_name: path to the *CXI file (file name)
