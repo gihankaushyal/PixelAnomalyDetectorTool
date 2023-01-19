@@ -690,9 +690,9 @@ class ML(qtw.QWidget):
 
         from sklearn.metrics import classification_report, confusion_matrix
         self.predictions = self.model.predict(self.X_test)
-        self.confussionMetrix.setEnabled(True)
+        self.confusionMatrix.setEnabled(True)
         self.classificationReport.setEnabled(True)
-        self.confussionMetrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
+        self.confusionMatrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
         self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
     def reset(self):
@@ -700,7 +700,7 @@ class ML(qtw.QWidget):
         Method to clear out the output from the test()
         :return: clear the self.confusionMatrix and self.classificationReport
         """
-        self.confussionMetrix.clear()
+        self.confusionMatrix.clear()
         self.classificationReport.clear()
         self.testButton.setEnabled(False)
 
