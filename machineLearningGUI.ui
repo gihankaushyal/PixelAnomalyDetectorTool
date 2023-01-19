@@ -243,7 +243,7 @@
     <string>Train</string>
    </property>
   </widget>
-  <widget class="QTextEdit" name="confussionMetrix">
+  <widget class="QTextEdit" name="confusionMatrix">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -305,7 +305,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Confussion Metrix</string>
+    <string>Confusion Matrix</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_9">
