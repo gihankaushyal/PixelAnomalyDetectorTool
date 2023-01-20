@@ -687,6 +687,7 @@ class ML(qtw.QWidget):
         """
 
         if i.text() == '&Yes':
+            self.trainButton.setEnabled(False)
             self.modelSelection()
             self.dataPrep()
             self.model.fit(self.X_train, self.y_train)
@@ -716,6 +717,7 @@ class ML(qtw.QWidget):
         """
         self.confusionMatrix.clear()
         self.classificationReport.clear()
+        self.trainButton.setEnabled(True)
         self.testButton.setEnabled(False)
 
 
@@ -761,7 +763,6 @@ class SortData(qtw.QWidget):
 
         self.showFiles()
 
-    @pyqtSlot()
     def showFiles(self):
         """
 
@@ -773,6 +774,8 @@ class SortData(qtw.QWidget):
 
         for file in files:
             self.availableFiles.append(str(file).split('/')[-1])
+
+        self.sortButton.setEnabled(True)
 
     @pyqtSlot()
     def buttonClicked(self):
@@ -793,7 +796,7 @@ class SortData(qtw.QWidget):
         msg.buttonClicked.connect(self.sort)
         msg.exec_()
 
-    @pyqtSlot(qtc.pyqtSignal)
+    # @pyqtSlot(qtc.pyqtSignal)
     def sort(self, i):
         """
                 Sort *cxi files using the trained model
@@ -802,6 +805,7 @@ class SortData(qtw.QWidget):
 
         if i.text() == '&Yes':
 
+            self.sortButton.setEnabled(False)
             folder = self.folderPath.text()
 
             files = Path(folder).glob('*.cxi')
@@ -845,6 +849,7 @@ class SortData(qtw.QWidget):
                 self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
                 self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
                 row += 1
+                self.sortButton.setEnabled(False)
 
 
 class MainWindow(qtw.QMainWindow):
@@ -928,6 +933,7 @@ class MainWindow(qtw.QMainWindow):
             self.eventNumber.setText("0")
             self.plotPixelIntensityButton.setEnabled(False)
             self.poltFitCheckBox.setEnabled(False)
+            self.poltFitCheckBox.setChecked(False)
             self.plotPeakPixelButton.setEnabled(False)
             self.sortForMLButton.setEnabled(False)
             self.sortButton.setEnabled(False)
