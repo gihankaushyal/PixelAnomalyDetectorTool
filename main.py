@@ -910,7 +910,7 @@ class MainWindow(qtw.QMainWindow):
         self.layout.addWidget(self.graphWidget)
         self.graphingSpace.setLayout(self.layout)
 
-        self.setWindowTitle("Detector Analyser")
+        self.setWindowTitle("PixelAnomalyDetector")
         self.show()
 
     @pyqtSlot()
