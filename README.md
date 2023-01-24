@@ -121,6 +121,7 @@ Make sure you have the following python packages installed;
 <!-- USAGE EXAMPLES -->
 ## Usage
 
+
 ### 1. Displaying the *CXI file
 To open up the cxi file you need to point the PixelAnomalyDetector to where is you *.cxi file is located (1) and where 
 is the appropriate geometry file is located (2). Then press ``` View File``` button (3)
@@ -156,6 +157,7 @@ distribution. (6) and thresholds for each inflection points (7). You can also ty
 you are satisfied with the sorting parameters click on the ```Sort``` button (8).
 
 ![sortingForML]
+
 _For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -170,7 +172,9 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 - [ ] Feature 3
     - [ ] Nested Feature
 
+
 See the [open issues](https://github.com/gihankaushyal/InternalTool/issues) for a full list of proposed features (and known issues).
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -206,9 +210,11 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
+
 Gihan Ketawala - gihan.ketawala@asu.edu
 
 Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com/gihankaushyal/InternalTool)
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
