@@ -23,7 +23,7 @@
     <a href="https://github.com/gihankaushyal/InternalTool"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://tmkamal.github.io/under-construction-template/">View Demo</a>
+    <a href="https://github.com/gihankaushyal/InternalTool/underConstruction.html">View Demo</a>
     ·
     <a href="https://github.com/gihankaushyal/InternalTool/issues">Report Bug</a>
     ·
