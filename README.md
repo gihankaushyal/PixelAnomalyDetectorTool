@@ -66,7 +66,6 @@
 
 ![product-screenshot]
 
-Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -76,7 +75,6 @@ Here's a blank template to get started: To avoid retyping too much info. Do a se
 
 * [![Python][Python]][Python-url]
 * [![Sciket-learn][Scikit-learn]][Scikit-url]
-
 * [![PyQt5][PyQt5]][PyQt5-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -123,7 +121,42 @@ Make sure you have the following python packages installed;
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+
+### 1. Displaying the *CXI file
+To open up the cxi file you need to point the PixelAnomalyDetector to where is you *.cxi file is located (1) and where 
+is the appropriate geometry file is located (2). Then press ``` View File``` button (3)
+
+![displayingTheCXIFile]
+
+Once you pressed the ```View File``` button a separate window will open with all the detector panel assembled
+(similar with [cxiview](https://www.desy.de/~barty/cheetah/Cheetah/cxiview.html)) and one of the ASCIIs already been 
+selected (1). Title of the widow show the event/image number showing out the total number of events 
+available in the *cxi file (2). Bottom left corner has a checkbox to turn on and off the found peaks (3). On the right 
+hand side of the window, you can change the brightness by changing the histogram (4).
+
+![fileViweWindow]
+
+### 2. Displaying the pixel intensity profile and toggle between images
+once the cxi is viewed ```Plot Pixel Intnstiy``` button (1) get enabled and once pressed vertically average intensity 
+profile (2) for the selected panel will be displayed. You can toggle between the images by pressing ```Next``` and 
+``` Previous ``` buttons (3) or if you want to jump into a particular image you can enter the event number in the 
+```Frame Number``` (4) field. When you are changing the event number on the main GUI the display for viewing the *.cxi
+file get updated. 
+ - If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
+the window for *.cxi file display and the pixel intensity plot on the main GUI will be automatically updated.
+
+![plottingPixelIntensity]
+
+### 3. Curve Fitting and Sort data for model training. 
+Bottom left corner of the main GUI, clicked on the ```Plot a Fit``` checkbox (1) to a polynomial fit the pixel intensity 
+plot (2). By default a 4<sup>th</sup> order polynomial will be applied, but you can change the order of the polynomial 
+simply typing in the order in the ```Order of Fit``` field (4). Once you are satisfied with the fit of the polynomial, 
+you can press on the ```Sort for ML``` button (4). A separate window will be opened up with the distributions for 
+inflection points (5). On the Top part of the window, there will be suggested values for inflection points based on each 
+distribution. (6) and thresholds for each inflection points (7). You can also type in the values for each section. Once 
+you are satisfied with the sorting parameters click on the ```Sort``` button (8).
+
+![sortingForML]
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
@@ -139,7 +172,9 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 - [ ] Feature 3
     - [ ] Nested Feature
 
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
+
+See the [open issues](https://github.com/gihankaushyal/InternalTool/issues) for a full list of proposed features (and known issues).
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -175,9 +210,11 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+Gihan Ketawala - gihan.ketawala@asu.edu
+
+Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com/gihankaushyal/InternalTool)
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -209,6 +246,10 @@ Project Link: [https://github.com/github_username/repo_name](https://github.com/
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/gihan-ketawala/
 [product-screenshot]: images/mainWindow.png
+[displayingTheCXIFile]: images/diplayingTheCXIFile.png
+[fileViweWindow]: images/fileViewWindow.png
+[plottingPixelIntensity]: images/plotingPixelIntensity.png
+[sortingForML]: images/sortingForML.png
 [Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=yellow
 [Python-url]: https://python.org/
 [Scikit-learn]: https://img.shields.io/badge/scikitlearn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=61DAFB
