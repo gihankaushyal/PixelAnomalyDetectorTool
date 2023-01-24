@@ -36,6 +36,12 @@ class DisplayImage(qtw.QWidget):
     panelSelected = qtc.pyqtSignal(dict)
 
     def __init__(self, fileName, geometry):
+
+        """
+
+        :param fileName: name of the *cxi file (with the full path)
+        :param geometry: path to the geometry file
+        """
         super(DisplayImage, self).__init__()
 
         # setting the size and location of the window
@@ -269,6 +275,12 @@ class SortingForML(qtw.QWidget):
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, fileName, oft, inDict):
+        """
+
+        :param fileName: name of the file to be sorted
+        :param oft: order of the fit for the polynomial
+        :param inDict: dictionary with detector panel information
+        """
 
         super(SortingForML, self).__init__()
 
@@ -315,10 +327,10 @@ class SortingForML(qtw.QWidget):
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
-                :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
+        :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
                 a panel
-                :return: Assigns panel detail
-                """
+        :return: Assigns panel detail
+        """
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
@@ -463,6 +475,10 @@ class SortingForML(qtw.QWidget):
 class ML(qtw.QWidget):
 
     def __init__(self, inDict):
+        """
+
+        :param inDict: dictionary with detector panel information
+        """
 
         super(ML, self).__init__()
 
@@ -726,6 +742,11 @@ class SortData(qtw.QWidget):
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, model, inDict):
+        """
+
+        :param model: trained model
+        :param inDict: dictionary with detector panel information
+        """
 
         super(SortData, self).__init__()
 
