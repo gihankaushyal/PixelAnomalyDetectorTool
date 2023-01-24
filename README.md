@@ -112,6 +112,9 @@ Make sure you have the following python packages installed;
    ```sh
    python main.py
    ```
+4. Click the following links to download a copies of practice data for [model training](https://www.dropbox.com/scl/fo/391ged4bi7yqgwnshosm4/h?dl=0&rlkey=ygfmaw24kppcnh59ww9k17uh5), 
+data for the [model to be used](https://www.dropbox.com/scl/fo/g7bxy5mbp6vxcqkdqooke/h?dl=0&rlkey=3shte43a3k3tw3isss1a25ho5) 
+and the [geometry](https://www.dropbox.com/scl/fo/x2b52tqpq8lpouxqbnb9g/h?dl=0&rlkey=r2ty8sijt0qtx9d0k2kt0sdgi).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
