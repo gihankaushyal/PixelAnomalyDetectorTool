@@ -23,7 +23,7 @@
     <a href="https://github.com/gihankaushyal/InternalTool"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/gihankaushyal/InternalTool">View Demo</a>
+    <a href="https://tmkamal.github.io/under-construction-template/">View Demo</a>
     ·
     <a href="https://github.com/gihankaushyal/InternalTool/issues">Report Bug</a>
     ·
@@ -65,7 +65,6 @@
 ## About The Project
 
 ![product-screenshot]
-
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -131,8 +130,8 @@ is the appropriate geometry file is located (2). Then press ``` View File``` but
 Once you pressed the ```View File``` button a separate window will open with all the detector panel assembled
 (similar with [cxiview](https://www.desy.de/~barty/cheetah/Cheetah/cxiview.html)) and one of the ASCIIs already been 
 selected (1). Title of the widow show the event/image number showing out the total number of events 
-available in the *cxi file (2). Bottom left corner has a checkbox to turn on and off the found peaks (3). On the right 
-hand side of the window, you can change the brightness by changing the histogram (4).
+available in the *cxi file (2). Bottom left corner has a checkbox to turn on and off the found peaks (3). On the 
+right-hand side of the window, you can change the brightness by changing the histogram (4).
 
 ![fileViweWindow]
 
@@ -154,24 +153,48 @@ simply typing in the order in the ```Order of Fit``` field (4). Once you are sat
 you can press on the ```Sort for ML``` button (4). A separate window will be opened up with the distributions for 
 inflection points (5). On the Top part of the window, there will be suggested values for inflection points based on each 
 distribution. (6) and thresholds for each inflection points (7). You can also type in the values for each section. Once 
-you are satisfied with the sorting parameters click on the ```Sort``` button (8).
+you are satisfied with the sorting parameters click on the ```Sort``` button (8). You can now safely close this window.
 
 ![sortingForML]
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+### 4. Training a model
+Now that you have sorted data to train a machine learning model to be trained, click on the ``` Train a Model``` button.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+![trainingAModel1]
 
+A separate widow will appear with directions to train a model  
+Click on the ```Browse``` button (1) to locate where you save the files to train the model. At the moment
+the file are being saved in to the InternalTool folder. Then select the machine learning model from the ```Model Selection```
+dropdown menu (2). Lastly, clicked on the ```Train``` button (3) to train a model.  
+* Training a model may take some time depending on the size of the training data set
 
+![trainingAModel2]
 
-<!-- ROADMAP -->
-## Roadmap
+Once the model training is completed, the ```Test``` button (1) will get enabled for you do a model testing. Have a look
+at the ```Confusion Matrix``` (2) and the ```Clasification Report``` (3). The off diagonal numbers (the false positives 
+and false negative) should be close to Zero. In the Classification Report, have a look at ```Precision, Recall, F1-score
+and Accuracy``` if the model is performing well, those numbers should be as close as possible to One. You can now safely
+close this window.
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+![trainingAModel3]
 
+### 5. Sorting the Data set using the trained model
+Finally, you are here, Sorting the entire data set using the trained model. To being, click on the ```Sort Data``` 
+button.
+
+![sortData1]
+
+A separate window will open with instructions. First, click on the ```Browes``` button (1) to point where in your folder 
+with *.cxi files to be sorted. Then the space bellow ```Available *.cxi files in the folder``` will automatically
+populate with all the available *.cxi file in folder you've selected. Lastly, clicked on the ```Sort``` button (3). 
+
+![sortData2]
+
+The 
+tool will go through all the *.cxi files and sort "good events" from the "bad events" and save them in separate text 
+files ([Crystfel](https://www.desy.de/~twhite/crystfel/index.html) friendly) format. 
+
+![sortData3]
 
 See the [open issues](https://github.com/gihankaushyal/InternalTool/issues) for a full list of proposed features (and known issues).
 
@@ -223,9 +246,10 @@ Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* []()
-* []()
-* []()
+* I acknowledge the guidance and support provided by [Sabine Botha](https://github.com/sbotha89) in the development of 
+the tool, PixelAnomalyDetector. Her contributions were crucial in ensuring the success of the project. 
+Thank you, Sabine, for your dedication and expertise.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -250,6 +274,12 @@ Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com
 [fileViweWindow]: images/fileViewWindow.png
 [plottingPixelIntensity]: images/plotingPixelIntensity.png
 [sortingForML]: images/sortingForML.png
+[trainingAModel1]: images/trainingAModel-1.png
+[trainingAModel2]: images/trainingAModel-2.png
+[trainingAModel3]: images/trainingAModel-3.png
+[sortData1]: images/sortData-1.png
+[sortData2]: images/sortData-2.png
+[sortData3]: images/sortData-3.png
 [Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=yellow
 [Python-url]: https://python.org/
 [Scikit-learn]: https://img.shields.io/badge/scikitlearn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=61DAFB
