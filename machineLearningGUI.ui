@@ -345,12 +345,12 @@
     <rect>
      <x>60</x>
      <y>170</y>
-     <width>141</width>
+     <width>161</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Enter Train / Test split:</string>
+    <string>Enter Train / Test split %:</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="trainSplit">
