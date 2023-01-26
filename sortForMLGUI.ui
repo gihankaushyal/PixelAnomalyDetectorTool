@@ -128,13 +128,13 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>60</y>
-     <width>301</width>
+     <y>65</y>
+     <width>341</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Based on the distribution, suggested ranges for:</string>
+    <string>Based on the distribution, suggested ranges for:       +/-</string>
    </property>
   </widget>
  </widget>
