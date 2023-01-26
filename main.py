@@ -286,8 +286,8 @@ class SortingForML(qtw.QWidget):
 
         self.badEvents = None
         self.goodEvents = None
-        self.x1_list = None
-        self.x2_list = None
+        self.inflectionPoint1List = None
+        self.inflectionPoint2List = None
         self.data = None
         self.setWindowTitle('Sorting for Machine Learning')
 
@@ -306,7 +306,7 @@ class SortingForML(qtw.QWidget):
         # self.layout.addWidget(self.browser)
         # self.graphSpace.setLayout(self.layout)
 
-        self.file_name = fileName
+        self.fileName = fileName
         self.orderOfFit = oft
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
@@ -345,11 +345,11 @@ class SortingForML(qtw.QWidget):
          the sortForMlGUI
         """
 
-        self.x1_list = []
-        self.x2_list = []
+        self.inflectionPoint1List = []
+        self.inflectionPoint2List = []
 
         try:
-            with h5py.File(self.file_name, "r") as f:
+            with h5py.File(self.fileName, "r") as f:
                 self.data = f['entry_1']['data_1']['data'][()]
 
             for i in range(len(self.data)):
@@ -371,8 +371,8 @@ class SortingForML(qtw.QWidget):
                         x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
                                    2)
 
-                        self.x1_list.append(x1)
-                        self.x2_list.append(x2)
+                        self.inflectionPoint1List.append(x1)
+                        self.inflectionPoint2List.append(x2)
                     except IndexError as e:
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
@@ -405,8 +405,8 @@ class SortingForML(qtw.QWidget):
         # with seaborn
         self.figure.clear()
         df = pd.DataFrame()
-        df['Inflection_point1'] = self.x1_list
-        df['Inflection_point2'] = self.x2_list
+        df['Inflection_point1'] = self.inflectionPoint1List
+        df['Inflection_point2'] = self.inflectionPoint2List
         colors = ['red', 'green', 'blue', 'violet', 'pink']
         random.shuffle(colors)
         for column in df.columns:
@@ -431,7 +431,9 @@ class SortingForML(qtw.QWidget):
         defined threshold for inflection points and spread of the distribution
         """
 
-        tag = str(self.file_name).split('/')[-1].split('.')[0]
+        tag = str(self.fileName).split('/')[-1].split('.')[0]
+
+        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select a location', directory=' ')
 
         self.goodEvents = {}
         self.badEvents = {}
@@ -443,7 +445,7 @@ class SortingForML(qtw.QWidget):
 
         try:
 
-            for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
+            for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
 
                 if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
                         float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
@@ -455,13 +457,12 @@ class SortingForML(qtw.QWidget):
                 else:
                     badList.append(i)
 
-            self.goodEvents[str(self.file_name)] = goodList
-            self.badEvents[str(self.file_name)] = badList
+            self.goodEvents[str(self.fileName)] = goodList
+            self.badEvents[str(self.fileName)] = badList
+            self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
+            self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
 
-            self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
-            self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag)
-
-            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
+            # qtw.QMessageBox.information(self, 'Success', "Done Sorting")
 
         except Exception as e:
             msg = qtw.QMessageBox()
@@ -512,9 +513,9 @@ class ML(qtw.QWidget):
         ath to the test field.
         """
 
-        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        self.parentDirectory.setText(fname)
+        self.parentDirectory.setText(folderName)
 
     # model training using multiple runs needs to be implemented
     @pyqtSlot()
@@ -707,6 +708,7 @@ class ML(qtw.QWidget):
             self.modelSelection()
             self.dataPrep()
             self.model.fit(self.X_train, self.y_train)
+            qtw.QMessageBox.information(self, 'Success', "Done Training")
             self.testButton.setEnabled(True)
         else:
             print('No is clicked')
@@ -942,9 +944,9 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        # dialog_box = qtw.QDialog()
-        fname = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        self.fileField.setText(fname[0][0])
+
+        fname = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+        self.fileField.setText(fname[0])
         self.browseButton_2.setEnabled(True)
 
         # resting the main window for the next cxi file
@@ -981,8 +983,8 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
         # dialog_box = qtw.QDialog()
-        geomName = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'geom Files (*.geom)')
-        self.fileField_2.setText(geomName[0][0])
+        geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
+        self.fileField_2.setText(geomName[0])
         self.viewFileButton.setEnabled(True)
 
     @pyqtSlot()
