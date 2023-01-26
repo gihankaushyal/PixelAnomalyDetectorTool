@@ -932,6 +932,7 @@ class MainWindow(qtw.QMainWindow):
         self.layout = qtw.QHBoxLayout()
         self.layout.addWidget(self.graphWidget)
         self.graphingSpace.setLayout(self.layout)
+        self.graphWidget.setEnabled(False)
 
         self.setWindowTitle("PixelAnomalyDetector")
         self.show()
@@ -945,8 +946,8 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
 
-        fname = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        self.fileField.setText(fname[0])
+        fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+        self.fileField.setText(fileName[0])
         self.browseButton_2.setEnabled(True)
 
         # resting the main window for the next cxi file
@@ -954,6 +955,7 @@ class MainWindow(qtw.QMainWindow):
             self.imageViewer.close()
             self.graphWidget.clear()
             self.eventNumber.setText("0")
+            self.eventNumber.setEnabled(False)
             self.plotPixelIntensityButton.setEnabled(False)
             self.poltFitCheckBox.setEnabled(False)
             self.poltFitCheckBox.setChecked(False)
@@ -963,6 +965,7 @@ class MainWindow(qtw.QMainWindow):
             self.nextButton.setEnabled(False)
             self.previousButton.setEnabled(False)
             self.MLButton.setEnabled(False)
+            self.orderOfFit.clear()
             self.orderOfFit.setEnabled(False)
 
         if self.sortForMLGUI:
@@ -982,7 +985,6 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        # dialog_box = qtw.QDialog()
         geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
         self.fileField_2.setText(geomName[0])
         self.viewFileButton.setEnabled(True)
@@ -1184,31 +1186,30 @@ class MainWindow(qtw.QMainWindow):
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortDataGUI.readyToSaveBad.connect(self.writeToFile)
 
-    def returnMaxPixel(self, coeff, x_range):
+    def returnMaxPixel(self, coeff, xRange):
         """
         returns the value where the coeff is maximized
         coeff (object): out put of a numpy curve fit.
         Range (tup) : a tuple with (min, max)
         """
 
-        storing_list = []
-        for i in range(x_range[0], x_range[1]):
-            storing_list.append((np.polyval(coeff, i), i))
+        storingList = []
+        for i in range(xRange[0], xRange[1]):
+            storingList.append((np.polyval(coeff, i), i))
 
-        storing_list.sort()
+        storingList.sort()
 
-        return storing_list[-1][1]
+        return storingList[-1][1]
 
-    def returnMaxPixelsList(self, file_name, deg=1):
+    def returnMaxPixelsList(self, fileName, deg=1):
         """
         fileName(str) : name of the file to be open
         deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         *args(list) : expects a list of events to be considered. **TO BE IMPLEMENTED**
         """
-        filename = file_name
-        max_pixels = []
+        maxPixels = []
 
-        with h5py.File(filename, "r") as f:
+        with h5py.File(fileName, "r") as f:
             data = f['entry_1']['data_1']['data'][()]
 
         for i in range(len(data)):
@@ -1220,9 +1221,9 @@ class MainWindow(qtw.QMainWindow):
 
             fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
 
-            max_pixels.append(self.returnMaxPixel(fit, (10, 186)))
+            maxPixels.append(self.returnMaxPixel(fit, (10, 186)))
 
-        return max_pixels
+        return maxPixels
 
     @pyqtSlot()
     def plotCurve(self):
@@ -1231,13 +1232,13 @@ class MainWindow(qtw.QMainWindow):
         :return: A plot in the  self.graphingSpace
         """
         try:
-            file_name = self.fileField.text()
-            event_number = int(self.eventNumber.text())
+            fileName = self.fileField.text()
+            eventNumber = int(self.eventNumber.text())
 
-            with h5py.File(file_name, "r") as f:
+            with h5py.File(fileName, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            frame = data[event_number]
+            frame = data[eventNumber]
 
             avgIntensities = []
 
@@ -1254,8 +1255,10 @@ class MainWindow(qtw.QMainWindow):
                 self.nextButton.setEnabled(True)
                 self.previousButton.setEnabled(True)
 
+            self.poltFitCheckBox.setChecked(False)
+
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % fileName)
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path -plotCurve")
@@ -1311,6 +1314,8 @@ class MainWindow(qtw.QMainWindow):
                     self.nextButton.setEnabled(True)
                     self.previousButton.setEnabled(True)
 
+                self.orderOfFit.setEnabled(True)
+
             except FileNotFoundError:
                 qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
 
@@ -1324,13 +1329,13 @@ class MainWindow(qtw.QMainWindow):
             self.plotCurve()
 
     @pyqtSlot(str)
-    def plotMaxPixels(self, file_name):
+    def plotMaxPixels(self, fileName):
         """
-        :param file_name: path to the *CXI file (file name)
+        :param fileName: path to the *CXI file (file name)
         :return: a plot with pixel with maximum value for the polynomial fit for all the events
         """
         try:
-            y = self.returnMaxPixelsList(file_name, deg=int(self.orderOfFit.text()))
+            y = self.returnMaxPixelsList(fileName, deg=int(self.orderOfFit.text()))
             x = range(len(y))
             self.graphWidget.clear()
             self.graphWidget.plot(x, y, pen=None, symbol='o')
@@ -1338,7 +1343,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('bottom', "Frame Number")
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % fileName)
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
