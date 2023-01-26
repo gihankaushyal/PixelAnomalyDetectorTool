@@ -385,7 +385,7 @@
     <string>/</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="restButton">
+  <widget class="QPushButton" name="resetButton">
    <property name="geometry">
     <rect>
      <x>560</x>
