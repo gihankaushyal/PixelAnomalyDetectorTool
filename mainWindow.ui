@@ -263,7 +263,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="GeomBBrowseButton">
+   <widget class="QPushButton" name="GeomBrowseButton">
     <property name="enabled">
      <bool>false</bool>
     </property>
