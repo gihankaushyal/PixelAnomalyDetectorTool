@@ -385,6 +385,19 @@
     <string>/</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="restButton">
+   <property name="geometry">
+    <rect>
+     <x>560</x>
+     <y>135</y>
+     <width>113</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections/>
