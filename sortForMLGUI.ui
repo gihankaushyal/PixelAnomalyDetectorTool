@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Sorting for Machine Learning</string>
   </property>
   <widget class="QWidget" name="graphSpace" native="true">
    <property name="geometry">
