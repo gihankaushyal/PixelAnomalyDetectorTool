@@ -321,7 +321,7 @@
     <string>Classification Report</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="trainTestSlit">
+  <widget class="QLineEdit" name="testSplit">
    <property name="enabled">
     <bool>true</bool>
    </property>
@@ -353,7 +353,7 @@
     <string>Enter Train / Test split:</string>
    </property>
   </widget>
-  <widget class="QLineEdit" name="trainTestSlit_2">
+  <widget class="QLineEdit" name="trainSplit">
    <property name="enabled">
     <bool>true</bool>
    </property>
