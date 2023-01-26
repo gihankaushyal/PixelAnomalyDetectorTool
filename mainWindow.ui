@@ -27,20 +27,20 @@
      <string>CXI File:</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="fileField">
+   <widget class="QLineEdit" name="cxiFilePath">
     <property name="geometry">
      <rect>
       <x>70</x>
       <y>20</y>
-      <width>571</width>
+      <width>600</width>
       <height>21</height>
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="browseButton">
+   <widget class="QPushButton" name="CXIBrowseButton">
     <property name="geometry">
      <rect>
-      <x>650</x>
+      <x>680</x>
       <y>15</y>
       <width>113</width>
       <height>32</height>
@@ -86,7 +86,7 @@
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>110</y>
+      <y>120</y>
       <width>741</width>
       <height>16</height>
      </rect>
@@ -198,7 +198,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>340</x>
+      <x>430</x>
       <y>200</y>
       <width>85</width>
       <height>32</height>
@@ -214,7 +214,7 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>430</x>
+      <x>340</x>
       <y>200</y>
       <width>85</width>
       <height>32</height>
@@ -250,24 +250,27 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="fileField_2">
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>60</y>
-      <width>531</width>
-      <height>21</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="browseButton_2">
+   <widget class="QLineEdit" name="geomFilePath">
     <property name="enabled">
      <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
-      <x>650</x>
-      <y>55</y>
+      <x>110</x>
+      <y>95</y>
+      <width>561</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="GeomBBrowseButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>90</y>
       <width>113</width>
       <height>32</height>
      </rect>
@@ -280,7 +283,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
+      <y>95</y>
       <width>81</width>
       <height>20</height>
      </rect>
@@ -335,6 +338,61 @@
     </property>
     <property name="text">
      <string>Plot a Fit</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>40</y>
+      <width>21</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>or</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>60</y>
+      <width>81</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>CXI File List</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="cxiFileListPath">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>100</x>
+      <y>60</y>
+      <width>571</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="CXIListBrowseButton">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>50</y>
+      <width>113</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Browse</string>
     </property>
    </widget>
   </widget>
