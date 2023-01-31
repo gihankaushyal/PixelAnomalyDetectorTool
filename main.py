@@ -411,6 +411,9 @@ class SortingForML(qtw.QWidget):
         random.shuffle(colors)
         for column in df.columns:
             sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        plt.title('Distributions of Inflection points 1 and 2')
+        plt.ylabel('Count')
+        plt.xlabel(' Vertically Average Pixel Intensity')
         plt.xticks()
         plt.legend()
 
@@ -433,45 +436,46 @@ class SortingForML(qtw.QWidget):
 
         tag = str(self.fileName).split('/')[-1].split('.')[0]
 
-        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select a location', directory=' ',
+        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select Save Location', directory=' ',
                                                                 options=qtw.QFileDialog.DontUseNativeDialog)
+        if fileSaveLocation != "":
+            self.goodEvents = {}
+            self.badEvents = {}
 
-        self.goodEvents = {}
-        self.badEvents = {}
+            # goodList to store all the events with expected pixel intensities for the file
+            goodList = []
+            # badList to store all the events with detector artifacts for the file
+            badList = []
 
-        # goodList to store all the events with expected pixel intensities for the file
-        goodList = []
-        # badList to store all the events with detector artifacts for the file
-        badList = []
+            try:
 
-        try:
+                for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
 
-            for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
+                    if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
+                            float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
+                            and \
+                            (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
+                            float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
 
-                if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
-                        float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
-                        and \
-                        (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
-                        float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
+                        goodList.append(i)
+                    else:
+                        badList.append(i)
 
-                    goodList.append(i)
-                else:
-                    badList.append(i)
+                self.goodEvents[str(self.fileName)] = goodList
+                self.badEvents[str(self.fileName)] = badList
+                self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
 
-            self.goodEvents[str(self.fileName)] = goodList
-            self.badEvents[str(self.fileName)] = badList
-            self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
-            self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
+            except Exception as e:
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
+                msg.setInformativeText(str(e) + " sort()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
 
-            # qtw.QMessageBox.information(self, 'Success', "Done Sorting")
-
-        except Exception as e:
-            msg = qtw.QMessageBox()
-            msg.setWindowTitle('Error')
-            msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
-            msg.setInformativeText(str(e) + " sort()")
-            msg.setIcon(qtw.QMessageBox.Information)
-            msg.exec_()
+        else:
+            qtw.QMessageBox.warning(self, 'Warning', 'Please Select a Save Location for sorted files')
 
 
 class ML(qtw.QWidget):
@@ -518,7 +522,7 @@ class ML(qtw.QWidget):
 
         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        if folderName != " ":
+        if folderName != "":
             self.parentDirectory.setText(folderName)
 
     # model training using multiple runs needs to be implemented
@@ -817,7 +821,7 @@ class SortData(qtw.QWidget):
 
         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        if folderName != " ":
+        if folderName != "":
             self.folderPath.setText(folderName)
             self.showFiles()
 
@@ -992,7 +996,7 @@ class MainWindow(qtw.QMainWindow):
         """
 
         fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        if fileName != " ":
+        if fileName != "":
             self.cxiFilePath.setText(fileName[0])
             self.cxiFileListPath.setEnabled(False)
             self.cxiListBrowseButton.setEnabled(False)
@@ -1041,7 +1045,7 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
         geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
-        if geomName != " ":
+        if geomName != "":
             self.geomFilePath.setText(geomName[0])
             self.viewFileButton.setEnabled(True)
 
