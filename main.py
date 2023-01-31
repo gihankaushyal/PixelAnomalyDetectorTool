@@ -12,7 +12,6 @@ from pathlib import Path
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
-# from PyQt5 import QtGui as qtg
 # from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
@@ -115,7 +114,7 @@ class DisplayImage(qtw.QWidget):
 
         self.setLayout(self.layout)
 
-    # @pyqtSlot(int)
+    @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
          reading and displaying data
@@ -325,7 +324,7 @@ class SortingForML(qtw.QWidget):
         self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.sort)
 
-    # @pyqtSlot(dict)
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
@@ -424,7 +423,7 @@ class SortingForML(qtw.QWidget):
         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def sort(self):
         """
 
@@ -434,7 +433,8 @@ class SortingForML(qtw.QWidget):
 
         tag = str(self.fileName).split('/')[-1].split('.')[0]
 
-        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select a location', directory=' ')
+        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select a location', directory=' ',
+                                                                options=qtw.QFileDialog.DontUseNativeDialog)
 
         self.goodEvents = {}
         self.badEvents = {}
@@ -507,7 +507,7 @@ class ML(qtw.QWidget):
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def browseFiles(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -518,10 +518,11 @@ class ML(qtw.QWidget):
 
         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        self.parentDirectory.setText(folderName)
+        if folderName != " ":
+            self.parentDirectory.setText(folderName)
 
     # model training using multiple runs needs to be implemented
-    # @pyqtSlot()
+    @pyqtSlot()
     def checkBoxClicked(self):
         """
 
@@ -534,7 +535,7 @@ class ML(qtw.QWidget):
             self.startRun.setEnabled(False)
             self.endRun.setEnabled(False)
 
-    # @pyqtSlot(dict)
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
          :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
@@ -705,7 +706,7 @@ class ML(qtw.QWidget):
         self.X_test = pd.concat([X_good_test, X_bad_test])
         self.y_test = pd.concat([y_good_test, y_bad_test])
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def buttonClicked(self):
         """
         This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
@@ -734,22 +735,18 @@ class ML(qtw.QWidget):
 
         if i.text() == '&Yes':
             self.trainButton.setEnabled(False)
-            print(self.modelSelection())
-            print(self.checkTrainTestSplit())
             if self.modelSelection() and self.checkTrainTestSplit():
-                print('im here YES')
                 self.dataPrep()
                 self.model.fit(self.X_train, self.y_train)
                 self.testButton.setEnabled(True)
                 qtw.QMessageBox.information(self, 'Success', "Done Training")
 
             else:
-                print('im here NO')
                 self.reset()
         else:
             self.reset()
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def test(self):
         """
         Method to test the validity of the trained model
@@ -809,7 +806,7 @@ class SortData(qtw.QWidget):
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.buttonClicked)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def browseFiles(self):
         """
         This method gets triggered when the browse button is Clicked in the GUI
@@ -818,11 +815,11 @@ class SortData(qtw.QWidget):
                 file path to the test field.
         """
 
-        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        self.folderPath.setText(fname)
-
-        self.showFiles()
+        if folderName != " ":
+            self.folderPath.setText(folderName)
+            self.showFiles()
 
     def showFiles(self):
         """
@@ -838,7 +835,7 @@ class SortData(qtw.QWidget):
 
         self.sortButton.setEnabled(True)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def buttonClicked(self):
         """
         Asks a user a Question/ Waring about the model that was trained
@@ -985,7 +982,7 @@ class MainWindow(qtw.QMainWindow):
         self.setWindowTitle("PixelAnomalyDetector")
         self.show()
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def browseFiles(self):
         """
         This method gets triggered when the browse button is Clicked in the GUI
@@ -995,11 +992,12 @@ class MainWindow(qtw.QMainWindow):
         """
 
         fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        self.cxiFilePath.setText(fileName[0])
-        self.cxiFileListPath.setEnabled(False)
-        self.cxiListBrowseButton.setEnabled(False)
-        self.geomBrowseButton.setEnabled(True)
-        self.geomFilePath.setEnabled(True)
+        if fileName != " ":
+            self.cxiFilePath.setText(fileName[0])
+            self.cxiFileListPath.setEnabled(False)
+            self.cxiListBrowseButton.setEnabled(False)
+            self.geomBrowseButton.setEnabled(True)
+            self.geomFilePath.setEnabled(True)
 
         # resting the main window for the next cxi file
         if self.imageViewer:
@@ -1034,7 +1032,7 @@ class MainWindow(qtw.QMainWindow):
             self.sortForMLGUI.close()
             self.sortDataGUI = None
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def browseGeom(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -1043,10 +1041,11 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
         geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
-        self.geomFilePath.setText(geomName[0])
-        self.viewFileButton.setEnabled(True)
+        if geomName != " ":
+            self.geomFilePath.setText(geomName[0])
+            self.viewFileButton.setEnabled(True)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def curveToPlot(self):
         """
         A method to select the type of curve to be plotted in the self.graphingSpace
@@ -1069,7 +1068,7 @@ class MainWindow(qtw.QMainWindow):
         elif self.plotName == 'plotFit':
             self.plotFit()
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def selectDisplay(self):
         """
         Based on the conditions this method calls to draw next/previous image from the *cxi file or create a new view to
@@ -1086,7 +1085,7 @@ class MainWindow(qtw.QMainWindow):
             self.viewFiles()
             print('im here NO')
 
-    # @pyqtSlot(dict)
+    @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
@@ -1101,7 +1100,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.curveToPlot()
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def viewFiles(self):
         """
         Spawn an instance of DisplayImage to display the *cxi file
@@ -1144,7 +1143,7 @@ class MainWindow(qtw.QMainWindow):
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
 
-    # @pyqtSlot(str)
+    @pyqtSlot(str)
     def nextEvent(self, eventNumber):
         """
         A method to increment an event
@@ -1174,7 +1173,7 @@ class MainWindow(qtw.QMainWindow):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    # @pyqtSlot(str)
+    @pyqtSlot(str)
     def previousEvent(self, eventNumber):
         """
         A method to decrement an event
@@ -1200,7 +1199,7 @@ class MainWindow(qtw.QMainWindow):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    # @pyqtSlot(dict,str)
+    @pyqtSlot(dict,str)
     def writeToFile(self, eventsList, fileName):
         """
         A method to save sorted events
@@ -1219,8 +1218,9 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
+        self.sortForMLGUI.close()
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def sortForML(self):
         """
         Spawn an instance of the SortingForML
@@ -1235,7 +1235,8 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
 
-    # @pyqtSlot()
+
+    @pyqtSlot()
     def machineLearning(self):
         """
         Spawn an instance of ML.
@@ -1247,7 +1248,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortButton.setEnabled(True)
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def sort(self):
         """
         Spawn an instance of SortData.
@@ -1298,7 +1299,7 @@ class MainWindow(qtw.QMainWindow):
 
         return maxPixels
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def plotCurve(self):
         """
         A method to plot the vertically averaged intensity profile for the selected panel (Default: p6a0)
@@ -1349,7 +1350,7 @@ class MainWindow(qtw.QMainWindow):
                                      'Value you ,%s,  entered is out of bound for this cxi file -plotCurve'
                                      % self.eventNumber.text())
 
-    # @pyqtSlot()
+    @pyqtSlot()
     def plotFit(self):
         """
         A method plot the polynomial fit
@@ -1414,7 +1415,7 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.plotCurve()
 
-    # @pyqtSlot(str)
+    @pyqtSlot(str)
     def plotMaxPixels(self, fileName):
         """
         :param fileName: path to the *CXI file (file name)
