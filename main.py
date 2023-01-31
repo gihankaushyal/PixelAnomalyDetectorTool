@@ -12,7 +12,7 @@ from pathlib import Path
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
+# from PyQt5 import QtGui as qtg
 # from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
@@ -943,6 +943,16 @@ class MainWindow(qtw.QMainWindow):
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
+        self.detectorLeft = [
+                            'p4a0', 'p4a1', 'p4a2', 'p4a3',
+                            'p5a0', 'p5a1', 'p5a2', 'p5a3',
+                            'p6a0', 'p6a1', 'p6a2', 'p6a3',
+                            'p7a0', 'p7a1', 'p7a2', 'p7a3',
+                            'p8a0', 'p8a1', 'p8a2', 'p8a3',
+                            'p9a0', 'p9a1', 'p9a2', 'p9a3',
+                            'p10a0', 'p10a1', 'p10a2', 'p10a3',
+                            'p11a0', 'p11a1', 'p11a2', 'p11a3',
+                             ]
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
@@ -986,6 +996,8 @@ class MainWindow(qtw.QMainWindow):
 
         fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
         self.cxiFilePath.setText(fileName[0])
+        self.cxiFileListPath.setEnabled(False)
+        self.cxiListBrowseButton.setEnabled(False)
         self.geomBrowseButton.setEnabled(True)
         self.geomFilePath.setEnabled(True)
 
@@ -1303,10 +1315,18 @@ class MainWindow(qtw.QMainWindow):
 
             avgIntensities = []
 
-            for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
-                avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+            if self.panelName in self.detectorLeft:
+                for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
+                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+            else:
+                for i in reversed(range(int(self.min_fs) + 5, int(self.max_fs) - 5)):
+
+                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+
+
             self.graphWidget.clear()
             self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, name='data')
+            self.graphWidget.setTitle("Panel: " + self.panelName)
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
 
@@ -1354,8 +1374,12 @@ class MainWindow(qtw.QMainWindow):
 
                 frame = data[int(eventNumber)]
 
-                for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
-                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+                if self.panelName in self.detectorLeft:
+                    for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
+                        avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+                else:
+                    for i in reversed(range(int(self.min_fs) + 5, int(self.max_fs) - 5)):
+                        avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
                 fit = np.polyfit(np.arange(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, deg=degry)
 
@@ -1364,6 +1388,7 @@ class MainWindow(qtw.QMainWindow):
                 self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5),
                                       np.polyval(fit, range(int(self.min_fs) + 5, int(self.max_fs) - 5)),
                                       name='fit', pen=pg.mkPen(color='r', width=2))
+                self.graphWidget.setTitle("Panel: " + self.panelName)
                 self.graphWidget.setLabel('left', "Avg. Pixel intensity")
                 self.graphWidget.setLabel('bottom', "Pixel Number")
                 self.graphWidget.addLegend()
