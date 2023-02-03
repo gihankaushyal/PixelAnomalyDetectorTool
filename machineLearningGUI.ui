@@ -388,10 +388,10 @@
   <widget class="QWidget" name="confusionMatrix" native="true">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>320</y>
-     <width>261</width>
-     <height>201</height>
+     <x>20</x>
+     <y>310</y>
+     <width>301</width>
+     <height>231</height>
     </rect>
    </property>
   </widget>
