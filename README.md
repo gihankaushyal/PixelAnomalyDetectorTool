@@ -167,7 +167,7 @@ profile (2) for the selected panel will be displayed. You can toggle between the
 ```Frame Number``` (4) field. When you are changing the event number on the main GUI the display for viewing the HDF5
 file gets updated. 
  >- If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
->the window for HDF5 file display and the pixel intensity plot on the main GUI will be automatically updated.
+ >the window for HDF5 file display and the pixel intensity plot on the main GUI will be automatically updated.
 
 ![plottingPixelIntensity]
 
@@ -215,8 +215,19 @@ dropdown menu (2). Lastly, clicked on the ```Train``` button (3) to train a mode
 
 ![trainingAModel2]
 
-Once the model training is completed, the ```Test``` button (1) will get enabled for you do a model testing. Have a look
-at the ```Confusion Matrix``` (2) and the ```Clasification Report``` (3). The off diagonal numbers (the false positives 
+Once the model training is completed, the ```Test``` button (1) will get enabled for you do a model testing.
+Have a look at the ```Confusion Matrix``` (2) and the ```Classification Report``` (3). 
+ >* Confusion Matrix and Classification Report are essential evaluation metrics used to assess the quality and accuracy of
+ > a machine learning model. Confusion matrix provides a summary of the model's predictions, comparing them to the 
+ > actual class labels. It presents the number of correct and incorrect predictions for each class, allowing you to 
+ > visualize the model's performance and identify areas of improvement. On the other hand, the classification report 
+ > provides a more comprehensive evaluation of the model's performance by calculating various metrics such as precision, 
+ > recall, F1-score, and support. These metrics give you an idea of the model's ability to accurately predict the 
+ > class labels, how many true positives and false positives it has, and its overall performance. By using both 
+ > the confusion matrix and the classification report, you can get a more comprehensive understanding of 
+ > the model's performance and fine-tune it to improve its accuracy.
+
+The off diagonal numbers (the false positives 
 and false negative) should be close to Zero. In the Classification Report, have a look at ```Precision, Recall, F1-score
 and Accuracy``` if the model is performing well, those numbers should be as close as possible to One. You can now safely
 close this window.
