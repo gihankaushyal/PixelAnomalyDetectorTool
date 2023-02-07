@@ -208,9 +208,16 @@ Now that you have sorted data to train a machine learning model to be trained, c
 ![trainingAModel1]
 
 A separate widow will appear with directions to train a model.
-Click on the ```Browse``` button (1) to locate where you save the files to train the model. At the moment
-the file are being saved in to the InternalTool folder. Then select the machine learning model from the ```Model Selection```
-dropdown menu (2). Lastly, clicked on the ```Train``` button (3) to train a model.  
+To train the model, follow these steps:
+
+1. Click the "Browse" button to find and select the file that will be used for training. 
+Currently, the files are saved in the InternalTool folder.
+2. From the "Model Selection" dropdown menu, choose the machine learning model you prefer.
+3. In the section for Training and Testing, enter the desired percentages for each. 
+
+<b><i>Note: that the sum of these percentages should equal 100%. The default settings are 70% for Training and 30% for 
+Testing. </i></b>
+4. Finally, click the "Train" button to initiate the training process.
 >* Training a model may take some time depending on the size of the training data set.
 
 ![trainingAModel2]
@@ -234,6 +241,12 @@ close this window.
 
 ![trainingAModel3]
 
+To proceed, you have two options after reviewing the model quality matrices:
+
+ 1. Select ```Save``` (1) to keep the current model.
+ 2. Choose ```Rese``` (2) to start over and train a new model with a different algorithm.
+
+![trainingAModel4]
 ### 5. Sorting the Data set using the trained model
 Finally, you are here, Sorting the entire data set using the trained model. To being, click on the ```Sort Data``` 
 button.
@@ -334,6 +347,7 @@ Thank you, Sabine, for your dedication and expertise.
 [trainingAModel1]: images/trainingAModel-1.png
 [trainingAModel2]: images/trainingAModel-2.png
 [trainingAModel3]: images/trainingAModel-3.png
+[trainingAModel4]: images/trainingAModel-4.png
 [sortData1]: images/sortData-1.png
 [sortData2]: images/sortData-2.png
 [sortData3]: images/sortData-3.png
