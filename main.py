@@ -294,11 +294,11 @@ class SortingForML(qtw.QWidget):
         uic.loadUi("sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
-        self.layout = qtw.QHBoxLayout()
-        self.figure = plt.figure()
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.layout.addWidget(self.canvas)
-        self.graphSpace.setLayout(self.layout)
+        self.layoutSortingForML = qtw.QHBoxLayout()
+        self.figureSortingForML = plt.figure()
+        self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+        self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+        self.graphSpace.setLayout(self.layoutSortingForML)
 
         # for plotting with plotly
         # self.layout = qtw.QHBoxLayout()
@@ -403,7 +403,7 @@ class SortingForML(qtw.QWidget):
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
         # with seaborn
-        self.figure.clear()
+        self.figureSortingForML.clear()
         df = pd.DataFrame()
         df['Inflection_point1'] = self.inflectionPoint1List
         df['Inflection_point2'] = self.inflectionPoint2List
@@ -417,7 +417,7 @@ class SortingForML(qtw.QWidget):
         plt.xticks()
         plt.legend()
 
-        self.canvas.draw()
+        self.canvasForInflectionPoints.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
@@ -510,6 +510,22 @@ class ML(qtw.QWidget):
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
+
+        # for displaying the confusion matrix
+        self.layoutConfusionMatrix = qtw.QHBoxLayout()
+        self.figureConfusionMatrix = plt.figure()
+        self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
+        # self.canvasConfusionMatrix.setGeometry(qtc.QRect(0, 0, 20, 20))
+        self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
+        self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
+
+        # for displaying the classification report
+        self.layoutClassificationReport = qtw.QHBoxLayout()
+        self.figureClassificationReport = plt.figure()
+        self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
+        # self.canvasClassificationReport.setGeometry(qtc.QRect(0, 0, 20, 20))
+        self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
+        self.classificationReport.setLayout(self.layoutClassificationReport)
 
     @pyqtSlot()
     def browseFiles(self):
@@ -757,20 +773,47 @@ class ML(qtw.QWidget):
         :return: Confusion matrix and a Classification Report
         """
 
-        from sklearn.metrics import classification_report, confusion_matrix
+        from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
         self.predictions = self.model.predict(self.X_test)
-        self.confusionMatrix.setEnabled(True)
-        self.classificationReport.setEnabled(True)
-        self.confusionMatrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
-        self.classificationReport.setText(classification_report(self.y_test, self.predictions))
 
+        self.figureConfusionMatrix.clear()
+        self.figureClassificationReport.clear()
+
+        # printing a heatmap for Confusion matrix
+        # cfm = confusion_matrix(self.y_test, self.predictions)
+        # cfm_df = pd.DataFrame(cfm, index=['0', '1'], columns=['0', '1'])
+        # ax1 = self.figureConfusionMatrix.add_subplot(111)
+        # sns.heatmap(cfm_df, annot=True, cmap='mako', ax=ax1, cbar=False)
+        # ax1.set_ylabel("True Label")
+        # ax1.set_xlabel("Predicted Label")
+        # self.canvasConfusionMatrix.draw()
+        ax1 = self.figureConfusionMatrix.add_subplot(111)
+        ConfusionMatrixDisplay.from_predictions(self.y_test, self.predictions, ax=ax1, colorbar=False, cmap='mako')
+        self.canvasConfusionMatrix.draw()
+
+        # printing a heatmap for Classification report
+        cr = classification_report(self.y_test, self.predictions)
+        columns = cr.strip().split()[0:3]
+        indexes = ['Bad', 'Good', 'Avg', 'Wt. Avg']
+        data = np.array(
+            [cr.strip().split()[5:8], cr.strip().split()[10:13], cr.strip().split()[19:22],
+             cr.strip().split()[25:28]], dtype=float)
+        cr_df = pd.DataFrame(data=data, columns=columns, index=indexes)
+        ax2 = self.figureClassificationReport.add_subplot(111)
+        sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=False, linewidth=1)
+        self.canvasClassificationReport.draw()
+
+        self.testButton.setEnabled(False)
+        self.saveButton.setEnabled(True)
+
+    @pyqtSlot()
     def reset(self):
         """
         Method to clear out the output from the test()
         :return: clear the self.confusionMatrix and self.classificationReport
         """
-        self.confusionMatrix.clear()
-        self.classificationReport.clear()
+        self.figureConfusionMatrix.clear()
+        self.figureClassificationReport.clear()
         self.trainButton.setEnabled(True)
         self.testButton.setEnabled(False)
         self.comboBox.setCurrentIndex(0)
@@ -858,7 +901,6 @@ class SortData(qtw.QWidget):
         msg.buttonClicked.connect(self.sort)
         msg.exec_()
 
-    # @pyqtSlot(qtc.pyqtSignal)
     def sort(self, i):
         """
                 Sort *cxi files using the trained model
