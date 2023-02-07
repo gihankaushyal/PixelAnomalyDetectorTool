@@ -11,12 +11,12 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Model Training</string>
   </property>
   <widget class="QLineEdit" name="parentDirectory">
    <property name="geometry">
     <rect>
-     <x>172</x>
+     <x>230</x>
      <y>35</y>
      <width>381</width>
      <height>21</height>
@@ -78,20 +78,20 @@
   <widget class="QLabel" name="label_2">
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>40</y>
-     <width>111</width>
-     <height>16</height>
+     <x>20</x>
+     <y>35</y>
+     <width>211</width>
+     <height>20</height>
     </rect>
    </property>
    <property name="text">
-    <string>Select Path:</string>
+    <string>Select the folder with  traing data:</string>
    </property>
   </widget>
   <widget class="QPushButton" name="browseButton">
    <property name="geometry">
     <rect>
-     <x>590</x>
+     <x>610</x>
      <y>30</y>
      <width>113</width>
      <height>32</height>
@@ -220,9 +220,9 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>430</x>
-     <y>190</y>
-     <width>113</width>
+     <x>320</x>
+     <y>210</y>
+     <width>100</width>
      <height>32</height>
     </rect>
    </property>
@@ -233,40 +233,14 @@
   <widget class="QPushButton" name="trainButton">
    <property name="geometry">
     <rect>
-     <x>180</x>
-     <y>190</y>
-     <width>113</width>
+     <x>140</x>
+     <y>210</y>
+     <width>100</width>
      <height>32</height>
     </rect>
    </property>
    <property name="text">
     <string>Train</string>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="confusionMatrix">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>50</x>
-     <y>320</y>
-     <width>151</width>
-     <height>200</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QTextEdit" name="classificationReport">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>320</x>
-     <y>320</y>
-     <width>381</width>
-     <height>200</height>
-    </rect>
    </property>
   </widget>
   <widget class="Line" name="line_3">
@@ -298,8 +272,8 @@
   <widget class="QLabel" name="label_8">
    <property name="geometry">
     <rect>
-     <x>70</x>
-     <y>300</y>
+     <x>110</x>
+     <y>280</y>
      <width>121</width>
      <height>16</height>
     </rect>
@@ -311,14 +285,127 @@
   <widget class="QLabel" name="label_9">
    <property name="geometry">
     <rect>
-     <x>440</x>
-     <y>300</y>
+     <x>450</x>
+     <y>280</y>
      <width>131</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
     <string>Classification Report</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="testSplit">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>320</x>
+     <y>170</y>
+     <width>30</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="inputMethodHints">
+    <set>Qt::ImhNone</set>
+   </property>
+   <property name="placeholderText">
+    <string>30</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_10">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>170</y>
+     <width>161</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enter Train / Test split %:</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="trainSplit">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>170</y>
+     <width>30</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="placeholderText">
+    <string>70</string>
+   </property>
+   <property name="clearButtonEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_11">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>170</y>
+     <width>16</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>/</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="resetButton">
+   <property name="geometry">
+    <rect>
+     <x>560</x>
+     <y>135</y>
+     <width>113</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Reset</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="confusionMatrix" native="true">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>290</y>
+     <width>301</width>
+     <height>261</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="saveButton">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>530</x>
+     <y>210</y>
+     <width>100</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </widget>
+  <widget class="QWidget" name="classificationReport" native="true">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>289</y>
+     <width>391</width>
+     <height>261</height>
+    </rect>
    </property>
   </widget>
  </widget>

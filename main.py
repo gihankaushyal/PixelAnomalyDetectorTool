@@ -12,7 +12,6 @@ from pathlib import Path
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
-from PyQt5 import QtGui as qtg
 # from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
@@ -126,6 +125,7 @@ class DisplayImage(qtw.QWidget):
         try:
             # applying the geometry and displaying the image
             self.eventNumber = eventNumber
+            print(self.fileName)
             # reading the given eventNumber from the cxi file
             self.cxi = fileTools.read_cxi(self.fileName, frameID=self.eventNumber, data=True, slab_size=True,
                                           peaks=True)
@@ -286,19 +286,19 @@ class SortingForML(qtw.QWidget):
 
         self.badEvents = None
         self.goodEvents = None
-        self.x1_list = None
-        self.x2_list = None
+        self.inflectionPoint1List = None
+        self.inflectionPoint2List = None
         self.data = None
         self.setWindowTitle('Sorting for Machine Learning')
 
         uic.loadUi("sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
-        self.layout = qtw.QHBoxLayout()
-        self.figure = plt.figure()
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.layout.addWidget(self.canvas)
-        self.graphSpace.setLayout(self.layout)
+        self.layoutSortingForML = qtw.QHBoxLayout()
+        self.figureSortingForML = plt.figure()
+        self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+        self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+        self.graphSpace.setLayout(self.layoutSortingForML)
 
         # for plotting with plotly
         # self.layout = qtw.QHBoxLayout()
@@ -306,7 +306,7 @@ class SortingForML(qtw.QWidget):
         # self.layout.addWidget(self.browser)
         # self.graphSpace.setLayout(self.layout)
 
-        self.file_name = fileName
+        self.fileName = fileName
         self.orderOfFit = oft
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
@@ -345,11 +345,11 @@ class SortingForML(qtw.QWidget):
          the sortForMlGUI
         """
 
-        self.x1_list = []
-        self.x2_list = []
+        self.inflectionPoint1List = []
+        self.inflectionPoint2List = []
 
         try:
-            with h5py.File(self.file_name, "r") as f:
+            with h5py.File(self.fileName, "r") as f:
                 self.data = f['entry_1']['data_1']['data'][()]
 
             for i in range(len(self.data)):
@@ -371,8 +371,8 @@ class SortingForML(qtw.QWidget):
                         x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
                                    2)
 
-                        self.x1_list.append(x1)
-                        self.x2_list.append(x2)
+                        self.inflectionPoint1List.append(x1)
+                        self.inflectionPoint2List.append(x2)
                     except IndexError as e:
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
@@ -403,18 +403,21 @@ class SortingForML(qtw.QWidget):
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
         # with seaborn
-        self.figure.clear()
+        self.figureSortingForML.clear()
         df = pd.DataFrame()
-        df['Inflection_point1'] = self.x1_list
-        df['Inflection_point2'] = self.x2_list
+        df['Inflection_point1'] = self.inflectionPoint1List
+        df['Inflection_point2'] = self.inflectionPoint2List
         colors = ['red', 'green', 'blue', 'violet', 'pink']
         random.shuffle(colors)
         for column in df.columns:
             sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        plt.title('Distributions of Inflection points 1 and 2')
+        plt.ylabel('Count')
+        plt.xlabel(' Vertically Average Pixel Intensity')
         plt.xticks()
         plt.legend()
 
-        self.canvas.draw()
+        self.canvasForInflectionPoints.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
@@ -431,45 +434,48 @@ class SortingForML(qtw.QWidget):
         defined threshold for inflection points and spread of the distribution
         """
 
-        tag = str(self.file_name).split('/')[-1].split('.')[0]
+        tag = str(self.fileName).split('/')[-1].split('.')[0]
 
-        self.goodEvents = {}
-        self.badEvents = {}
+        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select Save Location', directory=' ',
+                                                                options=qtw.QFileDialog.DontUseNativeDialog)
+        if fileSaveLocation != "":
+            self.goodEvents = {}
+            self.badEvents = {}
 
-        # goodList to store all the events with expected pixel intensities for the file
-        goodList = []
-        # badList to store all the events with detector artifacts for the file
-        badList = []
+            # goodList to store all the events with expected pixel intensities for the file
+            goodList = []
+            # badList to store all the events with detector artifacts for the file
+            badList = []
 
-        try:
+            try:
 
-            for (i, x1, x2) in zip(range(len(self.data)), self.x1_list, self.x2_list):
+                for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
 
-                if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
-                        float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
-                        and \
-                        (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
-                        float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
+                    if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
+                            float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
+                            and \
+                            (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
+                            float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
 
-                    goodList.append(i)
-                else:
-                    badList.append(i)
+                        goodList.append(i)
+                    else:
+                        badList.append(i)
 
-            self.goodEvents[str(self.file_name)] = goodList
-            self.badEvents[str(self.file_name)] = badList
+                self.goodEvents[str(self.fileName)] = goodList
+                self.badEvents[str(self.fileName)] = badList
+                self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
 
-            self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-advanceSort-%s.list' % tag)
-            self.readyToSaveBad.emit(self.badEvents, 'badEvents-advanceSort-%s.list' % tag)
+            except Exception as e:
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
+                msg.setInformativeText(str(e) + " sort()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
 
-            qtw.QMessageBox.information(self, 'Success', "Done Sorting")
-
-        except Exception as e:
-            msg = qtw.QMessageBox()
-            msg.setWindowTitle('Error')
-            msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
-            msg.setInformativeText(str(e) + " sort()")
-            msg.setIcon(qtw.QMessageBox.Information)
-            msg.exec_()
+        else:
+            qtw.QMessageBox.warning(self, 'Warning', 'Please Select a Save Location for sorted files')
 
 
 class ML(qtw.QWidget):
@@ -497,11 +503,29 @@ class ML(qtw.QWidget):
         self.max_fs = inDict['max_fs']
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
+        self.trainSplit.setText('70')
+        self.testSplit.setText('30')
         self.browseButton.clicked.connect(self.browseFiles)
         self.checkBox.stateChanged.connect(self.checkBoxClicked)
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
-        self.comboBox.activated.connect(self.reset)
+        self.resetButton.clicked.connect(self.reset)
+
+        # for displaying the confusion matrix
+        self.layoutConfusionMatrix = qtw.QHBoxLayout()
+        self.figureConfusionMatrix = plt.figure()
+        self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
+        # self.canvasConfusionMatrix.setGeometry(qtc.QRect(0, 0, 20, 20))
+        self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
+        self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
+
+        # for displaying the classification report
+        self.layoutClassificationReport = qtw.QHBoxLayout()
+        self.figureClassificationReport = plt.figure()
+        self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
+        # self.canvasClassificationReport.setGeometry(qtc.QRect(0, 0, 20, 20))
+        self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
+        self.classificationReport.setLayout(self.layoutClassificationReport)
 
     @pyqtSlot()
     def browseFiles(self):
@@ -512,9 +536,10 @@ class ML(qtw.QWidget):
         ath to the test field.
         """
 
-        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        self.parentDirectory.setText(fname)
+        if folderName != "":
+            self.parentDirectory.setText(folderName)
 
     # model training using multiple runs needs to be implemented
     @pyqtSlot()
@@ -552,17 +577,41 @@ class ML(qtw.QWidget):
         if modelSelected == 'LogisticRegression':
             from sklearn.linear_model import LogisticRegression
             self.model = LogisticRegression()
+            return True
         elif modelSelected == 'KNeighborsClassifier':
             from sklearn.neighbors import KNeighborsClassifier
             self.model = KNeighborsClassifier(n_neighbors=1)
+            return True
         elif modelSelected == 'DecisionTreeClassifier':
             from sklearn.tree import DecisionTreeClassifier
             self.model = DecisionTreeClassifier()
+            return True
         elif modelSelected == 'RandomForestClassifier':
             from sklearn.ensemble import RandomForestClassifier
             self.model = RandomForestClassifier(n_estimators=200)
+            return True
         else:
             qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
+            return False
+
+    def checkTrainTestSplit(self):
+        if self.trainSplit.text().isdigit() and self.testSplit.text().isdigit():
+            train = int(self.trainSplit.text())
+            test = int(self.testSplit.text())
+
+            if train+test > 100 or train+test < 100:
+                qtw.QMessageBox.critical(self, 'Alert', 'The Sum of train split + test split = 100%')
+                qtw.QMessageBox.information(self, 'Information',
+                                            'Setting the train and test split to the default values')
+                self.trainSplit.setText('70')
+                self.testSplit.setText('30')
+                return True
+            else:
+                return True
+
+        else:
+            qtw.QMessageBox.information(self,'Information', 'Please enter a valid number')
+            return False
 
     def dataPrep(self):
         """
@@ -582,7 +631,7 @@ class ML(qtw.QWidget):
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
             msg.setText("An error occurred while reading %s                                  " % self.fileName)
-            msg.setInformativeText(str(e) + " dataPrep2()")
+            msg.setInformativeText(str(e) + " dataPrep()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
@@ -616,7 +665,7 @@ class ML(qtw.QWidget):
                 msg.setWindowTitle('Warning')
                 msg.setText(
                     "An error occurred while reading bad events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep2()")
+                msg.setInformativeText(str(e) + " dataPrep()")
                 msg.setIcon(qtw.QMessageBox.Warning)
                 msg.exec_()
                 continue
@@ -651,7 +700,7 @@ class ML(qtw.QWidget):
                 msg.setWindowTitle('Error')
                 msg.setText(
                     "An error occurred while reading good events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep2()")
+                msg.setInformativeText(str(e) + " dataPrep()")
                 msg.setIcon(qtw.QMessageBox.Information)
                 msg.exec_()
                 continue
@@ -661,14 +710,16 @@ class ML(qtw.QWidget):
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
         X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
         y_good = dataFrame_good['Flag']
-        X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good, test_size=0.25)
+        X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
+                                                                                test_size=int(self.testSplit.text()))
 
         dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
                                    dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
         X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
         y_bad = dataFrame_bad['Flag']
 
-        X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad, test_size=0.25)
+        X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
+                                                                            test_size=int(self.testSplit.text()))
 
         self.X_train = pd.concat([X_good_train, X_bad_train])
         self.y_train = pd.concat([y_good_train, y_bad_train])
@@ -680,7 +731,7 @@ class ML(qtw.QWidget):
         """
         This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
         answer it either moves forward to train a model or allow user to go back and select a different
-        ASCII for training.
+        ASCI for training.
         :return: Yes or No
         """
         msg = qtw.QMessageBox()
@@ -697,19 +748,23 @@ class ML(qtw.QWidget):
     # @pyqtSlot(qtc.QSig)
     def train(self, i):
         """
-        Method to train the user selected model using the data from the selected ASCII
+        Method to train the user selected model using the data from the selected ASCI
         :param i: QMessageBox output( &Yes or &No)
         :return: Model and Enables the "Test" button
         """
 
         if i.text() == '&Yes':
             self.trainButton.setEnabled(False)
-            self.modelSelection()
-            self.dataPrep()
-            self.model.fit(self.X_train, self.y_train)
-            self.testButton.setEnabled(True)
+            if self.modelSelection() and self.checkTrainTestSplit():
+                self.dataPrep()
+                self.model.fit(self.X_train, self.y_train)
+                self.testButton.setEnabled(True)
+                qtw.QMessageBox.information(self, 'Success', "Done Training")
+
+            else:
+                self.reset()
         else:
-            print('No is clicked')
+            self.reset()
 
     @pyqtSlot()
     def test(self):
@@ -718,12 +773,38 @@ class ML(qtw.QWidget):
         :return: Confusion matrix and a Classification Report
         """
 
-        from sklearn.metrics import classification_report, confusion_matrix
+        from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
         self.predictions = self.model.predict(self.X_test)
-        self.confusionMatrix.setEnabled(True)
-        self.classificationReport.setEnabled(True)
-        self.confusionMatrix.setText(str(confusion_matrix(self.y_test, self.predictions)))
-        self.classificationReport.setText(classification_report(self.y_test, self.predictions))
+
+        self.figureConfusionMatrix.clear()
+        self.figureClassificationReport.clear()
+
+        # printing a heatmap for Confusion matrix
+        # cfm = confusion_matrix(self.y_test, self.predictions)
+        # cfm_df = pd.DataFrame(cfm, index=['0', '1'], columns=['0', '1'])
+        # ax1 = self.figureConfusionMatrix.add_subplot(111)
+        # sns.heatmap(cfm_df, annot=True, cmap='mako', ax=ax1, cbar=False)
+        # ax1.set_ylabel("True Label")
+        # ax1.set_xlabel("Predicted Label")
+        # self.canvasConfusionMatrix.draw()
+        ax1 = self.figureConfusionMatrix.add_subplot(111)
+        ConfusionMatrixDisplay.from_predictions(self.y_test, self.predictions, ax=ax1, colorbar=False, cmap='mako')
+        self.canvasConfusionMatrix.draw()
+
+        # printing a heatmap for Classification report
+        cr = classification_report(self.y_test, self.predictions)
+        columns = cr.strip().split()[0:3]
+        indexes = ['Bad', 'Good', 'Avg', 'Wt. Avg']
+        data = np.array(
+            [cr.strip().split()[5:8], cr.strip().split()[10:13], cr.strip().split()[19:22],
+             cr.strip().split()[25:28]], dtype=float)
+        cr_df = pd.DataFrame(data=data, columns=columns, index=indexes)
+        ax2 = self.figureClassificationReport.add_subplot(111)
+        sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=False, linewidth=1)
+        self.canvasClassificationReport.draw()
+
+        self.testButton.setEnabled(False)
+        self.saveButton.setEnabled(True)
 
     @pyqtSlot()
     def reset(self):
@@ -731,10 +812,13 @@ class ML(qtw.QWidget):
         Method to clear out the output from the test()
         :return: clear the self.confusionMatrix and self.classificationReport
         """
-        self.confusionMatrix.clear()
-        self.classificationReport.clear()
+        self.figureConfusionMatrix.clear()
+        self.figureClassificationReport.clear()
         self.trainButton.setEnabled(True)
         self.testButton.setEnabled(False)
+        self.comboBox.setCurrentIndex(0)
+        self.trainSplit.setText('70')
+        self.testSplit.setText('30')
 
 
 class SortData(qtw.QWidget):
@@ -778,11 +862,11 @@ class SortData(qtw.QWidget):
                 file path to the test field.
         """
 
-        fname = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
-        self.folderPath.setText(fname)
-
-        self.showFiles()
+        if folderName != "":
+            self.folderPath.setText(folderName)
+            self.showFiles()
 
     def showFiles(self):
         """
@@ -817,7 +901,6 @@ class SortData(qtw.QWidget):
         msg.buttonClicked.connect(self.sort)
         msg.exec_()
 
-    # @pyqtSlot(qtc.pyqtSignal)
     def sort(self, i):
         """
                 Sort *cxi files using the trained model
@@ -883,8 +966,8 @@ class MainWindow(qtw.QMainWindow):
         uic.loadUi("mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
-        self.browseButton.clicked.connect(self.browseFiles)
-        self.browseButton_2.clicked.connect(self.browseGeom)
+        self.cxiBrowseButton.clicked.connect(self.browseFiles)
+        self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
 
         # initializing the popup windows
@@ -903,6 +986,16 @@ class MainWindow(qtw.QMainWindow):
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
+        self.detectorLeft = [
+                            'p4a0', 'p4a1', 'p4a2', 'p4a3',
+                            'p5a0', 'p5a1', 'p5a2', 'p5a3',
+                            'p6a0', 'p6a1', 'p6a2', 'p6a3',
+                            'p7a0', 'p7a1', 'p7a2', 'p7a3',
+                            'p8a0', 'p8a1', 'p8a2', 'p8a3',
+                            'p9a0', 'p9a1', 'p9a2', 'p9a3',
+                            'p10a0', 'p10a1', 'p10a2', 'p10a3',
+                            'p11a0', 'p11a1', 'p11a2', 'p11a3',
+                             ]
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
@@ -911,7 +1004,7 @@ class MainWindow(qtw.QMainWindow):
         self.poltFitCheckBox.clicked.connect(self.plotFit)
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
-        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.fileField.text()))
+        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
 
         self.sortButton.clicked.connect(self.sort)
         self.sortForMLButton.clicked.connect(self.sortForML)
@@ -930,6 +1023,7 @@ class MainWindow(qtw.QMainWindow):
         self.layout = qtw.QHBoxLayout()
         self.layout.addWidget(self.graphWidget)
         self.graphingSpace.setLayout(self.layout)
+        self.graphWidget.setEnabled(False)
 
         self.setWindowTitle("PixelAnomalyDetector")
         self.show()
@@ -942,16 +1036,23 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        # dialog_box = qtw.QDialog()
-        fname = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        self.fileField.setText(fname[0][0])
-        self.browseButton_2.setEnabled(True)
+
+        fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+        if fileName != "":
+            self.cxiFilePath.setText(fileName[0])
+            self.cxiFileListPath.setEnabled(False)
+            self.cxiListBrowseButton.setEnabled(False)
+            self.geomBrowseButton.setEnabled(True)
+            self.geomFilePath.setEnabled(True)
 
         # resting the main window for the next cxi file
         if self.imageViewer:
             self.imageViewer.close()
+            # del self.imageViewer
+            # self.imageViewer = None
             self.graphWidget.clear()
             self.eventNumber.setText("0")
+            self.eventNumber.setEnabled(False)
             self.plotPixelIntensityButton.setEnabled(False)
             self.poltFitCheckBox.setEnabled(False)
             self.poltFitCheckBox.setChecked(False)
@@ -961,16 +1062,21 @@ class MainWindow(qtw.QMainWindow):
             self.nextButton.setEnabled(False)
             self.previousButton.setEnabled(False)
             self.MLButton.setEnabled(False)
+            self.orderOfFit.clear()
             self.orderOfFit.setEnabled(False)
+            self.graphWidget.setEnabled(False)
 
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
+            self.sortForMLGUI = None
 
         if self.mlGUI:
             self.mlGUI.close()
+            self.mlGUI = None
 
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
+            self.sortDataGUI = None
 
     @pyqtSlot()
     def browseGeom(self):
@@ -980,10 +1086,10 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        # dialog_box = qtw.QDialog()
-        geomName = qtw.QFileDialog.getOpenFileNames(self, 'Open File', ' ', 'geom Files (*.geom)')
-        self.fileField_2.setText(geomName[0][0])
-        self.viewFileButton.setEnabled(True)
+        geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
+        if geomName != "":
+            self.geomFilePath.setText(geomName[0])
+            self.viewFileButton.setEnabled(True)
 
     @pyqtSlot()
     def curveToPlot(self):
@@ -999,7 +1105,7 @@ class MainWindow(qtw.QMainWindow):
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Information')
             msg.setText("Plot a curve first                                                                    ")
-            msg.setInformativeText('If you are thinking of changing to a different ASCII, please plot a Pixel '
+            msg.setInformativeText('If you are thinking of changing to a different ASIC, please plot a Pixel '
                                    'intensity curve first')
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
@@ -1019,9 +1125,11 @@ class MainWindow(qtw.QMainWindow):
             self.eventNumber.setText(str(self.totalEvents - 1))
 
         if self.imageViewer:
+            print('Im here YES')
             self.imageViewer.drawImage(int(self.eventNumber.text()))
         else:
             self.viewFiles()
+            print('im here NO')
 
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
@@ -1045,13 +1153,23 @@ class MainWindow(qtw.QMainWindow):
         :return: A gui with the *cxi file open. similar to cxi view. Also, turns ON "Plot Pixel Intensity",
         "Plot Peak Pixel" and "Plot a Fit" checkBox
         """
+        self.eventNumber.setEnabled(True)
         if not self.eventNumber.text():
             self.eventNumber.setEnabled(True)
             self.eventNumber.setText("0")
 
-        self.imageViewer = DisplayImage(self.fileField.text(), self.fileField_2.text())
-        self.imageViewer.drawImage(int(self.eventNumber.text()))
-        self.totalEvents = self.imageViewer.size
+        if self.imageViewer:
+            self.imageViewer.close()
+            # self.imageViewer = None
+            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+            self.imageViewer.drawImage(int(self.eventNumber.text()))
+            self.totalEvents = self.imageViewer.size
+            self.imageViewer.show()
+        else:
+            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+            self.imageViewer.drawImage(int(self.eventNumber.text()))
+            self.totalEvents = self.imageViewer.size
+            self.imageViewer.show()
 
         # initial panel assignment
         if not self.panelDict:
@@ -1065,8 +1183,6 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer.panelSelected.connect(self.readPanelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
-
-        self.imageViewer.show()
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
@@ -1089,6 +1205,11 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedNext.emit(int(self.eventNumber.text()))
+            # print('im next button and here are the values i have:')
+            # if self.imageViewer in gc.get_objects(): print('found it')
+            # print(self.imageViewer.fileName)
+            print(self.eventNumber.text())
+
         except Exception as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
@@ -1114,6 +1235,7 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedPrevious.emit(int(self.eventNumber.text()))
+
         except Exception as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
@@ -1142,6 +1264,7 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
+        self.sortForMLGUI.close()
 
     @pyqtSlot()
     def sortForML(self):
@@ -1150,13 +1273,14 @@ class MainWindow(qtw.QMainWindow):
         :return: good and bad lists to be saved. Turns ON "Train a Model" button
         """
 
-        self.sortForMLGUI = SortingForML(self.fileField.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortForMLGUI = SortingForML(self.cxiFilePath.text(), self.orderOfFit.text(), self.panelDict)
         self.sortForMLGUI.show()
         self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
 
         self.sortForMLGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
+
 
     @pyqtSlot()
     def machineLearning(self):
@@ -1182,31 +1306,30 @@ class MainWindow(qtw.QMainWindow):
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortDataGUI.readyToSaveBad.connect(self.writeToFile)
 
-    def returnMaxPixel(self, coeff, x_range):
+    def returnMaxPixel(self, coeff, xRange):
         """
         returns the value where the coeff is maximized
         coeff (object): out put of a numpy curve fit.
         Range (tup) : a tuple with (min, max)
         """
 
-        storing_list = []
-        for i in range(x_range[0], x_range[1]):
-            storing_list.append((np.polyval(coeff, i), i))
+        storingList = []
+        for i in range(xRange[0], xRange[1]):
+            storingList.append((np.polyval(coeff, i), i))
 
-        storing_list.sort()
+        storingList.sort()
 
-        return storing_list[-1][1]
+        return storingList[-1][1]
 
-    def returnMaxPixelsList(self, file_name, deg=1):
+    def returnMaxPixelsList(self, fileName, deg=1):
         """
         fileName(str) : name of the file to be open
         deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
         *args(list) : expects a list of events to be considered. **TO BE IMPLEMENTED**
         """
-        filename = file_name
-        max_pixels = []
+        maxPixels = []
 
-        with h5py.File(filename, "r") as f:
+        with h5py.File(fileName, "r") as f:
             data = f['entry_1']['data_1']['data'][()]
 
         for i in range(len(data)):
@@ -1218,9 +1341,9 @@ class MainWindow(qtw.QMainWindow):
 
             fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
 
-            max_pixels.append(self.returnMaxPixel(fit, (10, 186)))
+            maxPixels.append(self.returnMaxPixel(fit, (10, 186)))
 
-        return max_pixels
+        return maxPixels
 
     @pyqtSlot()
     def plotCurve(self):
@@ -1229,20 +1352,28 @@ class MainWindow(qtw.QMainWindow):
         :return: A plot in the  self.graphingSpace
         """
         try:
-            file_name = self.fileField.text()
-            event_number = int(self.eventNumber.text())
+            fileName = self.cxiFilePath.text()
+            eventNumber = int(self.eventNumber.text())
 
-            with h5py.File(file_name, "r") as f:
+            with h5py.File(fileName, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
-            frame = data[event_number]
+            frame = data[eventNumber]
 
             avgIntensities = []
 
-            for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
-                avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+            if self.panelName in self.detectorLeft:
+                for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
+                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+            else:
+                for i in reversed(range(int(self.min_fs) + 5, int(self.max_fs) - 5)):
+
+                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+
+
             self.graphWidget.clear()
             self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, name='data')
+            self.graphWidget.setTitle("Panel: " + self.panelName)
             self.graphWidget.setLabel('left', "Avg. Pixel intensity")
             self.graphWidget.setLabel('bottom', "Pixel Number")
 
@@ -1252,8 +1383,10 @@ class MainWindow(qtw.QMainWindow):
                 self.nextButton.setEnabled(True)
                 self.previousButton.setEnabled(True)
 
+            self.poltFitCheckBox.setChecked(False)
+
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % fileName)
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path -plotCurve")
@@ -1277,7 +1410,7 @@ class MainWindow(qtw.QMainWindow):
                     self.orderOfFit.setEnabled(True)
                     self.orderOfFit.setText("4")
 
-                file_name = self.fileField.text()
+                file_name = self.cxiFilePath.text()
                 eventNumber = int(self.eventNumber.text())
                 avgIntensities = []
                 degry = int(self.orderOfFit.text())
@@ -1288,8 +1421,12 @@ class MainWindow(qtw.QMainWindow):
 
                 frame = data[int(eventNumber)]
 
-                for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
-                    avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+                if self.panelName in self.detectorLeft:
+                    for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
+                        avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
+                else:
+                    for i in reversed(range(int(self.min_fs) + 5, int(self.max_fs) - 5)):
+                        avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
                 fit = np.polyfit(np.arange(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, deg=degry)
 
@@ -1298,6 +1435,7 @@ class MainWindow(qtw.QMainWindow):
                 self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5),
                                       np.polyval(fit, range(int(self.min_fs) + 5, int(self.max_fs) - 5)),
                                       name='fit', pen=pg.mkPen(color='r', width=2))
+                self.graphWidget.setTitle("Panel: " + self.panelName)
                 self.graphWidget.setLabel('left', "Avg. Pixel intensity")
                 self.graphWidget.setLabel('bottom', "Pixel Number")
                 self.graphWidget.addLegend()
@@ -1308,6 +1446,8 @@ class MainWindow(qtw.QMainWindow):
                     self.sortForMLButton.setEnabled(True)
                     self.nextButton.setEnabled(True)
                     self.previousButton.setEnabled(True)
+
+                self.orderOfFit.setEnabled(True)
 
             except FileNotFoundError:
                 qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
@@ -1322,13 +1462,13 @@ class MainWindow(qtw.QMainWindow):
             self.plotCurve()
 
     @pyqtSlot(str)
-    def plotMaxPixels(self, file_name):
+    def plotMaxPixels(self, fileName):
         """
-        :param file_name: path to the *CXI file (file name)
+        :param fileName: path to the *CXI file (file name)
         :return: a plot with pixel with maximum value for the polynomial fit for all the events
         """
         try:
-            y = self.returnMaxPixelsList(file_name, deg=int(self.orderOfFit.text()))
+            y = self.returnMaxPixelsList(fileName, deg=int(self.orderOfFit.text()))
             x = range(len(y))
             self.graphWidget.clear()
             self.graphWidget.plot(x, y, pen=None, symbol='o')
@@ -1336,7 +1476,7 @@ class MainWindow(qtw.QMainWindow):
             self.graphWidget.setLabel('bottom', "Frame Number")
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % fileName)
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
