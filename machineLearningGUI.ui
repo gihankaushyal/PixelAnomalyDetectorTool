@@ -273,7 +273,7 @@
    <property name="geometry">
     <rect>
      <x>110</x>
-     <y>300</y>
+     <y>280</y>
      <width>121</width>
      <height>16</height>
     </rect>
@@ -286,7 +286,7 @@
    <property name="geometry">
     <rect>
      <x>450</x>
-     <y>300</y>
+     <y>280</y>
      <width>131</width>
      <height>16</height>
     </rect>
@@ -376,9 +376,9 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>310</y>
+     <y>290</y>
      <width>301</width>
-     <height>221</height>
+     <height>261</height>
     </rect>
    </property>
   </widget>
@@ -401,10 +401,10 @@
   <widget class="QWidget" name="classificationReport" native="true">
    <property name="geometry">
     <rect>
-     <x>330</x>
-     <y>309</y>
-     <width>371</width>
-     <height>221</height>
+     <x>340</x>
+     <y>289</y>
+     <width>391</width>
+     <height>261</height>
     </rect>
    </property>
   </widget>
