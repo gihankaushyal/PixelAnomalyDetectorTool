@@ -17,6 +17,7 @@ from PyQt5 import QtCore as qtc
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pickle
 # import plotly.express as px
 from PyQt5.QtCore import pyqtSlot
 
@@ -226,7 +227,6 @@ class DisplayImage(qtw.QWidget):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    # @pyqtSlot(pg.GraphicsScene.mouseMoveEvent)
     def selectPanel(self, event):
         """
         Draw a boarder around the selected ASIIC
@@ -463,13 +463,14 @@ class SortingForML(qtw.QWidget):
 
                 self.goodEvents[str(self.fileName)] = goodList
                 self.badEvents[str(self.fileName)] = badList
+                qtw.QMessageBox.information(self, "Completed", "Sorted files have being saved.")
                 self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
                 self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
 
             except Exception as e:
                 msg = qtw.QMessageBox()
                 msg.setWindowTitle('Error')
-                msg.setText("An error occurred while sorting the file %s                                  " % self.fileName)
+                msg.setText("An error occurred while sorting the file %s                              " % self.fileName)
                 msg.setInformativeText(str(e) + " sort()")
                 msg.setIcon(qtw.QMessageBox.Information)
                 msg.exec_()
@@ -510,12 +511,13 @@ class ML(qtw.QWidget):
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
+        self.saveButton.clicked.connect(self.save)
+        self.comboBox.activated.connect(self.comboBoxChanged)
 
         # for displaying the confusion matrix
         self.layoutConfusionMatrix = qtw.QHBoxLayout()
         self.figureConfusionMatrix = plt.figure()
         self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
-        # self.canvasConfusionMatrix.setGeometry(qtc.QRect(0, 0, 20, 20))
         self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
         self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
 
@@ -523,7 +525,7 @@ class ML(qtw.QWidget):
         self.layoutClassificationReport = qtw.QHBoxLayout()
         self.figureClassificationReport = plt.figure()
         self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
-        # self.canvasClassificationReport.setGeometry(qtc.QRect(0, 0, 20, 20))
+
         self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
         self.classificationReport.setLayout(self.layoutClassificationReport)
 
@@ -745,7 +747,6 @@ class ML(qtw.QWidget):
         msg.buttonClicked.connect(self.train)
         msg.exec_()
 
-    # @pyqtSlot(qtc.QSig)
     def train(self, i):
         """
         Method to train the user selected model using the data from the selected ASCI
@@ -819,6 +820,19 @@ class ML(qtw.QWidget):
         self.comboBox.setCurrentIndex(0)
         self.trainSplit.setText('70')
         self.testSplit.setText('30')
+
+    @pyqtSlot(int)
+    def comboBoxChanged(self, index):
+        self.reset()
+        self.comboBox.setCurrentIndex(index)
+
+    @pyqtSlot()
+    def save(self):
+        filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickel Files (*.pkl)")
+
+        if filename:
+            with open(filename, 'wb') as f:
+                pickle.dump(self.model, f)
 
 
 class SortData(qtw.QWidget):
@@ -912,6 +926,9 @@ class SortData(qtw.QWidget):
             self.sortButton.setEnabled(False)
             folder = self.folderPath.text()
 
+            fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
+                                                                                  'Sorted Files', directory=' ',
+                                                                    options=qtw.QFileDialog.DontUseNativeDialog)
             files = Path(folder).glob('*.cxi')
             row = 0
             self.tableWidget.setRowCount(len(list(files)))
@@ -946,8 +963,9 @@ class SortData(qtw.QWidget):
                 self.goodEvents[str(file)] = goodList
                 self.badEvents[str(file)] = badList
 
-                self.readyToSaveGood.emit(self.goodEvents, 'goodEvents-modelSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEvents, 'badEvents-modelSort-%s.list' % tag)
+                self.readyToSaveGood.emit(self.goodEvents,
+                                          fileSaveLocation + '/' + 'goodEvents-modelSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-modelSort-%s.list' % tag)
 
                 self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
                 self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
@@ -1280,7 +1298,6 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
-
 
     @pyqtSlot()
     def machineLearning(self):
