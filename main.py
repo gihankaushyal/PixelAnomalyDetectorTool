@@ -291,7 +291,7 @@ class SortingForML(qtw.QWidget):
         self.data = None
         self.setWindowTitle('Sorting for Machine Learning')
 
-        uic.loadUi("sortForMLGUI.ui", self)
+        uic.loadUi("UI/sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
         self.layoutSortingForML = qtw.QHBoxLayout()
@@ -495,7 +495,7 @@ class ML(qtw.QWidget):
         self.X_test = None
         self.y_test = None
         self.predictions = None
-        uic.loadUi("machineLearningGUI.ui", self)
+        uic.loadUi("UI/machineLearningGUI.ui", self)
 
         self.setWindowTitle('Machine Learning')
 
@@ -848,7 +848,7 @@ class SortData(qtw.QWidget):
 
         super(SortData, self).__init__()
 
-        uic.loadUi('sortDataGUI.ui', self)
+        uic.loadUi('UI/sortDataGUI.ui', self)
         self.setWindowTitle('Sort Data')
 
         self.model = model
@@ -981,12 +981,18 @@ class MainWindow(qtw.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        uic.loadUi("mainWindow.ui", self)
+        uic.loadUi("UI/mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
+
+        #  First message on status bar
+        self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
+
+        # Redirect standard output to custom function
+        sys.stdout = self
 
         # initializing the popup windows
         self.imageViewer = None
@@ -1055,13 +1061,14 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
 
-        fileName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        if fileName != "":
-            self.cxiFilePath.setText(fileName[0])
+        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+        if fileName:
+            self.cxiFilePath.setText(fileName)
             self.cxiFileListPath.setEnabled(False)
             self.cxiListBrowseButton.setEnabled(False)
             self.geomBrowseButton.setEnabled(True)
             self.geomFilePath.setEnabled(True)
+            self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
         # resting the main window for the next cxi file
         if self.imageViewer:
@@ -1387,7 +1394,6 @@ class MainWindow(qtw.QMainWindow):
 
                     avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
-
             self.graphWidget.clear()
             self.graphWidget.plot(range(int(self.min_fs) + 5, int(self.max_fs) - 5), avgIntensities, name='data')
             self.graphWidget.setTitle("Panel: " + self.panelName)
@@ -1497,6 +1503,10 @@ class MainWindow(qtw.QMainWindow):
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
+
+    def write(self, message):
+        # Update the status bar with the message
+        self.statusBar.showMessage(message)
 
     def closeEvent(self, QCloseEvent):
         """
