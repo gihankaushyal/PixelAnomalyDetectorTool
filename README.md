@@ -10,7 +10,7 @@
 
 <!-- PROJECT LOGO -->
 
-</style><br />
+[//]: # (</style><br />)
 <div align="center">
   <a href="https://github.com/gihankaushyal/InternalTool">
     <img src="images/logo.png" alt="Logo" width="128" height="128">
@@ -87,7 +87,7 @@
 To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
-![GitHub Pipenv locked Python version (branch)](https://img.shields.io/github/pipenv/locked/python-version/gihankaushyal/PixelAnomalyDetector/main)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/seaborn?style=for-the-badge)
 
 In order of all the dependencies and packages to run smoothly, make sure you have Python version v3.7 or higher by running.
 * In Linux or Mac: run the following command on a Terminal 
