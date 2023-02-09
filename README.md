@@ -10,7 +10,7 @@
 
 <!-- PROJECT LOGO -->
 
-</style><br />
+[//]: # (</style><br />)
 <div align="center">
   <a href="https://github.com/gihankaushyal/InternalTool">
     <img src="images/logo.png" alt="Logo" width="128" height="128">
@@ -87,7 +87,7 @@
 To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
-![GitHub Pipenv locked Python version (branch)](https://img.shields.io/github/pipenv/locked/python-version/gihankaushyal/PixelAnomalyDetector/main)
+[![PyPI - Python Version][Python-badge]][Python-url]
 
 In order of all the dependencies and packages to run smoothly, make sure you have Python version v3.7 or higher by running.
 * In Linux or Mac: run the following command on a Terminal 
@@ -99,9 +99,9 @@ In order of all the dependencies and packages to run smoothly, make sure you hav
   python --version
   ```
   
-You can either download the latest version of [Python](https://www.python.org/downloads/) or get an interactive 
-development environment (IDE) such as [PyCharm](https://www.jetbrains.com/pycharm/download/)  or a Python distribution 
-like [Anaconda](https://www.anaconda.com).
+You can either download the latest version of [Python][Python-url] or get an interactive 
+development environment (IDE) such as [PyCharm][PyCharm-url]  or a Python distribution 
+like [Anaconda][Anaconda-url].
 
 Make sure to have the following python packages are installed;
     ``` h5py, numpy, pandas, matplotlib, seaborn, PyQt5, pyqtgraph, scikit-learn
@@ -133,9 +133,9 @@ Make sure to have the following python packages are installed;
    ```sh
    python main.py
    ```
-4. Click the following links to download a copies of practice data for [model training](https://www.dropbox.com/scl/fo/391ged4bi7yqgwnshosm4/h?dl=0&rlkey=ygfmaw24kppcnh59ww9k17uh5), 
-data for the [model to be used](https://www.dropbox.com/scl/fo/g7bxy5mbp6vxcqkdqooke/h?dl=0&rlkey=3shte43a3k3tw3isss1a25ho5) 
-and the [geometry](https://www.dropbox.com/scl/fo/x2b52tqpq8lpouxqbnb9g/h?dl=0&rlkey=r2ty8sijt0qtx9d0k2kt0sdgi).
+4. Click the following links to download a copies of practice data for [model training][model-training-url], 
+data for the [model to be used][model-to-be-used-url]
+and the [geometry][geom-url].
     * <b> Although not required, downloading the entire dataset for model training is strongly encouraged as it will greatly improve the model's predicting accuracy. If you elect to only download a subset of the training data we recommend selecting the <i>*-r0484_*.cxi</i> files for optimal results.</b>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -153,7 +153,7 @@ located (1) and where is the appropriate geometry file is located (2). Then pres
 ![displayingTheCXIFile]
 
 Once you pressed the ```View File``` button a separate window will open with all the detector panel assembled
-(similar with [cxiview](https://www.desy.de/~barty/cheetah/Cheetah/cxiview.html)) and one of the ASICs already been 
+(similar with [cxiview][cxiview-url]) and one of the ASICs already been 
 selected (1). Title of the widow show the event/image number showing out the total number of events 
 available in the HDF5 file (2). Bottom left corner has a checkbox to turn on and off the found peaks (3). On the 
 right-hand side of the window, you can change the brightness by changing the histogram (4).
@@ -261,7 +261,7 @@ populate with all the available *.cxi file in folder you've selected. Lastly, cl
 
 The 
 tool will go through all the *.cxi files and sort "good events" from the "bad events" and save them in separate text 
-files ([Crystfel](https://www.desy.de/~twhite/crystfel/index.html) friendly) format. 
+files ([Crystfel][Crystfel-url] friendly) format. 
 
 ![sortData3]
 
@@ -306,7 +306,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Gihan Ketawala - gihan.ketawala@asu.edu
 
-Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com/gihankaushyal/InternalTool)
+Project Link: [https://github.com/gihankaushyal/PixelAnomalyDetector][repo-url]
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -316,7 +316,7 @@ Project Link: [https://github.com/gihankaushyal/InternalTool](https://github.com
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-* I acknowledge the guidance and support provided by [Sabine Botha](https://github.com/sbotha89) in the development of 
+* I acknowledge the guidance and support provided by [Sabine Botha][Sabine-github] in the development of 
 the tool, PixelAnomalyDetector. Her contributions were crucial in ensuring the success of the project. 
 Thank you, Sabine, for your dedication and expertise.
 
@@ -351,9 +351,19 @@ Thank you, Sabine, for your dedication and expertise.
 [sortData1]: images/sortData-1.png
 [sortData2]: images/sortData-2.png
 [sortData3]: images/sortData-3.png
+[Python-badge]: https://img.shields.io/pypi/pyversions/seaborn?style=for-the-badge
 [Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=yellow
-[Python-url]: https://python.org/
+[Python-url]: https://www.python.org/downloads/
+[PyCharm-url]:https://www.jetbrains.com/pycharm/download/
+[Anaconda-url]: https://www.anaconda.com
 [Scikit-learn]: https://img.shields.io/badge/scikitlearn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=61DAFB
 [Scikit-url]: https://scikit-learn.org/
 [PyQt5]: https://img.shields.io/badge/PyQt5-3776AB?style=for-the-badge&logo=pyqt5&logoColor=yellow
 [PyQt5-url]: https://pypi.org/project/PyQt5
+[model-training-url]:https://www.dropbox.com/scl/fo/391ged4bi7yqgwnshosm4/h?dl=0&rlkey=ygfmaw24kppcnh59ww9k17uh5
+[model-to-be-used-url]:https://www.dropbox.com/scl/fo/g7bxy5mbp6vxcqkdqooke/h?dl=0&rlkey=3shte43a3k3tw3isss1a25ho5
+[geom-url]:https://www.dropbox.com/scl/fo/x2b52tqpq8lpouxqbnb9g/h?dl=0&rlkey=r2ty8sijt0qtx9d0k2kt0sdgi
+[cxiview-url]:https://www.desy.de/~barty/cheetah/Cheetah/cxiview.html
+[Crystfel-url]:https://www.desy.de/~twhite/crystfel/index.html
+[repo-url]:https://github.com/gihankaushyal/PixelAnomalyDetector
+[Sabine-github]:https://github.com/sbotha89
