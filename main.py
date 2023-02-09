@@ -116,6 +116,8 @@ class DisplayImage(qtw.QWidget):
 
         self.setLayout(self.layout)
 
+        # handling what happens after the widget is closed
+        self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot(int)
@@ -129,7 +131,7 @@ class DisplayImage(qtw.QWidget):
         try:
             # applying the geometry and displaying the image
             self.eventNumber = eventNumber
-            print(self.fileName)
+            # print(self.fileName)
             # reading the given eventNumber from the cxi file
             self.cxi = fileTools.read_cxi(self.fileName, frameID=self.eventNumber, data=True, slab_size=True,
                                           peaks=True)
@@ -271,6 +273,9 @@ class DisplayImage(qtw.QWidget):
             msg.setInformativeText(str(e) + " selectPanel()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
+
+    def closeEvent(self, QCloseEvent):
+        self.isClosed = True
 
 
 class SortingForML(qtw.QWidget):
@@ -441,7 +446,7 @@ class SortingForML(qtw.QWidget):
 
         tag = str(self.fileName).split('/')[-1].split('.')[0]
 
-        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self,  caption='Select Save Location', directory=' ',
+        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
                                                                 options=qtw.QFileDialog.DontUseNativeDialog)
         if fileSaveLocation != "":
             self.goodEvents = {}
@@ -469,8 +474,9 @@ class SortingForML(qtw.QWidget):
                 self.goodEvents[str(self.fileName)] = goodList
                 self.badEvents[str(self.fileName)] = badList
                 qtw.QMessageBox.information(self, "Completed", "Sorted files have being saved.")
-                self.readyToSaveGood.emit(self.goodEvents, fileSaveLocation+'/'+'goodEvents-advanceSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation+'/'+'badEvents-advanceSort-%s.list' % tag)
+                self.readyToSaveGood.emit(self.goodEvents,
+                                          fileSaveLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
+                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
 
             except Exception as e:
                 msg = qtw.QMessageBox()
@@ -608,7 +614,7 @@ class ML(qtw.QWidget):
             train = int(self.trainSplit.text())
             test = int(self.testSplit.text())
 
-            if train+test > 100 or train+test < 100:
+            if train + test > 100 or train + test < 100:
                 qtw.QMessageBox.critical(self, 'Alert', 'The Sum of train split + test split = 100%')
                 qtw.QMessageBox.information(self, 'Information',
                                             'Setting the train and test split to the default values')
@@ -619,7 +625,7 @@ class ML(qtw.QWidget):
                 return True
 
         else:
-            qtw.QMessageBox.information(self,'Information', 'Please enter a valid number')
+            qtw.QMessageBox.information(self, 'Information', 'Please enter a valid number')
             return False
 
     def dataPrep(self):
@@ -983,11 +989,11 @@ class SortData(qtw.QWidget):
                 self.sortButton.setEnabled(False)
 
 
-
 class BusyLight(qtw.QWidget):
     """
     Status indicator light when the GUI is busy
     """
+
     def __init__(self):
         super().__init__()
         self.setFixedSize(12, 12)
@@ -1015,6 +1021,7 @@ class IdleLight(qtw.QWidget):
     """
         Status indicator light when the GUI is Idle
         """
+
     def __init__(self):
         super().__init__()
         self.setFixedSize(12, 12)
@@ -1057,6 +1064,9 @@ class MainWindow(qtw.QMainWindow):
         self.totalEvents = None
         self.plotName = 'plotCurve'
 
+        self.imageViewerClosed = True
+        self.messagesViewFile = None
+
         self.panelDict = None
         self.panelName = None
         self.min_fs = None
@@ -1064,15 +1074,15 @@ class MainWindow(qtw.QMainWindow):
         self.min_ss = None
         self.max_ss = None
         self.detectorLeft = [
-                            'p4a0', 'p4a1', 'p4a2', 'p4a3',
-                            'p5a0', 'p5a1', 'p5a2', 'p5a3',
-                            'p6a0', 'p6a1', 'p6a2', 'p6a3',
-                            'p7a0', 'p7a1', 'p7a2', 'p7a3',
-                            'p8a0', 'p8a1', 'p8a2', 'p8a3',
-                            'p9a0', 'p9a1', 'p9a2', 'p9a3',
-                            'p10a0', 'p10a1', 'p10a2', 'p10a3',
-                            'p11a0', 'p11a1', 'p11a2', 'p11a3',
-                             ]
+            'p4a0', 'p4a1', 'p4a2', 'p4a3',
+            'p5a0', 'p5a1', 'p5a2', 'p5a3',
+            'p6a0', 'p6a1', 'p6a2', 'p6a3',
+            'p7a0', 'p7a1', 'p7a2', 'p7a3',
+            'p8a0', 'p8a1', 'p8a2', 'p8a3',
+            'p9a0', 'p9a1', 'p9a2', 'p9a3',
+            'p10a0', 'p10a1', 'p10a2', 'p10a3',
+            'p11a0', 'p11a1', 'p11a2', 'p11a3',
+        ]
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
@@ -1227,12 +1237,10 @@ class MainWindow(qtw.QMainWindow):
         if int(self.eventNumber.text()) >= self.totalEvents:
             self.eventNumber.setText(str(self.totalEvents - 1))
 
-        if self.imageViewer:
-            print('Im here YES')
+        if not self.imageViewerClosed:
             self.imageViewer.drawImage(int(self.eventNumber.text()))
         else:
             self.viewFiles()
-            print('im here NO')
 
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
@@ -1256,26 +1264,30 @@ class MainWindow(qtw.QMainWindow):
         :return: A gui with the *cxi file open. similar to cxi view. Also, turns ON "Plot Pixel Intensity",
         "Plot Peak Pixel" and "Plot a Fit" checkBox
         """
-        self.eventNumber.setEnabled(True)
-        if not self.eventNumber.text():
+
+        if not self.eventNumber.isEnabled():
             self.eventNumber.setEnabled(True)
+        if not self.eventNumber.text():
             self.eventNumber.setText("0")
 
-        if self.imageViewer:
+        if not self.imageViewerClosed:
+            self.imageViewer.close()
             self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
             self.imageViewer.drawImage(int(self.eventNumber.text()))
             self.totalEvents = self.imageViewer.size
+            self.imageViewerClosed = False
             self.imageViewer.show()
         else:
             self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
             self.imageViewer.drawImage(int(self.eventNumber.text()))
             self.totalEvents = self.imageViewer.size
+            self.imageViewerClosed = False
             self.imageViewer.show()
 
-        self.messages = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
-                                                                  "buttons to navigate through images",
-                         "Click the Fit Plot CheckBox to fit a polynomial"]
-        self.showNextMessage()
+        self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
+                                                                          "buttons to navigate through images",
+                                 "Click the Fit Plot CheckBox to fit a polynomial"]
+        self.showNextMessage(self.messagesViewFile)
 
         # initial panel assignment
         if not self.panelDict:
@@ -1289,17 +1301,21 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer.panelSelected.connect(self.readPanelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.destroyed.connect(self.isImageViewerClosed)
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
 
-    def showNextMessage(self):
-        message = self.messages.pop(0)
+    def isImageViewerClosed(self):
+        self.imageViewerClosed = True
+
+    def showNextMessage(self, messageList):
+        message = messageList.pop(0)
         self.statusbar.showMessage(message, 3000)
-        if self.messages:
-            qtc.QTimer.singleShot(3000, self.showNextMessage)
+        if messageList:
+            qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
@@ -1317,10 +1333,6 @@ class MainWindow(qtw.QMainWindow):
             self.curveToPlot()
 
             self.clickedNext.emit(int(self.eventNumber.text()))
-            # print('im next button and here are the values i have:')
-            # if self.imageViewer in gc.get_objects(): print('found it')
-            # print(self.imageViewer.fileName)
-            print(self.eventNumber.text())
 
         except Exception as e:
             msg = qtw.QMessageBox()
@@ -1357,7 +1369,7 @@ class MainWindow(qtw.QMainWindow):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    @pyqtSlot(dict,str)
+    @pyqtSlot(dict, str)
     def writeToFile(self, eventsList, fileName):
         """
         A method to save sorted events
@@ -1399,6 +1411,8 @@ class MainWindow(qtw.QMainWindow):
         self.MLButton.setEnabled(True)
 
         self.setBusy()
+        if self.sortForMLGUI.close():
+            self.setIdle()
 
     @pyqtSlot()
     def machineLearning(self):
@@ -1489,7 +1503,6 @@ class MainWindow(qtw.QMainWindow):
                     avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             else:
                 for i in reversed(range(int(self.min_fs) + 5, int(self.max_fs) - 5)):
-
                     avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
 
             self.graphWidget.clear()
