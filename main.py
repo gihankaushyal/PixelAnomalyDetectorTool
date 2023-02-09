@@ -116,6 +116,8 @@ class DisplayImage(qtw.QWidget):
 
         self.setLayout(self.layout)
 
+
+
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
@@ -975,14 +977,15 @@ class SortData(qtw.QWidget):
                 self.sortButton.setEnabled(False)
 
 
+
 class BusyLight(qtw.QWidget):
     """
     Status indicator light when the GUI is busy
     """
     def __init__(self):
         super().__init__()
-        self.setFixedSize(10, 10)
-        self.color = qtc.Qt.yellow
+        self.setFixedSize(12, 12)
+        self.color = qtg.QColor('darkorange')
         self.timer = qtc.QTimer(self)
         self.timer.timeout.connect(self.update)
         self.timer.start(500)
@@ -999,7 +1002,7 @@ class BusyLight(qtw.QWidget):
             self.color = qtc.Qt.transparent
         else:
             self.color = qtc.Qt.yellow
-    #     self.update()
+        super().update()
 
 
 class IdleLight(qtw.QWidget):
@@ -1008,13 +1011,13 @@ class IdleLight(qtw.QWidget):
         """
     def __init__(self):
         super().__init__()
-        self.setFixedSize(10, 10)
+        self.setFixedSize(12, 12)
 
     def paintEvent(self, event):
         painter = qtg.QPainter(self)
         painter.setRenderHint(qtg.QPainter.Antialiasing)
         painter.setPen(qtc.Qt.NoPen)
-        painter.setBrush(qtc.Qt.green)
+        painter.setBrush(qtg.QColor('springgreen'))
         painter.drawEllipse(self.rect())
 
 
@@ -1103,6 +1106,22 @@ class MainWindow(qtw.QMainWindow):
         self.statusbar.addPermanentWidget(self.idleLight)
         self.idleLight.show()
         self.busyLight.hide()
+
+    def setBusy(self):
+        """
+
+        :return: Change the light to busy
+        """
+        self.busyLight.show()
+        self.idleLight.hide()
+
+    def setIdle(self):
+        """
+
+        :return: Change the light to Idle
+        """
+        self.busyLight.hide()
+        self.idleLight.show()
 
     @pyqtSlot()
     def browseFiles(self):
@@ -1237,8 +1256,6 @@ class MainWindow(qtw.QMainWindow):
             self.eventNumber.setText("0")
 
         if self.imageViewer:
-            self.imageViewer.close()
-            # self.imageViewer = None
             self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
             self.imageViewer.drawImage(int(self.eventNumber.text()))
             self.totalEvents = self.imageViewer.size
@@ -1354,8 +1371,11 @@ class MainWindow(qtw.QMainWindow):
 
         f.close()
         self.statusbar.showMessage("Saving file %s " % fileName, 2000)
+        self.setIdle()
 
-        self.sortForMLGUI.close()
+        if self.sortForMLGUI:
+            self.sortForMLGUI.close()
+            self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
 
     @pyqtSlot()
     def sortForML(self):
@@ -1372,6 +1392,8 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
         self.MLButton.setEnabled(True)
 
+        self.setBusy()
+
     @pyqtSlot()
     def machineLearning(self):
         """
@@ -1384,6 +1406,8 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortButton.setEnabled(True)
 
+        self.setBusy()
+
     @pyqtSlot()
     def sort(self):
         """
@@ -1395,6 +1419,8 @@ class MainWindow(qtw.QMainWindow):
 
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortDataGUI.readyToSaveBad.connect(self.writeToFile)
+
+        self.setBusy()
 
     def returnMaxPixel(self, coeff, xRange):
         """
@@ -1591,14 +1617,6 @@ class MainWindow(qtw.QMainWindow):
 
         if self.sortDataGUI:
             self.sortDataGUI.close()
-
-    def setBusy(self):
-        self.busyLight.show()
-        self.idleLight.hide()
-
-    def setIdle(self):
-        self.busyLight.hide()
-        self.idleLight.show()
 
 
 # main .
