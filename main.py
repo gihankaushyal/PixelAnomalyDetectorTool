@@ -12,6 +12,7 @@ from pathlib import Path
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
+from PyQt5 import QtGui as qtg
 # from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
@@ -974,6 +975,49 @@ class SortData(qtw.QWidget):
                 self.sortButton.setEnabled(False)
 
 
+class BusyLight(qtw.QWidget):
+    """
+    Status indicator light when the GUI is busy
+    """
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(10, 10)
+        self.color = qtc.Qt.yellow
+        self.timer = qtc.QTimer(self)
+        self.timer.timeout.connect(self.update)
+        self.timer.start(500)
+
+    def paintEvent(self, event):
+        painter = qtg.QPainter(self)
+        painter.setRenderHint(qtg.QPainter.Antialiasing)
+        painter.setPen(qtc.Qt.NoPen)
+        painter.setBrush(self.color)
+        painter.drawEllipse(self.rect())
+
+    def update(self):
+        if self.color == qtc.Qt.yellow:
+            self.color = qtc.Qt.transparent
+        else:
+            self.color = qtc.Qt.yellow
+    #     self.update()
+
+
+class IdleLight(qtw.QWidget):
+    """
+        Status indicator light when the GUI is Idle
+        """
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(10, 10)
+
+    def paintEvent(self, event):
+        painter = qtg.QPainter(self)
+        painter.setRenderHint(qtg.QPainter.Antialiasing)
+        painter.setPen(qtc.Qt.NoPen)
+        painter.setBrush(qtc.Qt.green)
+        painter.drawEllipse(self.rect())
+
+
 class MainWindow(qtw.QMainWindow):
     clickedNext = qtc.pyqtSignal(int)
     clickedPrevious = qtc.pyqtSignal(int)
@@ -991,8 +1035,8 @@ class MainWindow(qtw.QMainWindow):
         #  First message on status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
 
-        # Redirect standard output to custom function
-        sys.stdout = self
+        # # Redirect standard output to custom function
+        # sys.stdout = self
 
         # initializing the popup windows
         self.imageViewer = None
@@ -1051,6 +1095,14 @@ class MainWindow(qtw.QMainWindow):
 
         self.setWindowTitle("PixelAnomalyDetector")
         self.show()
+
+        # adding busy and idle lights
+        self.busyLight = BusyLight()
+        self.idleLight = IdleLight()
+        self.statusbar.addPermanentWidget(self.busyLight)
+        self.statusbar.addPermanentWidget(self.idleLight)
+        self.idleLight.show()
+        self.busyLight.hide()
 
     @pyqtSlot()
     def browseFiles(self):
@@ -1111,10 +1163,11 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-        geomName = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
-        if geomName != "":
-            self.geomFilePath.setText(geomName[0])
+        geomName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
+        if geomName:
+            self.geomFilePath.setText(geomName)
             self.viewFileButton.setEnabled(True)
+            self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
 
     @pyqtSlot()
     def curveToPlot(self):
@@ -1196,6 +1249,11 @@ class MainWindow(qtw.QMainWindow):
             self.totalEvents = self.imageViewer.size
             self.imageViewer.show()
 
+        self.messages = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
+                                                                  "buttons to navigate through images",
+                         "Click the Fit Plot CheckBox to fit a polynomial"]
+        self.showNextMessage()
+
         # initial panel assignment
         if not self.panelDict:
             self.panelDict = self.imageViewer.outgoingDict
@@ -1213,6 +1271,12 @@ class MainWindow(qtw.QMainWindow):
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
+
+    def showNextMessage(self):
+        message = self.messages.pop(0)
+        self.statusbar.showMessage(message, 3000)
+        if self.messages:
+            qtc.QTimer.singleShot(3000, self.showNextMessage)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
@@ -1289,6 +1353,8 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
+        self.statusbar.showMessage("Saving file %s " % fileName, 2000)
+
         self.sortForMLGUI.close()
 
     @pyqtSlot()
@@ -1504,9 +1570,10 @@ class MainWindow(qtw.QMainWindow):
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
-    def write(self, message):
-        # Update the status bar with the message
-        self.statusBar.showMessage(message)
+    # def write(self, message):
+    #     print("I got the message:", message)
+    #     # Update the status bar with the message
+    #     self.statusbar.showMessage(message)
 
     def closeEvent(self, QCloseEvent):
         """
@@ -1524,6 +1591,14 @@ class MainWindow(qtw.QMainWindow):
 
         if self.sortDataGUI:
             self.sortDataGUI.close()
+
+    def setBusy(self):
+        self.busyLight.show()
+        self.idleLight.hide()
+
+    def setIdle(self):
+        self.busyLight.hide()
+        self.idleLight.show()
 
 
 # main .
