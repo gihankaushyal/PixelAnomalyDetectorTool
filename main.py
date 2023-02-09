@@ -116,7 +116,7 @@ class DisplayImage(qtw.QWidget):
 
         self.setLayout(self.layout)
 
-
+        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
@@ -327,6 +327,8 @@ class SortingForML(qtw.QWidget):
         self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.sort)
 
+        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
+
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
@@ -531,6 +533,8 @@ class ML(qtw.QWidget):
 
         self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
         self.classificationReport.setLayout(self.layoutClassificationReport)
+
+        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot()
     def browseFiles(self):
@@ -869,6 +873,8 @@ class SortData(qtw.QWidget):
 
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.buttonClicked)
+
+        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot()
     def browseFiles(self):
