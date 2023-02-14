@@ -152,6 +152,11 @@ located (1) and where is the appropriate geometry file is located (2). Then pres
 
 ![displayingTheCXIFile]
 
+Some useful hits and guides are shown in the status bar (1) and on the bottom right conner (2) a solid green light 
+indicating the GUI in idle or a blinking yellow light indicating the GUI is busy will be shown.
+
+![statusBarAndLights]
+
 Once you pressed the ```View File``` button a separate window will open with all the detector panel assembled
 (similar with [cxiview][cxiview-url]) and one of the ASICs already been 
 selected (1). Title of the widow show the event/image number showing out the total number of events 
@@ -341,6 +346,7 @@ Thank you, Sabine, for your dedication and expertise.
 [linkedin-url]: https://www.linkedin.com/in/gihan-ketawala/
 [product-screenshot]: images/mainWindow.png
 [displayingTheCXIFile]: images/diplayingTheCXIFile.png
+[statusBarAndLights]: images/statusBarAndLigghts.png
 [fileViewWindow]: images/fileViewWindow.png
 [plottingPixelIntensity]: images/plotingPixelIntensity.png
 [sortingForML]: images/sortingForML.png
