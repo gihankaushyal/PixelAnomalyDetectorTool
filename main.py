@@ -845,7 +845,7 @@ class ML(qtw.QMainWindow):
              cr.strip().split()[25:28]], dtype=float)
         cr_df = pd.DataFrame(data=data, columns=columns, index=indexes)
         ax2 = self.figureClassificationReport.add_subplot(111)
-        sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=False, linewidth=1)
+        sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=True, linewidth=1)
         self.canvasClassificationReport.draw()
 
         self.testButton.setEnabled(False)
