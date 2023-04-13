@@ -1065,6 +1065,9 @@ class IdleLight(qtw.QWidget):
         painter.setBrush(qtg.QColor('springgreen'))
         painter.drawEllipse(self.rect())
 
+class Hitfinding():
+    pass
+
 
 class MainWindow(qtw.QMainWindow):
     clickedNext = qtc.pyqtSignal(int)
@@ -1073,12 +1076,13 @@ class MainWindow(qtw.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
-        uic.loadUi("UI/mainWindow.ui", self)
+        uic.loadUi("UI/mainwindow-2.ui", self)
         self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
+        self.viewFileButton_2.clicked.connect(self.viewFiles)
 
         #  First message on status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
@@ -1104,7 +1108,7 @@ class MainWindow(qtw.QMainWindow):
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
-        self.detectorLeft = [
+        self.panelNames = [
             'p4a0', 'p4a1', 'p4a2', 'p4a3',
             'p5a0', 'p5a1', 'p5a2', 'p5a3',
             'p6a0', 'p6a1', 'p6a2', 'p6a3',
@@ -1442,6 +1446,7 @@ class MainWindow(qtw.QMainWindow):
 
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
+            self.sortForMLGUI = None
             self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
 
     @pyqtSlot()
@@ -1502,7 +1507,7 @@ class MainWindow(qtw.QMainWindow):
         self.setBusy()
 
         loop = qtc.QEventLoop()
-        self.sortForMLGUI.destroyed.connect(loop.quit)
+        self.sortDataGUI.destroyed.connect(loop.quit)
         loop.exec_()
 
         self.setIdle()
@@ -1563,7 +1568,7 @@ class MainWindow(qtw.QMainWindow):
 
             avgIntensities = []
 
-            if self.panelName in self.detectorLeft:
+            if self.panelName in self.panelNames:
                 for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
                     avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             else:
@@ -1620,7 +1625,7 @@ class MainWindow(qtw.QMainWindow):
 
                 frame = data[int(eventNumber)]
 
-                if self.panelName in self.detectorLeft:
+                if self.panelName in self.panelNames:
                     for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
                         avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
                 else:
