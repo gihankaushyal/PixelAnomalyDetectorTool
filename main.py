@@ -34,6 +34,12 @@ from lib.geometry_parser.GeometryFileParser import *
 
 
 class DisplayImage(qtw.QWidget):
+    """
+        This class inherits from the PyQt5 QWidget class and provides a custom widget for displaying images.
+        The widget emits a signal when the user selects an image panel, providing a dictionary with panel
+        information.
+    """
+
     panelSelected = qtc.pyqtSignal(dict)
 
     def __init__(self, fileName, geometry):
@@ -43,6 +49,7 @@ class DisplayImage(qtw.QWidget):
         :param fileName: name of the *cxi file (with the full path)
         :param geometry: path to the geometry file
         """
+        # Call the superclass constructor
         super(DisplayImage, self).__init__()
 
         # setting the size and location of the window
@@ -53,7 +60,7 @@ class DisplayImage(qtw.QWidget):
         self.fileName = fileName
         self.geometryName = geometry
 
-        # class variables
+        # Initialize class variables
         self.eventNumber = None
         self.imageToDraw = None
         self.cxi = None
@@ -63,31 +70,33 @@ class DisplayImage(qtw.QWidget):
         self.panelsXYEdges = {}
         self.outgoingDict = {}
 
-        # main window for display the data
+        # Create the main window for display the data
         self.mainWidget = pg.ImageView()
 
-        # adding a checkBoxes
+        # Add a checkbox for showing found peaks
         self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
 
-        # connecting the checkBoxes to a method
+        # Connect the checkbox to the drawImage method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
 
-        # adding a layout and add checkbox and the mainwindow to the layout
+        # Create a layout and add the main window and the checkbox to it
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
         self.layout.addWidget(self.foundPeaksCheckBox)
 
-        # reading the geometry file
+        # Read the geometry file
         try:
             self.parser = GeometryFileParser(self.geometryName)
             self.geometry = self.parser.pixel_map_for_cxiview()
 
+            # Create a dictionary for panel boundaries
             for panelName in self.parser.dictionary['panels'].keys():
                 self.panelFsSs[panelName] = [self.parser.dictionary['panels'][panelName]['min_fs'],
                                              self.parser.dictionary['panels'][panelName]['max_fs'],
                                              self.parser.dictionary['panels'][panelName]['min_ss'],
                                              self.parser.dictionary['panels'][panelName]['max_ss']]
 
+            # Create a dictionary for panel locations
             for panelName in self.panelFsSs.keys():
                 # bottom left conner
                 x1 = (self.panelFsSs[panelName][0], self.panelFsSs[panelName][2])
@@ -103,53 +112,64 @@ class DisplayImage(qtw.QWidget):
         except FileNotFoundError:
             qtw.QMessageBox.critical(self, 'Fail', self.geometryName, " was not found -reading geometry __init__")
 
-        # adding an overlapping canvas to the found peaks
+        # Add an overlapping canvas for found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
         self.mainWidget.getView().addItem(self.foundPeaksCanvas)
 
-        # adding a canvas for displaying panel edges
+        # Add a canvas for displaying panel edges
         self.panelEdgesCanvas = pg.PlotDataItem()
         self.mainWidget.getView().addItem(self.panelEdgesCanvas)
 
         # connecting a mouse clicked event to a select panel method
         self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
 
+        # Set the layout for the widget
         self.setLayout(self.layout)
 
-        # handling what happens after the widget is closed
+        # Handle what happens after the widget is closed
         self.isClosed = False
+
+        # Set the widget to delete itself on close
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
-         reading and displaying data
+         Read and display data for a given event number from a CXI file.
         :param eventNumber: event number to be displayed
         :return: pixel map from the cxi file
         """
 
         try:
-            # applying the geometry and displaying the image
+            # Set the current event number
             self.eventNumber = eventNumber
-            # print(self.fileName)
-            # reading the given eventNumber from the cxi file
+
+            # Read the CXI file for the given event number, with data, slab size, and peaks
             self.cxi = fileTools.read_cxi(self.fileName, frameID=self.eventNumber, data=True, slab_size=True,
                                           peaks=True)
+            # Get the size of the CXI file
             self.size = self.cxi['stack_shape'][0]
-            # reading data
+
+            # Read the 'data' from the CXI file
             imgData = self.cxi['data']
-            # converting data into a pixel map to display and applying geometry
+
+            # Convert the data into a pixel map and apply the geometry (x and y coordinates)
             self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
-            # showing the pixel map in the main window
+
+            # Set the pixel map as the image to be displayed in the main window
             self.mainWidget.setImage(self.imageToDraw)
-            # setting a window title with the eventNumber and the total number of event in the file
+
+            # Set the window title to show the current event number and the total number of events in the file
             self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
 
+            # If the event number is 0, draw the initial panel
             if self.eventNumber == 0:
                 self.drawInitialPanel()
 
+            # Draw the peaks on the image
             self.drawPeaks()
 
+        # Handle any exceptions that might occur while processing the data
         except IndexError as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Information')
@@ -160,31 +180,43 @@ class DisplayImage(qtw.QWidget):
 
     def drawPeaks(self):
         """
-        :return: draw circles around the found peaks extracted from the cxi file
+        Draw circles around the found peaks extracted from the cxi file.
+        :return: None
         """
         try:
+            # Check if the "found peaks" checkbox is checked
             if self.foundPeaksCheckBox.isChecked():
                 peaks_x = []
                 peaks_y = []
 
-                # temp = fileTools.read_event()
+                # Get the number of peaks, x and y positions from the cxi file
                 n_peaks = self.cxi['n_peaks']
                 x_data = self.cxi['peakXPosRaw']
                 y_data = self.cxi['peakYPosRaw']
 
+                # Loop through all the peaks
                 for i in range(0, n_peaks):
                     peak_fs = x_data[i]
                     peak_ss = y_data[i]
 
+                    # Calculate the peak position in the slab
                     peak_in_slab = int(round(peak_ss)) * self.cxi['stack_shape'][2] + int(round(peak_fs))
+
+                    # Append the x and y positions of the peaks to the lists
                     peaks_x.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
                     peaks_y.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
 
+                # Create a blue pen for drawing circles around the peaks
                 ring_pen = pg.mkPen('b', width=2)
+
+                # Draw circles around the peaks using the blue pen
                 self.foundPeaksCanvas.setData(peaks_x, peaks_y, symbol='o', size=10, pen=ring_pen, brush=(0, 0, 0, 0),
                                               pxMode=False)
             else:
+                # If the "found peaks" checkbox is not checked, clear the canvas
                 self.foundPeaksCanvas.clear()
+
+        # Handle any exceptions that might occur while processing the data
         except Exception as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
@@ -195,35 +227,47 @@ class DisplayImage(qtw.QWidget):
 
     def drawInitialPanel(self):
         """
-        draw initial panel (predetermined to be p6a0)
+        Draw the initial panel (predetermined to be p6a0).
         :return:  a dictionary (self.outgoingDict)
         """
 
         try:
+            # Iterate through all panel names in the panelLocFromGeom dictionary
             for panelName in self.panelLocFromGeom.keys():
                 x_edges = []
                 y_edges = []
 
+                # Calculate the x and y edges of each panel
                 for i in range(4):
                     edge_fs = self.panelLocFromGeom[panelName][i][0]
                     edge_ss = self.panelLocFromGeom[panelName][i][1]
                     peak_in_slab = int(round(edge_ss)) * self.cxi['stack_shape'][2] + int(round(edge_fs))
                     x_edges.append(self.geometry['x'][peak_in_slab] + self.imageToDraw.shape[0] / 2)
                     y_edges.append(self.geometry['y'][peak_in_slab] + self.imageToDraw.shape[1] / 2)
+
+                # Close the square by appending the first edge to the end of the list
                 x_edges.append(x_edges[0])
                 y_edges.append(y_edges[0])
 
+                # Store the x and y edges for each panel in the panelsXYEdges dictionary
                 self.panelsXYEdges[panelName] = [x_edges, y_edges]
 
+            # Create a red pen with width 3 for drawing panel edges
             pen = pg.mkPen('r', width=3)
-            # plotting a square along the edges of the selected panel
+
+            # Plot a square along the edges of the selected panel (p6a0)
             self.panelEdgesCanvas.setData(self.panelsXYEdges['p6a0'][0],
                                           self.panelsXYEdges['p6a0'][1], pen=pen)
+
+            # Create a dictionary with panel information
             self.outgoingDict = {'panel_name': 'p6a0',
                                  'min_fs': self.panelFsSs['p6a0'][0], 'max_fs': self.panelFsSs['p6a0'][1],
                                  'min_ss': self.panelFsSs['p6a0'][2], 'max_ss': self.panelFsSs['p6a0'][3]}
 
+            # Emit the panelSelected signal with the outgoingDict
             self.panelSelected.emit(self.outgoingDict)
+
+        # Handle any exceptions that might occur while processing the data
         except Exception as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
@@ -234,38 +278,46 @@ class DisplayImage(qtw.QWidget):
 
     def selectPanel(self, event):
         """
-        Draw a boarder around the selected ASIIC
+        Draw a border around the selected ASIC.
         :param event: A mouse clicked event
-        :return: Draw a Red boarder around the selected ASIIC
+        :return: Draw a Red boarder around the selected ASIC
         """
 
         try:
-            # panel locations corrected for displayImage
-
+            # Get the position of the mouse click
             pos = event.scenePos()
+            # Check if the mouse click is within the main widget's view
             if self.mainWidget.getView().sceneBoundingRect().contains(pos):
+                # Convert the scene position to view position
                 mouse_point = self.mainWidget.getView().mapSceneToView(pos)
                 x_mouse = int(mouse_point.x())
                 y_mouse = int(mouse_point.y())
 
+                # Iterate through all the panel names in the panelsXYEdges dictionary
                 for panelName in self.panelsXYEdges.keys():
                     if x_mouse in range(int(min(self.panelsXYEdges[panelName][0])),
                                         int(max(self.panelsXYEdges[panelName][0]))) \
                             and y_mouse in range(int(min(self.panelsXYEdges[panelName][1])),
                                                  int(max(self.panelsXYEdges[panelName][1]))):
+
+                        # Create a red pen with width 3 for drawing panel edges
                         pen = pg.mkPen('r', width=3)
-                        # plotting a square along the edges of the selected panel
+
+                        # Plot a square along the edges of the selected panel
                         self.panelEdgesCanvas.setData(self.panelsXYEdges[panelName][0],
                                                       self.panelsXYEdges[panelName][1], pen=pen)
-                        # print(self.panelFsSs[panelName])
 
+                        # Create a dictionary with panel information
                         self.outgoingDict = {'panel_name': panelName,
                                              'min_fs': self.panelFsSs[panelName][0],
                                              'max_fs': self.panelFsSs[panelName][1],
                                              'min_ss': self.panelFsSs[panelName][2],
                                              'max_ss': self.panelFsSs[panelName][3]}
+
+                        # Emit the panelSelected signal with the outgoingDict
                         self.panelSelected.emit(self.outgoingDict)
 
+        # Handle any exceptions that might occur while processing the data
         except Exception as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
@@ -279,19 +331,29 @@ class DisplayImage(qtw.QWidget):
 
 
 class SortingForML(qtw.QWidget):
+    """
+       This class inherits from the PyQt5 QWidget class and provides a custom widget for sorting images
+       to be used for machine learning. The widget emits two signals, one for each category of images
+       (good or bad) when the user sorts the images.
+    """
+
+    # Define two PyQt signals to indicate when the user is ready to save an image as good or bad
     readyToSaveGood = qtc.pyqtSignal(dict, str)
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, fileName, oft, inDict):
         """
+            Initialize the SortingForML custom widget.
 
-        :param fileName: name of the file to be sorted
-        :param oft: order of the fit for the polynomial
-        :param inDict: dictionary with detector panel information
+            :param fileName: name of the file to be sorted
+            :param oft: order of the fit for the polynomial
+            :param inDict: dictionary with detector panel information
         """
 
+        # Call the superclass constructor
         super(SortingForML, self).__init__()
 
+        # Initialize instance variables
         self.badEvents = None
         self.goodEvents = None
         self.inflectionPoint1List = None
@@ -299,9 +361,10 @@ class SortingForML(qtw.QWidget):
         self.data = None
         self.setWindowTitle('Sorting for Machine Learning')
 
+        # Load the user interface layout from a .ui file
         uic.loadUi("UI/sortForMLGUI.ui", self)
 
-        # for plotting with matplotlib
+        # Set up plotting with matplotlib
         self.layoutSortingForML = qtw.QHBoxLayout()
         self.figureSortingForML = plt.figure()
         self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
@@ -314,6 +377,7 @@ class SortingForML(qtw.QWidget):
         # self.layout.addWidget(self.browser)
         # self.graphSpace.setLayout(self.layout)
 
+        # Set the instance variables using the parameters
         self.fileName = fileName
         self.orderOfFit = oft
         self.panelName = inDict['panel_name']
@@ -322,56 +386,70 @@ class SortingForML(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
-        # setting initial values for spinBoxes (value ranges for inflection points)
+        # Set initial values and step size for the spin boxes (value ranges for inflection points)
         self.doubleSpinBoxIF1.setValue(15)
         self.doubleSpinBoxIF2.setValue(15)
         self.doubleSpinBoxIF1.setSingleStep(0.05)
         self.doubleSpinBoxIF2.setSingleStep(0.05)
 
+        # Connect the plotInflectionPointsButton signal to the plotInflectionPoints method
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         self.plotInflectionPoints()
         self.sortButton.clicked.connect(self.sort)
 
+        # Set the widget to delete itself on close
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
-        :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
+            Read panel details from the provided dictionary and update instance variables accordingly.
+
+            :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
                 a panel
-        :return: Assigns panel detail
+            :return: Assigns panel detail and calls the plotInflectionPoints method to update the plot
         """
+
+        # Update instance variables using the input dictionary
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        # Call the plotInflectionPoints method to update the plot based on the new panel details
         self.plotInflectionPoints()
 
     def plotInflectionPoints(self):
         """
-        :return: Plot two histograms for inflection point1 and inflection point2 on the self.graphSpace of
-         the sortForMlGUI
+        Plot two histograms for inflection point1 and inflection point2 on the self.graphSpace of
+            the sortForMlGUI.
+        :return: None
         """
 
+        # Initialize lists for inflection points
         self.inflectionPoint1List = []
         self.inflectionPoint2List = []
 
         try:
+            # Read the data from the file
             with h5py.File(self.fileName, "r") as f:
                 self.data = f['entry_1']['data_1']['data'][()]
 
+            # Iterate through the data and calculate inflection points
             for i in range(len(self.data)):
                 frame = self.data[i]
 
+                # Calculate average intensities for the specified range
                 avgIntensities = []
                 for j in range(self.min_fs + 5, self.max_fs - 5):
                     avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
 
+                # Fit a polynomial to the average intensities
                 fit = np.polyfit(np.arange(self.min_fs + 5, self.max_fs - 5), avgIntensities, deg=int(self.orderOfFit))
-                # calculating the inflection points (second derivative of the forth order polynomial)
-                # this piece of code would convert a numpy runtime warning to an exception
+
+                # Calculate the inflection points (second derivative of the polynomial)
+                # Handle various exceptions and warnings during the calculation
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
                     try:
@@ -384,15 +462,18 @@ class SortingForML(qtw.QWidget):
                         self.inflectionPoint1List.append(x1)
                         self.inflectionPoint2List.append(x2)
                     except IndexError as e:
+                        # Show a message box if there is an IndexError
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
                         msg.setInformativeText('Try entering a different order for the polynomial')
                         msg.setIcon(qtw.QMessageBox.Critical)
                         msg.exec_()
                     except ValueError:
+                        # Show a message box if there is a ValueError
                         qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
                         continue
                     except Warning as e:
+                        # Show a message box if there is a Warning
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
                         msg.setInformativeText('Error occurred while trying to calculate the sqrt of %i'
@@ -412,7 +493,7 @@ class SortingForML(qtw.QWidget):
         # fig = px.histogram(df, nbins=200, opacity=0.5)
         # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        # with seaborn
+        # Create a DataFrame and plot the histograms using seaborn
         self.figureSortingForML.clear()
         df = pd.DataFrame()
         df['Inflection_point1'] = self.inflectionPoint1List
@@ -429,7 +510,7 @@ class SortingForML(qtw.QWidget):
 
         self.canvasForInflectionPoints.draw()
 
-        # Enabling button and check box after plotting
+        # Update the display with inflection point values and enable buttons and checkboxes
         self.inflectionPoint1.setEnabled(True)
         self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
         self.inflectionPoint2.setEnabled(True)
@@ -440,45 +521,56 @@ class SortingForML(qtw.QWidget):
     def sort(self):
         """
 
-        :return: two dictionaries (for both good and bad events) with file names and events sorted out by user
+        :return: :return: two dictionaries (for both good and bad events) with file names and events sorted out by user
         defined threshold for inflection points and spread of the distribution
-        """
 
+        """
+        # Get the postfix for file saving
         tag = str(self.fileName).split('/')[-1].split('.')[0]
 
+        # Get the directory to save the sorted files
         fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
                                                                 options=qtw.QFileDialog.DontUseNativeDialog)
         if fileSaveLocation != "":
+            # Initialize goodEvents and badEvents dictionaries
             self.goodEvents = {}
             self.badEvents = {}
 
-            # goodList to store all the events with expected pixel intensities for the file
+            # Lists to store good and bad event indices
             goodList = []
-            # badList to store all the events with detector artifacts for the file
             badList = []
 
             try:
-
+                # Iterate through the data and inflection points (x1, x2)
                 for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
 
+                    # Check if the inflection points are within user-defined thresholds
                     if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
                             float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
                             and \
                             (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
                             float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
 
+                        # If the inflection points are within thresholds, add the index to the goodList
                         goodList.append(i)
                     else:
+                        # If the inflection points are not within thresholds, add the index to the badList
                         badList.append(i)
 
+                # Update the goodEvents and badEvents dictionaries with goodList and badList
                 self.goodEvents[str(self.fileName)] = goodList
                 self.badEvents[str(self.fileName)] = badList
+
+                # Display a message to inform the user that the sorted files have been saved
                 qtw.QMessageBox.information(self, "Completed", "Sorted files have being saved.")
+
+                # Emit the readyToSaveGood and readyToSaveBad signals with the dictionaries and file save location
                 self.readyToSaveGood.emit(self.goodEvents,
                                           fileSaveLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
                 self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
 
             except Exception as e:
+                # If there is an exception, display an error message using qtw.QMessageBox
                 msg = qtw.QMessageBox()
                 msg.setWindowTitle('Error')
                 msg.setText("An error occurred while sorting the file %s                              " % self.fileName)
@@ -487,6 +579,7 @@ class SortingForML(qtw.QWidget):
                 msg.exec_()
 
         else:
+            # If the user does not provide a valid file save location, display a warning message using qtw.QMessageBox
             qtw.QMessageBox.warning(self, 'Warning', 'Please Select a Save Location for sorted files')
 
 
@@ -494,12 +587,13 @@ class ML(qtw.QMainWindow):
 
     def __init__(self, inDict):
         """
-
+         Initialize the ML QMainWindow with a dictionary containing detector panel information.
         :param inDict: dictionary with detector panel information
         """
-
+        # Call the superclass constructor
         super(ML, self).__init__()
 
+        # Initialize instance variables
         self.messages = None
         self.model = None
         self.X_train = None
@@ -509,15 +603,21 @@ class ML(qtw.QMainWindow):
         self.predictions = None
         uic.loadUi("UI/machineLearningGUI.ui", self)
 
+        # Load the UI file for the Machine Learning GUI
         self.setWindowTitle('Machine Learning')
 
+        # Get the detector panel information from the input dictionary
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
         self.max_fs = inDict['max_fs']
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
+
+        # Set the default values for train and test splits
         self.trainSplit.setText('70')
         self.testSplit.setText('30')
+
+        # Connect buttons to their corresponding slots
         self.browseButton.clicked.connect(self.browseFiles)
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
@@ -525,22 +625,22 @@ class ML(qtw.QMainWindow):
         self.saveButton.clicked.connect(self.save)
         self.comboBox.activated.connect(self.comboBoxChanged)
 
-        # for displaying the confusion matrix
+        # Setup layouts and canvases for displaying confusion matrix and classification report
+        # Confusion Matrix
         self.layoutConfusionMatrix = qtw.QHBoxLayout()
         self.figureConfusionMatrix = plt.figure()
         self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
         self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
         self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
 
-        # for displaying the classification report
+        # Classification report
         self.layoutClassificationReport = qtw.QHBoxLayout()
         self.figureClassificationReport = plt.figure()
         self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
-
         self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
         self.classificationReport.setLayout(self.layoutClassificationReport)
 
-        # adding busy and idle lights
+        # Add busy and idle lights to the status bar
         self.busyLight = BusyLight()
         self.idleLight = IdleLight()
         self.statusbar.addPermanentWidget(self.busyLight)
@@ -548,13 +648,15 @@ class ML(qtw.QMainWindow):
         self.idleLight.show()
         self.busyLight.hide()
 
+        # Show a message on the status bar
         self.statusbar.showMessage("Point to where you have the data for model training", 3000)
 
+        # Set the attribute to delete the window on close
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     def setBusy(self):
         """
-
+        Change the light indicator to "busy" status by showing the busy light and hiding the idle light.
         :return: Change the light to busy
         """
         self.busyLight.show()
@@ -562,13 +664,20 @@ class ML(qtw.QMainWindow):
 
     def setIdle(self):
         """
-
+        Change the light indicator to "idle" status by hiding the busy light and showing the idle light.
         :return: Change the light to Idle
         """
         self.busyLight.hide()
         self.idleLight.show()
 
     def showNextMessage(self, messageList):
+        """
+            Display the next message from the messageList in the status bar for 3 seconds.
+            If there are more messages in the messageList, recursively call the function to display the next message.
+
+            :param messageList: List of messages to display in the status bar
+            :return: None
+        """
         message = messageList.pop(0)
         self.statusbar.showMessage(message, 3000)
         if messageList:
@@ -576,14 +685,14 @@ class ML(qtw.QMainWindow):
 
     @pyqtSlot()
     def browseFiles(self):
-        self.setBusy()
+        """
+            This method gets triggered when the browse button is clicked in the GUI.
+        Function: The function is to take in a text field where the value needs to be set and called in a dialog box
+        with file structure view starting at the 'root' and lets the user select the file they want and set the file path
+        to the text field.
+        """
 
-        """
-            This method gets triggered when the browse button is Clicked in the GUI
-        function: The function is to take in a text field where the value needs to be set and called in a dialog box
-        with file structure view starting at the 'root' and lets the user select the file they want and set the file p
-        ath to the test field.
-        """
+        self.setBusy()
 
         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
@@ -612,7 +721,9 @@ class ML(qtw.QMainWindow):
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
-         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
+        This method is used to read the panel details from the provided dictionary (inDict).
+
+        :param inDict: Dictionary with ASIC/panel information coming from the signal once the user clicked on a panel
         :return: Assigns panel details to class variables from inDict
         """
         self.panelName = inDict['panel_name']
@@ -623,8 +734,9 @@ class ML(qtw.QMainWindow):
 
     def modelSelection(self):
         """
+        This method handles the selection of a scikit-learn model based on the user's choice from the GUI.
 
-        :return: user selected scikit-learn model
+        :return: user selected scikit-learn model as a boolean, indicating if the model has been successfully selected
         """
 
         modelSelected = self.comboBox.currentText()
@@ -649,6 +761,12 @@ class ML(qtw.QMainWindow):
             return False
 
     def checkTrainTestSplit(self):
+        """
+            This method checks if the train-test split entered by the user is valid and sums up to 100%.
+
+            :return: boolean, indicating if the train-test split is valid
+        """
+
         if self.trainSplit.text().isdigit() and self.testSplit.text().isdigit():
             train = int(self.trainSplit.text())
             test = int(self.testSplit.text())
@@ -669,15 +787,17 @@ class ML(qtw.QMainWindow):
 
     def dataPrep(self):
         """
-        This method look into the folder where the sorted files are stored (by sort() in SortingForMl) and prepare the
+        This method looks into the folder where the sorted files are stored (by sort() in SortingForMl) and prepares the
         data for training and testing.
-        :return: X_train, X_test, y_train, y_test
+
+        :return: Sets X_train, X_test, y_train, y_test as class attributes
         """
+
 
         from sklearn.model_selection import train_test_split
         folder = self.parentDirectory.text()
 
-        # Bad Events
+        # Processing bad events
         files = Path(folder).glob('badEvents-advanceSort-*.list')
         dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
@@ -713,7 +833,7 @@ class ML(qtw.QMainWindow):
                 continue
         dataFrame_bad['Flag'] = 0
 
-        # Good Events
+        # Processing good events
         files = Path(folder).glob('goodEvents-advanceSort-*.list')
         dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
@@ -748,6 +868,7 @@ class ML(qtw.QMainWindow):
                 continue
         dataFrame_good['Flag'] = 1
 
+        # Preparing the data for training and testing
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
         X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
@@ -771,10 +892,11 @@ class ML(qtw.QMainWindow):
     @pyqtSlot()
     def buttonClicked(self):
         """
-        This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
-        answer it either moves forward to train a model or allow user to go back and select a different
-        ASCI for training.
-        :return: Yes or No
+        This method gets triggered when the "Train" button is pressed. It asks the user to confirm the selected panel
+        for training the machine learning model. Based on the user's response, it either proceeds with model training or
+        allows the user to go back and select a different ASCI for training.
+
+        :return: None
         """
         msg = qtw.QMessageBox()
         msg.setWindowTitle('Question')
@@ -789,10 +911,12 @@ class ML(qtw.QMainWindow):
 
     def train(self, i):
         """
-        Method to train the user selected model using the data from the selected ASCI
-        :param i: QMessageBox output( &Yes or &No)
-        :return: Model and Enables the "Test" button
+        Method to train the user-selected model using the data from the selected ASCI.
+
+        :param i: QMessageBox output (&Yes or &No)
+        :return: None
         """
+
 
         if i.text() == '&Yes':
             self.setBusy()
@@ -813,8 +937,8 @@ class ML(qtw.QMainWindow):
     @pyqtSlot()
     def test(self):
         """
-        Method to test the validity of the trained model
-        :return: Confusion matrix and a Classification Report
+        Method to test the validity of the trained model.
+        :return: None
         """
         from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
         self.predictions = self.model.predict(self.X_test)
@@ -824,7 +948,8 @@ class ML(qtw.QMainWindow):
         self.figureConfusionMatrix.clear()
         self.figureClassificationReport.clear()
 
-        # printing a heatmap for Confusion matrix
+        # Displaying the confusion matrix
+
         # cfm = confusion_matrix(self.y_test, self.predictions)
         # cfm_df = pd.DataFrame(cfm, index=['0', '1'], columns=['0', '1'])
         # ax1 = self.figureConfusionMatrix.add_subplot(111)
@@ -836,7 +961,7 @@ class ML(qtw.QMainWindow):
         ConfusionMatrixDisplay.from_predictions(self.y_test, self.predictions, ax=ax1, colorbar=False, cmap='mako')
         self.canvasConfusionMatrix.draw()
 
-        # printing a heatmap for Classification report
+        # Displaying the classification report as a heatmap
         cr = classification_report(self.y_test, self.predictions)
         columns = cr.strip().split()[0:3]
         indexes = ['Bad', 'Good', 'Avg', 'Wt. Avg']
@@ -855,47 +980,83 @@ class ML(qtw.QMainWindow):
     @pyqtSlot()
     def reset(self):
         """
-        Method to clear out the output from the test()
-        :return: clear the self.confusionMatrix and self.classificationReport
+        Method to clear out the output from the test() method.
+        :return: None
         """
+        # Clear the confusion matrix and classification report figures
         self.figureConfusionMatrix.clear()
         self.figureClassificationReport.clear()
+
+        # Enable the "Train" button and disable the "Test" button
         self.trainButton.setEnabled(True)
         self.testButton.setEnabled(False)
+
+        # Reset the model selection combo box to its initial state
         self.comboBox.setCurrentIndex(0)
+
+        # Reset the train and test split percentage to default values (70 and 30)
         self.trainSplit.setText('70')
         self.testSplit.setText('30')
 
     @pyqtSlot(int)
     def comboBoxChanged(self, index):
+        """
+            Method to handle the change of the model selection in the combo box.
+            :param index: The index of the newly selected model in the combo box
+            :return: None
+        """
+
+        # Reset the interface to its initial state
         self.reset()
+
+        # Set the current index of the combo box to the given index
         self.comboBox.setCurrentIndex(index)
 
     @pyqtSlot()
     def save(self):
+        """
+            Method to save the trained machine learning model as a pickle file.
+            :return: None
+        """
+
+        # Open a file dialog to allow the user to select a file location and name for the saved model
         filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
 
+        # If a filename is provided
         if filename:
+            # Open the file in write binary mode
             with open(filename, 'wb') as f:
+                # Use pickle.dump to save the model to the file
                 pickle.dump(self.model, f)
 
 
 class SortData(qtw.QWidget):
+    """
+       Custom QWidget subclass that is used to create a custom widget for sorting data in a PyQt5 application.
+    """
+
+    # Define a PyQt signal named 'readyToSaveGood' that takes a dictionary and a string as arguments
     readyToSaveGood = qtc.pyqtSignal(dict, str)
+
+    # Define a PyQt signal named 'readyToSaveBad' that takes a dictionary and a string as arguments
     readyToSaveBad = qtc.pyqtSignal(dict, str)
 
     def __init__(self, model, inDict):
         """
+            Initialize the SortData class with a trained model and a dictionary containing detector panel information.
 
-        :param model: trained model
-        :param inDict: dictionary with detector panel information
+            :param model: trained model
+            :param inDict: dictionary with detector panel information
         """
 
+        # Call the __init__ method of the parent class (QWidget)
         super(SortData, self).__init__()
 
+        # Load the UI file (sortDataGUI.ui) to set up the user interface
         uic.loadUi('UI/sortDataGUI.ui', self)
         self.setWindowTitle('Sort Data')
 
+        # Set class attributes with the passed model and detector panel information
         self.model = model
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
@@ -903,15 +1064,19 @@ class SortData(qtw.QWidget):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        # Initialize empty dictionaries for storing good and bad events
         self.goodEvents = {}
         self.badEvents = {}
 
+        # Find and set up the table widget in the UI
         self.tableWidget = self.findChild(qtw.QTableWidget, 'tableWidget')
         self.tableWidget.setColumnWidth(0, 350)
 
+        # Connect signals to slots (methods) for handling user interactions
         self.browseButton.clicked.connect(self.browseFiles)
         self.sortButton.clicked.connect(self.buttonClicked)
 
+        # Set the attribute to delete the widget when it is closed
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
     @pyqtSlot()
@@ -923,10 +1088,14 @@ class SortData(qtw.QWidget):
                 file path to the test field.
         """
 
+        # Open a file dialog to let the user select a folder
         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
 
+        # If a folder is selected (folderName is not empty)
         if folderName != "":
+            # Set the selected folder path to the text field in the user interface
             self.folderPath.setText(folderName)
+            # Call the showFiles() method to display the selected files
             self.showFiles()
 
     def showFiles(self):
@@ -934,22 +1103,29 @@ class SortData(qtw.QWidget):
 
         :return: Displays available files in the selected folder in self.availableFiles (QTextEdit)
         """
+
+        # Get the folder path from the folderPath QLineEdit
         folder = self.folderPath.text()
 
+        # Use the pathlib module to find all files with the .cxi extension in the folder
         files = Path(folder).glob('*.cxi')
 
+        # Use the pathlib module to find all files with the .cxi extension in the folder
         for file in files:
+            # Append the filename (without the folder path) to the availableFiles QTextEdit
             self.availableFiles.append(str(file).split('/')[-1])
 
+        # Enable the sortButton QPushButton
         self.sortButton.setEnabled(True)
 
     @pyqtSlot()
     def buttonClicked(self):
         """
-        Asks a user a Question/ Waring about the model that was trained
-        :return: Yes or No
+            Asks a user a Question/ Waring about the model that was trained
+            :return: Yes or No
         """
 
+        # Create a QMessageBox object
         msg = qtw.QMessageBox()
         msg.setWindowTitle('Question')
         msg.setText("Panel Selected: %s                                             " % self.panelName)
@@ -959,20 +1135,25 @@ class SortData(qtw.QWidget):
         msg.setIcon(qtw.QMessageBox.Question)
         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
         msg.setDefaultButton(qtw.QMessageBox.Yes)
+
+        # Connect the buttonClicked signal to the sort method
         msg.buttonClicked.connect(self.sort)
+
+        # Show the QMessageBox
         msg.exec_()
 
     def sort(self, i):
         """
-                Sort *cxi files using the trained model
-                :return: two separate *.list files for good and bad events for the cxi files
-                """
+            Sort *cxi files using the trained model
+            :return: two separate *.list files for good and bad events for the cxi files
+        """
 
-        if i.text() == '&Yes':
+        if i.text() == '&Yes': # Check if the user has confirmed to proceed with the sorting process
 
             self.sortButton.setEnabled(False)
             folder = self.folderPath.text()
 
+            # Get the location where the sorted files will be saved
             fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
                                                                                   'Sorted Files', directory=' ',
                                                                     options=qtw.QFileDialog.DontUseNativeDialog)
@@ -981,7 +1162,7 @@ class SortData(qtw.QWidget):
             self.tableWidget.setRowCount(len(list(files)))
 
             files = Path(folder).glob('*.cxi')
-            for file in files:
+            for file in files: # Iterate through the *cxi files and process them individually
 
                 tag = str(file).split('/')[-1].split('.')[0]
 
@@ -993,20 +1174,22 @@ class SortData(qtw.QWidget):
                 # badList to store all the events with detector artifacts for the file
                 badList = []
 
-                with h5py.File(file, "r") as f:
+                with h5py.File(file, "r") as f: # Open the file using the h5py library and read the data
                     data = f['entry_1']['data_1']['data'][()]
 
-                for i in range(data.shape[0]):
+                for i in range(data.shape[0]): # Loop through each event in the data
 
+                    # Preprocess the frame and use the trained model to make a prediction
                     frame = data[i][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5].flatten()
-
                     predictions = self.model.predict(frame.reshape(1, 31675))
 
+                    # Based on the prediction, append the event index to either the goodList or the badList
                     if predictions:
                         goodList.append(i)
                     else:
                         badList.append(i)
 
+                # Store the good and bad events in their respective dictionaries
                 self.goodEvents[str(file)] = goodList
                 self.badEvents[str(file)] = badList
 
@@ -1014,101 +1197,156 @@ class SortData(qtw.QWidget):
                                           fileSaveLocation + '/' + 'goodEvents-modelSort-%s.list' % tag)
                 self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-modelSort-%s.list' % tag)
 
+                # Update the table widget in the GUI with the results of the sorting process
                 self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
                 self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
                 self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
                 row += 1
-                self.sortButton.setEnabled(False)
+                self.sortButton.setEnabled(False) # Disable the "Sort" button to prevent further sorting
 
 
 class BusyLight(qtw.QWidget):
     """
-    Status indicator light when the GUI is busy
+        BusyLight is a custom QWidget that serves as a status indicator light when the GUI is busy.
+        It alternates its color between yellow and transparent, creating a blinking effect.
     """
 
     def __init__(self):
         super().__init__()
+        # Set the fixed size of the widget
         self.setFixedSize(12, 12)
+        # Initialize the default color to darkorange
         self.color = qtg.QColor('darkorange')
+        # Create a QTimer and connect it to the update method
         self.timer = qtc.QTimer(self)
         self.timer.timeout.connect(self.update)
+        # Start the timer with 500 ms intervals
         self.timer.start(500)
 
     def paintEvent(self, event):
+        """
+            This method handles the paint event of the widget, drawing its appearance.
+        """
+        # Create a QPainter for drawing the widget
         painter = qtg.QPainter(self)
+        # Enable antialiasing for smooth rendering
         painter.setRenderHint(qtg.QPainter.Antialiasing)
+        # Set the pen to NoPen to prevent any outline from being drawn
         painter.setPen(qtc.Qt.NoPen)
+        # Set the brush to the current color of the light
         painter.setBrush(self.color)
+        # Draw an ellipse within the widget's rectangular area, creating the circular shape of the light
         painter.drawEllipse(self.rect())
 
     def update(self):
+        """
+            This method is called every 500 milliseconds by the QTimer.
+            It toggles the color of the light and triggers a repaint of the widget.
+        """
+        # Toggle the color between yellow and transparent
         if self.color == qtc.Qt.yellow:
             self.color = qtc.Qt.transparent
         else:
             self.color = qtc.Qt.yellow
+        # Call the base class's update method to ensure the widget is repainted with the new color
         super().update()
 
 
 class IdleLight(qtw.QWidget):
     """
-        Status indicator light when the GUI is Idle
-        """
+    IdleLight is a custom QWidget that serves as a status indicator light when the GUI is idle.
+    It displays a static springgreen color to indicate the idle state.
+    """
 
     def __init__(self):
         super().__init__()
+        # Set the fixed size of the widget
         self.setFixedSize(12, 12)
 
     def paintEvent(self, event):
+        """
+        This method handles the paint event of the widget, drawing its appearance.
+        """
+        # Create a QPainter for drawing the widget
         painter = qtg.QPainter(self)
+        # Enable antialiasing for smooth rendering
         painter.setRenderHint(qtg.QPainter.Antialiasing)
+        # Set the pen to NoPen to prevent any outline from being drawn
         painter.setPen(qtc.Qt.NoPen)
+        # Set the brush to the springgreen color
         painter.setBrush(qtg.QColor('springgreen'))
+        # Draw an ellipse within the widget's rectangular area, creating the circular shape of the light
         painter.drawEllipse(self.rect())
+
 
 class Hitfinding():
     pass
 
 
 class MainWindow(qtw.QMainWindow):
+    """
+        MainWindow is a custom QMainWindow that inherits from the PyQt5 QMainWindow class.
+        It contains two custom signals: clickedNext and clickedPrevious.
+        These signals are emitted when the user clicks the "Next" or "Previous" buttons within the GUI.
+    """
+
+    # Define custom signal clickedNext to emit when the "Next" button is clicked
     clickedNext = qtc.pyqtSignal(int)
+
+    # Define custom signal clickedPrevious to emit when the "Previous" button is clicked
     clickedPrevious = qtc.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
+        # Call the superclass constructor
         super(MainWindow, self).__init__(*args, **kwargs)
 
+        # Load UI from file
         uic.loadUi("UI/mainwindow-2.ui", self)
         self.setGeometry(700, 100, 800, 700)
-        # connecting elements to functions
+
+        # Connect UI elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
         self.viewFileButton_2.clicked.connect(self.viewFiles)
+        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
+        self.poltFitCheckBox.clicked.connect(self.plotFit) # the vertically average intensity profile
+        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
+        self.sortButton.clicked.connect(self.sort)
+        self.sortForMLButton.clicked.connect(self.sortForML)
+        self.MLButton.clicked.connect(self.machineLearning)
+        self.orderOfFit.editingFinished.connect(self.plotFit)
+        self.eventNumber.editingFinished.connect(self.curveToPlot)
+        self.eventNumber.editingFinished.connect(self.selectDisplay)
 
-        #  First message on status bar
+        # incrementing through event numbers
+        self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
+        self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
+
+        # Set initial message on the status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
 
-        # initializing the popup windows
+        # Initialize the popup windows
         self.imageViewer = None
         self.sortForMLGUI = None
         self.mlGUI = None
         self.sortDataGUI = None
 
+        # Initialize variables
         self.fileSize = None
         self.totalEvents = None
         self.plotName = 'plotCurve'
-
-        # variables to identify the respective windows are opened or closed.
         self.imageViewerClosed = True
-
         self.messagesViewFile = None
-
         self.panelDict = None
         self.panelName = None
         self.min_fs = None
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
-        self.panelNames = [
+
+        # Initialize list of panel names for the left side of the LCLS epix detector
+        self.panelNamesOnLeft = [
             'p4a0', 'p4a1', 'p4a2', 'p4a3',
             'p5a0', 'p5a1', 'p5a2', 'p5a3',
             'p6a0', 'p6a1', 'p6a2', 'p6a3',
@@ -1118,39 +1356,20 @@ class MainWindow(qtw.QMainWindow):
             'p10a0', 'p10a1', 'p10a2', 'p10a3',
             'p11a0', 'p11a1', 'p11a2', 'p11a3',
         ]
-        # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
-        # panel
-        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
-        # button for call the fit_curve() method to fit a nth order polynomial for
-        # the vertically average intensity profile
-        self.poltFitCheckBox.clicked.connect(self.plotFit)
-        # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
-        # the frames of the
-        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
+        # this names could be different for EuXFEL AGIPD
 
-        self.sortButton.clicked.connect(self.sort)
-        self.sortForMLButton.clicked.connect(self.sortForML)
-        self.MLButton.clicked.connect(self.machineLearning)
-
-        self.orderOfFit.editingFinished.connect(self.plotFit)
-        self.eventNumber.editingFinished.connect(self.curveToPlot)
-        self.eventNumber.editingFinished.connect(self.selectDisplay)
-
-        # incrementing through event numbers
-        self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
-        self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
-
-        # graphing
+        # Initialize graphing
         self.graphWidget = pg.PlotWidget()
         self.layout = qtw.QHBoxLayout()
         self.layout.addWidget(self.graphWidget)
         self.graphingSpace.setLayout(self.layout)
         self.graphWidget.setEnabled(False)
 
+        # Set window title and show the window
         self.setWindowTitle("PixelAnomalyDetector")
         self.show()
 
-        # adding busy and idle lights
+        # Initialize busy and idle lights
         self.busyLight = BusyLight()
         self.idleLight = IdleLight()
         self.statusbar.addPermanentWidget(self.busyLight)
@@ -1158,7 +1377,7 @@ class MainWindow(qtw.QMainWindow):
         self.idleLight.show()
         self.busyLight.hide()
 
-        # tool tips for buttons
+        # Tool tips for buttons
         self.viewFileButton.setToolTip("Click to display the CXI file")
         self.plotPixelIntensityButton.setToolTip("Click to plot the vertically averaged pixel intensity of "
                                                  "the selected panel")
@@ -1169,24 +1388,35 @@ class MainWindow(qtw.QMainWindow):
 
     def setBusy(self):
         """
-
-        :return: Change the light to busy
+            Change the light to busy.
+            :return: None
         """
         self.busyLight.show()
         self.idleLight.hide()
 
     def setIdle(self):
         """
-
-        :return: Change the light to Idle
+            Change the light to idle.
+            :return: None
         """
         self.busyLight.hide()
         self.idleLight.show()
 
     def setImageViewerClosed(self):
+        """
+            Set the imageViewerClosed attribute to True.
+            :return: None
+        """
         self.imageViewerClosed = True
 
     def showNextMessage(self, messageList):
+        """
+            Display the next message in the messageList in the status bar and remove it from the list.
+            If there are more messages, call this function again with a delay.
+
+            :param messageList: list of messages to display in the status bar
+            :return: None
+        """
         message = messageList.pop(0)
         self.statusbar.showMessage(message, 3000)
         if messageList:
@@ -1200,9 +1430,10 @@ class MainWindow(qtw.QMainWindow):
         file structure view starting at the 'root' and lets the user select the file they want and set the file path to
         the test field.
         """
-
+        # Set the status indicator light to busy
         self.setBusy()
 
+        # Open a file dialog to let the user select a CXI file
         fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
         if fileName:
             self.cxiFilePath.setText(fileName)
@@ -1212,11 +1443,10 @@ class MainWindow(qtw.QMainWindow):
             self.geomFilePath.setEnabled(True)
             self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
-        # resting the main window for the next cxi file
+        # Reset the main window for the next CXI file
         if self.imageViewer:
             self.imageViewer.close()
-            # del self.imageViewer
-            # self.imageViewer = None
+
             self.graphWidget.clear()
             self.eventNumber.setText("0")
             self.eventNumber.setEnabled(False)
@@ -1233,6 +1463,7 @@ class MainWindow(qtw.QMainWindow):
             self.orderOfFit.setEnabled(False)
             self.graphWidget.setEnabled(False)
 
+        # Close any related GUI windows
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
             self.sortForMLGUI = None
@@ -1245,6 +1476,7 @@ class MainWindow(qtw.QMainWindow):
             self.sortForMLGUI.close()
             self.sortDataGUI = None
 
+        # Set the status indicator light back to idle
         self.setIdle()
 
     @pyqtSlot()
@@ -1256,14 +1488,17 @@ class MainWindow(qtw.QMainWindow):
         the test field.
         """
 
+        # Set the status indicator light to busy
         self.setBusy()
 
+        # Open a file dialog to let the user select a geometry file
         geomName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
         if geomName:
             self.geomFilePath.setText(geomName)
             self.viewFileButton.setEnabled(True)
             self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
 
+        # Set the status indicator light back to idle
         self.setIdle()
 
     @pyqtSlot()
@@ -1273,6 +1508,7 @@ class MainWindow(qtw.QMainWindow):
         :return: type of plot to display
         """
 
+        # Check if the event number is greater or equal to the total number of events
         if int(self.eventNumber.text()) >= self.totalEvents:
             self.eventNumber.setText(str(self.totalEvents - 1))
 
@@ -1285,6 +1521,8 @@ class MainWindow(qtw.QMainWindow):
                                    'intensity curve first')
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
+
+        # Call the appropriate plotting method based on the value of self.plotName
         elif self.plotName == 'plotCurve':
             self.plotCurve()
         elif self.plotName == 'plotFit':
@@ -1293,24 +1531,33 @@ class MainWindow(qtw.QMainWindow):
     @pyqtSlot()
     def selectDisplay(self):
         """
-        Based on the conditions this method calls to draw next/previous image from the *cxi file or create a new view to
-         display the *cxi file
-        :return: Next/Previous event of the *CXI or window for to display the *CXI file.
+            This method is responsible for updating the displayed event of the *cxi file or creating a new view to display
+            the *cxi file based on the current state of the image viewer. It is called when the user wants to navigate through
+            events in the *cxi file.
+            :return: Next/Previous event of the *cxi file or a new window to display the *cxi file.
         """
+
+        # Check if the event number is greater or equal to the total number of events, and adjust if needed
         if int(self.eventNumber.text()) >= self.totalEvents:
             self.eventNumber.setText(str(self.totalEvents - 1))
 
+        # If the image viewer is open, draw the next/previous image from the *cxi file
         if not self.imageViewerClosed:
             self.imageViewer.drawImage(int(self.eventNumber.text()))
+
+        # If the image viewer is closed, create a new view to display the *cxi file
         else:
             self.viewFiles()
 
     @pyqtSlot(dict)
     def readPanelDetails(self, inDict):
         """
-        :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
-        :return: Assigns panel details to class variables.
+        This method is called when the user clicks on a panel in the image viewer.
+        :param inDict: Dictionary containing ASIC/panel information received from the signal emitted when a panel is clicked
+        :return: Assigns panel details to class variables and calls curveToPlot() method.
         """
+
+        # Assign the received panel information to the class variables
         self.panelDict = inDict
         self.panelName = inDict['panel_name']
         self.min_fs = inDict['min_fs']
@@ -1318,21 +1565,24 @@ class MainWindow(qtw.QMainWindow):
         self.min_ss = inDict['min_ss']
         self.max_ss = inDict['max_ss']
 
+        # Call the curveToPlot() method to update the curve based on the selected panel
         self.curveToPlot()
 
     @pyqtSlot()
     def viewFiles(self):
         """
-        Spawn an instance of DisplayImage to display the *cxi file
-        :return: A gui with the *cxi file open. similar to cxi view. Also, turns ON "Plot Pixel Intensity",
-        "Plot Peak Pixel" and "Plot a Fit" checkBox
+            This method creates an instance of DisplayImage to display the *cxi file.
+            :return: A GUI with the *cxi file open, similar to cxi view. It also enables the "Plot Pixel Intensity",
+                 "Plot Peak Pixel", and "Plot a Fit" checkBox.
         """
 
+        # Enable the eventNumber field if it's not enabled
         if not self.eventNumber.isEnabled():
             self.eventNumber.setEnabled(True)
         if not self.eventNumber.text():
             self.eventNumber.setText("0")
 
+        # If the image viewer is not closed, close it and create a new instance of DisplayImage
         if not self.imageViewerClosed:
             self.imageViewer.close()
             self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
@@ -1347,12 +1597,13 @@ class MainWindow(qtw.QMainWindow):
             self.imageViewerClosed = False
             self.imageViewer.show()
 
+        # Set up the messages to be shown in the status bar
         self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
                                                                           "buttons to navigate through images",
                                  "Click the Fit Plot CheckBox to fit a polynomial"]
         self.showNextMessage(self.messagesViewFile)
 
-        # initial panel assignment
+        # Initial panel assignment
         if not self.panelDict:
             self.panelDict = self.imageViewer.outgoingDict
             self.panelName = self.imageViewer.outgoingDict['panel_name']
@@ -1361,11 +1612,13 @@ class MainWindow(qtw.QMainWindow):
             self.min_ss = self.imageViewer.outgoingDict['min_ss']
             self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
+        # Connect signals and slots
         self.imageViewer.panelSelected.connect(self.readPanelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
         self.imageViewer.destroyed.connect(self.setImageViewerClosed)
 
+        # Enable the Plot Pixel Intensity, Plot Peak Pixel, and Plot a Fit CheckBox buttons if they are not enabled
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
@@ -1374,25 +1627,29 @@ class MainWindow(qtw.QMainWindow):
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
         """
-        A method to increment an event
-        :param eventNumber: Existing event number
-        :return: Existing event number +1
+        This method increments the event number to navigate to the next event in the *cxi file.
+        :param eventNumber: The current event number.
+        :return: The updated event number, incremented by 1, or reset to 0 if it reaches the end of the event list.
         """
         try:
+            # Increment the event number if it's not the last event
             if int(self.eventNumber.text()) < self.totalEvents - 1:
                 self.eventNumber.setText(str(int(eventNumber) + 1))
+            # Reset the event number to 0 if it's the last event
             elif int(self.eventNumber.text()) == self.totalEvents - 1:
                 self.eventNumber.setText(str(0))
 
+            # Update the plot based on the new event number
             self.curveToPlot()
 
+            # Emit the updated event number
             self.clickedNext.emit(int(self.eventNumber.text()))
 
         except Exception as e:
+            # Display an error message if an exception occurs
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
-            msg.setText(
-                "An error occurred while reading bad events file                                  ")
+            msg.setText("An error occurred while reading bad events file")
             msg.setInformativeText(str(e) + " nextEvent()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
@@ -1400,25 +1657,29 @@ class MainWindow(qtw.QMainWindow):
     @pyqtSlot(str)
     def previousEvent(self, eventNumber):
         """
-        A method to decrement an event
-        :param eventNumber: Existing event number
-        :return: Existing event number -1
+        This method decrements the event number to navigate to the previous event in the *cxi file.
+        :param eventNumber: The current event number.
+        :return: The updated event number, decremented by 1, or set to the last event if it reaches the beginning of the event list.
         """
         try:
+            # Decrement the event number if it's not the first event
             if int(self.eventNumber.text()) > 0:
                 self.eventNumber.setText(str(int(eventNumber) - 1))
+            # Set the event number to the last event if it's the first event
             elif int(self.eventNumber.text()) == 0:
                 self.eventNumber.setText(str(self.totalEvents - 1))
 
+            # Update the plot based on the new event number
             self.curveToPlot()
 
+            # Emit the updated event number
             self.clickedPrevious.emit(int(self.eventNumber.text()))
 
         except Exception as e:
+            # Display an error message if an exception occurs
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Error')
-            msg.setText(
-                "An error occurred while reading bad events file                                  ")
+            msg.setText("An error occurred while reading bad events file")
             msg.setInformativeText(str(e) + " previousEvent()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
@@ -1426,90 +1687,118 @@ class MainWindow(qtw.QMainWindow):
     @pyqtSlot(dict, str)
     def writeToFile(self, eventsList, fileName):
         """
-        A method to save sorted events
-        :param eventsList: dictionary with *cxi file path and event numbers
-        :param fileName: save file name
-        :return: *.list file
+        This method saves the sorted events in a *.list file.
+        :param eventsList: A dictionary containing the *cxi file path and event numbers.
+        :param fileName: The file name for the saved file.
+        :return: A *.list file containing the sorted events.
         """
+        # Open the file in write mode
         f = open(fileName, 'w')
 
+        # Iterate through the keys in the eventsList dictionary
         for key in eventsList.keys():
+            # Iterate through the event numbers associated with the key
             for i in eventsList[key]:
+                # Write the key, event number, and other necessary characters to the file
                 f.write(key)
                 f.write(' ')
                 f.write('//')
                 f.write(str(i))
                 f.write('\n')
 
+        # Close the file
         f.close()
+        # Display a message in the status bar indicating the file was saved
         self.statusbar.showMessage("Saving file %s " % fileName, 2000)
 
+        # Close the SortForMLGUI if it is open
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
             self.sortForMLGUI = None
+            # Display a message in the status bar prompting the user to train a model
             self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
 
     @pyqtSlot()
     def sortForML(self):
         """
-        Spawn an instance of the SortingForML
-        :return: good and bad lists to be saved. Turns ON "Train a Model" button
+        Spawn an instance of the SortingForML GUI and connect signals to it.
+        Once the SortingForML GUI is closed, emits signals to save good and bad events list to files and enables the "Train
+        a Model" button. Also sets the busy cursor until the SortingForML GUI is closed.
         """
-
+        # Spawn an instance of the SortingForML GUI and show it
         self.sortForMLGUI = SortingForML(self.cxiFilePath.text(), self.orderOfFit.text(), self.panelDict)
         self.sortForMLGUI.show()
-        self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
 
+        # Connect signals from the imageViewer and SortingForML GUIs
+        self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
         self.sortForMLGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
+
+        # Enable the "Train a Model" button
         self.MLButton.setEnabled(True)
 
+        # Set the busy cursor until the SortingForML GUI is closed
         self.setBusy()
 
+        # Use a QEventLoop to wait for the SortingForML GUI to be closed
         loop = qtc.QEventLoop()
         self.sortForMLGUI.destroyed.connect(loop.quit)
         loop.exec_()
 
+        # Set the idle cursor after the SortingForML GUI is closed
         self.setIdle()
 
     @pyqtSlot()
     def machineLearning(self):
         """
-        Spawn an instance of ML.
-        :return: A trained model. Turns ON "Sort" button
+        This method is triggered when the "Train a Model" button is clicked.
+        It spawns an instance of ML to train a machine learning model based on the good and bad lists of events.
+        :return: A trained model. Turns ON "Sort" button.
         """
+        # create an instance of the ML class and display the window
         self.mlGUI = ML(self.panelDict)
         self.mlGUI.show()
+        # connect the panelSelected signal of the imageViewer to the readPanelDetails method of the mlGUI
         self.imageViewer.panelSelected.connect(self.mlGUI.readPanelDetails)
 
+        # enable the Sort button
         self.sortButton.setEnabled(True)
 
+        # set the application status to "busy"
         self.setBusy()
 
+        # create an event loop and connect the destroyed signal of the mlGUI to quit the loop
         loop = qtc.QEventLoop()
         self.mlGUI.destroyed.connect(loop.quit)
         loop.exec_()
 
+        # set the application status to "idle"
         self.setIdle()
 
     @pyqtSlot()
     def sort(self):
         """
-        Spawn an instance of SortData.
-        :return: A sorted list of good and bad events to be saved.
+        Spawn an instance of SortData, which sorts events based on the trained model and allows
+        the user to save a list of good and bad events to a file.
+        :return: None
         """
+        # Create a new instance of SortData and show the GUI
         self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
         self.sortDataGUI.show()
 
+        # Connect the signals from SortData to this class's writeToFile method, which saves the sorted events to a file
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortDataGUI.readyToSaveBad.connect(self.writeToFile)
 
+        # Set the busy cursor while the SortData GUI is open
         self.setBusy()
 
+        # Start a new event loop to keep the SortData GUI running until it is closed by the user
         loop = qtc.QEventLoop()
         self.sortDataGUI.destroyed.connect(loop.quit)
         loop.exec_()
 
+        # Reset the cursor to idle once the SortData GUI is closed
         self.setIdle()
 
     def returnMaxPixel(self, coeff, xRange):
@@ -1529,10 +1818,12 @@ class MainWindow(qtw.QMainWindow):
 
     def returnMaxPixelsList(self, fileName, deg=1):
         """
-        fileName(str) : name of the file to be open
-        deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
-        *args(list) : expects a list of events to be considered. **TO BE IMPLEMENTED**
+        A method to calculate the maximum pixel value for each frame of a CXI file.
+        :param fileName: str, name of the file to be opened
+        :param deg: int, order of the polynomial fit (1 for a straight line, 2 or more for higher order polynomial)
+        :return: a list of maximum pixel values for each frame
         """
+
         maxPixels = []
 
         with h5py.File(fileName, "r") as f:
@@ -1568,7 +1859,8 @@ class MainWindow(qtw.QMainWindow):
 
             avgIntensities = []
 
-            if self.panelName in self.panelNames:
+            # handling the left and right detector pannels
+            if self.panelName in self.panelNamesOnLeft:
                 for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
                     avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
             else:
@@ -1625,7 +1917,7 @@ class MainWindow(qtw.QMainWindow):
 
                 frame = data[int(eventNumber)]
 
-                if self.panelName in self.panelNames:
+                if self.panelName in self.panelNamesOnLeft:
                     for i in range(int(self.min_fs) + 5, int(self.max_fs) - 5):
                         avgIntensities.append(np.average(frame[int(self.min_ss):int(self.max_ss), i]))
                 else:
