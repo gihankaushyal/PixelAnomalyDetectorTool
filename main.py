@@ -1310,7 +1310,7 @@ class MainWindow(qtw.QMainWindow):
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.geomBrowseButton_2.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
-        self.viewTrainingFilesButton.clicked.connect(self.viewFilesList)
+        self.viewTrainingFilesButton.clicked.connect(self.viewFiles)
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
         self.poltFitCheckBox.clicked.connect(self.plotFit) # the vertically average intensity profile
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
@@ -1445,9 +1445,7 @@ class MainWindow(qtw.QMainWindow):
             fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
                                                                                   'Text Files (*.txt)')
             self.trainingFilesPath.setText(fileName)
-            self.viewTrainingFilesButton.setEnabled(True)
-            self.nextButton_2.setEnabled(True)
-            self.previousButton_2.setEnabled(True)
+            self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
         else:
             # Open a file dialog to let the user select a CXI file - from the Anomaly Detector tab
@@ -1514,6 +1512,10 @@ class MainWindow(qtw.QMainWindow):
             currentTabIndex = self.tabWidget.currentIndex()
             if currentTabIndex == 0:
                 self.geomFilePath_2.setText(geomName)
+                self.viewTrainingFilesButton.setEnabled(True)
+                self.nextButton_2.setEnabled(True)
+                self.previousButton_2.setEnabled(True)
+                self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
             else:
                 self.geomFilePath.setText(geomName)
                 self.viewFileButton.setEnabled(True)
@@ -1597,80 +1599,105 @@ class MainWindow(qtw.QMainWindow):
                  "Plot Peak Pixel", and "Plot a Fit" checkBox.
         """
 
-        # Enable the eventNumber field if it's not enabled
-        if not self.eventNumber.isEnabled():
-            self.eventNumber.setEnabled(True)
-        if not self.eventNumber.text():
-            self.eventNumber.setText("0")
+        currentTabIndex = self.tabWidget.currentIndex()
+        if currentTabIndex == 0:
+            if self.trainingFilesPath:
+                # Read the list of CXI files from the text file
+                with open(self.trainingFilesPath.text(), 'r') as f:
+                    cxiFileList = f.readlines()
 
-        # If the image viewer is not closed, close it and create a new instance of DisplayImage
-        if not self.imageViewerClosed:
-            self.imageViewer.close()
-            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
+                # Iterate over each CXI file in the list and display its images using DisplayImage class
+                for cxiFile in cxiFileList:
+                    # Remove the trailing newline character
+                    cxiFile = cxiFile.strip()
+                    print(str(cxiFile))
+                    # Create an instance of DisplayImage and display the first image
+                    self.imageViewer = DisplayImage(str(cxiFile), self.geomFilePath_2.text())
+                    self.imageViewer.drawImage(0)
+                    self.imageViewer.show()
+                    self.totalEvents = self.imageViewer.size
+                    print(self.totalEvents)
+
+                    # Connect signals to the appropriate slots
+                    self.imageViewer.panelSelected.connect(self.readPanelDetails)
+                    self.clickedNext.connect(self.imageViewer.drawImage)
+                    self.clickedPrevious.connect(self.imageViewer.drawImage)
         else:
-            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
+            # Enable the eventNumber field if it's not enabled
+            if not self.eventNumber.isEnabled():
+                self.eventNumber.setEnabled(True)
+            if not self.eventNumber.text():
+                self.eventNumber.setText("0")
 
-        # Set up the messages to be shown in the status bar
-        self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
-                                                                          "buttons to navigate through images",
-                                 "Click the Fit Plot CheckBox to fit a polynomial"]
-        self.showNextMessage(self.messagesViewFile)
+            # If the image viewer is not closed, close it and create a new instance of DisplayImage
+            if not self.imageViewerClosed:
+                self.imageViewer.close()
+                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+                self.imageViewer.drawImage(int(self.eventNumber.text()))
+                self.totalEvents = self.imageViewer.size
+                self.imageViewerClosed = False
+                self.imageViewer.show()
+            else:
+                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+                self.imageViewer.drawImage(int(self.eventNumber.text()))
+                self.totalEvents = self.imageViewer.size
+                self.imageViewerClosed = False
+                self.imageViewer.show()
 
-        # Initial panel assignment
-        if not self.panelDict:
-            self.panelDict = self.imageViewer.outgoingDict
-            self.panelName = self.imageViewer.outgoingDict['panel_name']
-            self.min_fs = self.imageViewer.outgoingDict['min_fs']
-            self.max_fs = self.imageViewer.outgoingDict['max_fs']
-            self.min_ss = self.imageViewer.outgoingDict['min_ss']
-            self.max_ss = self.imageViewer.outgoingDict['max_ss']
+            # Set up the messages to be shown in the status bar
+                self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
+                                                                                  "buttons to navigate through images",
+                                         "Click the Fit Plot CheckBox to fit a polynomial"]
+                self.showNextMessage(self.messagesViewFile)
 
-        # Connect signals and slots
-        self.imageViewer.panelSelected.connect(self.readPanelDetails)
-        self.clickedNext.connect(self.imageViewer.drawImage)
-        self.clickedPrevious.connect(self.imageViewer.drawImage)
-        self.imageViewer.destroyed.connect(self.setImageViewerClosed)
+                # Initial panel assignment
+                if not self.panelDict:
+                    self.panelDict = self.imageViewer.outgoingDict
+                    self.panelName = self.imageViewer.outgoingDict['panel_name']
+                    self.min_fs = self.imageViewer.outgoingDict['min_fs']
+                    self.max_fs = self.imageViewer.outgoingDict['max_fs']
+                    self.min_ss = self.imageViewer.outgoingDict['min_ss']
+                    self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
-        # Enable the Plot Pixel Intensity, Plot Peak Pixel, and Plot a Fit CheckBox buttons if they are not enabled
-        if not self.plotPixelIntensityButton.isEnabled():
-            self.plotPixelIntensityButton.setEnabled(True)
-            self.poltFitCheckBox.setEnabled(True)
-            self.plotPeakPixelButton.setEnabled(True)
+                # Connect signals and slots
+                self.imageViewer.panelSelected.connect(self.readPanelDetails)
+                self.clickedNext.connect(self.imageViewer.drawImage)
+                self.clickedPrevious.connect(self.imageViewer.drawImage)
+                self.imageViewer.destroyed.connect(self.setImageViewerClosed)
 
-    def viewFilesList(self):
-        """
-            Read a list of CXI files and display them one by one using the DisplayImage class
-            """
-        # Get the filename of the list of CXI files
-        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Text Files (*.txt)')
+                # Enable the Plot Pixel Intensity, Plot Peak Pixel, and Plot a Fit CheckBox buttons if they are not enabled
+                if not self.plotPixelIntensityButton.isEnabled():
+                    self.plotPixelIntensityButton.setEnabled(True)
+                    self.poltFitCheckBox.setEnabled(True)
+                    self.plotPeakPixelButton.setEnabled(True)
 
-        if fileName:
-            # Read the list of CXI files from the text file
-            with open(fileName, 'r') as f:
-                cxiFileList = f.readlines()
-
-            # Iterate over each CXI file in the list and display its images using DisplayImage class
-            for cxiFile in cxiFileList:
-                # Remove the trailing newline character
-                cxiFile = cxiFile.strip()
-
-                # Create an instance of DisplayImage and display the first image
-                imageViewer = DisplayImage(cxiFile, self.geomFilePath.text())
-                imageViewer.drawImage(0)
-                self.totalEvents = imageViewer.size
-
-                # Connect signals to the appropriate slots
-                imageViewer.panelSelected.connect(self.readPanelDetails)
-                self.clickedNext.connect(imageViewer.drawImage)
-                self.clickedPrevious.connect(imageViewer.drawImage)
+    # def viewFilesList(self):
+    #     """
+    #         Read a list of CXI files and display them one by one using the DisplayImage class
+    #         """
+    #     # Get the filename of the list of CXI files
+    #     fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Text Files (*.txt)')
+    #
+    #     if fileName:
+    #         # Read the list of CXI files from the text file
+    #         with open(fileName, 'r') as f:
+    #             cxiFileList = f.readlines()
+    #
+    #         # Iterate over each CXI file in the list and display its images using DisplayImage class
+    #         for cxiFile in cxiFileList:
+    #             # Remove the trailing newline character
+    #             cxiFile = cxiFile.strip()
+    #
+    #             # Create an instance of DisplayImage and display the first image
+    #             imageViewer = DisplayImage(cxiFile, self.geomFilePath_2.text())
+    #             imageViewer.drawImage(0)
+    #             self.totalEvents = imageViewer.size
+    #             print(self.totalEvents)
+    #
+    #             # Connect signals to the appropriate slots
+    #             imageViewer.panelSelected.connect(self.readPanelDetails)
+    #             self.clickedNext.connect(imageViewer.drawImage)
+    #             self.clickedPrevious.connect(imageViewer.drawImage)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
