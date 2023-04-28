@@ -1706,7 +1706,9 @@ class MainWindow(qtw.QMainWindow):
         :param eventNumber: The current event number.
         :return: The updated event number, incremented by 1, or reset to 0 if it reaches the end of the event list.
         """
-        try:
+
+        currentTabIndex = self.tabWidget.currentIndex()
+        if currentTabIndex == 0:
             # Increment the event number if it's not the last event
             if int(self.eventNumber.text()) < self.totalEvents - 1:
                 self.eventNumber.setText(str(int(eventNumber) + 1))
@@ -1714,20 +1716,31 @@ class MainWindow(qtw.QMainWindow):
             elif int(self.eventNumber.text()) == self.totalEvents - 1:
                 self.eventNumber.setText(str(0))
 
-            # Update the plot based on the new event number
-            self.curveToPlot()
-
             # Emit the updated event number
             self.clickedNext.emit(int(self.eventNumber.text()))
+        else:
+            try:
+                # Increment the event number if it's not the last event
+                if int(self.eventNumber.text()) < self.totalEvents - 1:
+                    self.eventNumber.setText(str(int(eventNumber) + 1))
+                # Reset the event number to 0 if it's the last event
+                elif int(self.eventNumber.text()) == self.totalEvents - 1:
+                    self.eventNumber.setText(str(0))
 
-        except Exception as e:
-            # Display an error message if an exception occurs
-            msg = qtw.QMessageBox()
-            msg.setWindowTitle('Error')
-            msg.setText("An error occurred while reading bad events file")
-            msg.setInformativeText(str(e) + " nextEvent()")
-            msg.setIcon(qtw.QMessageBox.Information)
-            msg.exec_()
+                # Update the plot based on the new event number
+                self.curveToPlot()
+
+                # Emit the updated event number
+                self.clickedNext.emit(int(self.eventNumber.text()))
+
+            except Exception as e:
+                # Display an error message if an exception occurs
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while reading bad events file")
+                msg.setInformativeText(str(e) + " nextEvent()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
 
     @pyqtSlot(str)
     def previousEvent(self, eventNumber):
