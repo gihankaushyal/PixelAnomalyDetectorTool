@@ -67,6 +67,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="viewTrainingFilesButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>100</x>
@@ -80,6 +83,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="nextButton_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>160</x>
@@ -93,6 +99,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="previousButton_2">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>40</x>
@@ -119,6 +128,9 @@
       </property>
      </widget>
      <widget class="QComboBox" name="comboBox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>330</x>
@@ -144,6 +156,9 @@
       </item>
      </widget>
      <widget class="QPushButton" name="trainButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>310</x>
@@ -157,6 +172,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="testButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>450</x>
@@ -183,6 +201,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="pushButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>630</x>
@@ -268,6 +289,9 @@
       </property>
      </widget>
      <widget class="QPushButton" name="saveButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>380</x>
