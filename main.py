@@ -160,7 +160,7 @@ class DisplayImage(qtw.QWidget):
             self.mainWidget.setImage(self.imageToDraw)
 
             # Set the window title to show the current event number and the total number of events in the file
-            self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
+            self.setWindowTitle("%s : Showing %i of %i " % (self.fileName.split('/')[-1], self.eventNumber, self.size - 1))
 
             # If the event number is 0, draw the initial panel
             if self.eventNumber == 0:
@@ -326,8 +326,8 @@ class DisplayImage(qtw.QWidget):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    def closeEvent(self, QCloseEvent):
-        self.isClosed = True
+    # def closeEvent(self, QCloseEvent):
+    #     self.isClosed = True
 
 
 class SortingForML(qtw.QWidget):
@@ -1447,6 +1447,15 @@ class MainWindow(qtw.QMainWindow):
             self.trainingFilesPath.setText(fileName)
             self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
+            if self.imageViewer:
+                self.imageViewer.close()
+
+                self.eventNumber_2.clear()
+                self.viewTrainingFilesButton.setEnabled(False)
+                self.previousButton_2.setEnabled(False)
+                self.nextButton_2.setEnabled(False)
+                self.eventNumber_2.setEnabled(False)
+
         else:
             # Open a file dialog to let the user select a CXI file - from the Anomaly Detector tab
             fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
@@ -1603,11 +1612,6 @@ class MainWindow(qtw.QMainWindow):
 
         currentTabIndex = self.tabWidget.currentIndex()
         if currentTabIndex == 0:
-            # Enable the eventNumber field if it's not enabled
-            if not self.eventNumber_2.isEnabled():
-                self.eventNumber_2.setEnabled(True)
-            if not self.eventNumber_2.text():
-                self.eventNumber_2.setText("0")
 
             if self.trainingFilesPath:
                 # Read the list of CXI files from the text file
@@ -1616,12 +1620,18 @@ class MainWindow(qtw.QMainWindow):
 
                 # Iterate over each CXI file in the list and display its images using DisplayImage class
                 for cxiFile in cxiFileList:
+                    # Enable the eventNumber field if it's not enabled
+                    if not self.eventNumber_2.isEnabled():
+                        self.eventNumber_2.setEnabled(True)
+                    if not self.eventNumber_2.text():
+                        self.eventNumber_2.setText("0")
+
                     # Remove the trailing newline character
                     cxiFile = cxiFile.strip()
 
                     # Create an instance of DisplayImage and display the first image
                     self.imageViewer = DisplayImage(str(cxiFile), self.geomFilePath_2.text())
-                    self.imageViewer.drawImage(0)
+                    self.imageViewer.drawImage(int(self.eventNumber_2.text()))
                     self.imageViewer.show()
                     self.totalEvents = self.imageViewer.size
 
@@ -1629,6 +1639,11 @@ class MainWindow(qtw.QMainWindow):
                     self.imageViewer.panelSelected.connect(self.readPanelDetails)
                     self.clickedNext.connect(self.imageViewer.drawImage)
                     self.clickedPrevious.connect(self.imageViewer.drawImage)
+
+                    # Use an event loop to block execution until the display window is closed
+                    loop = qtc.QEventLoop()
+                    self.imageViewer.destroyed.connect(loop.quit)
+                    loop.exec_()
         else:
             # Enable the eventNumber field if it's not enabled
             if not self.eventNumber.isEnabled():
