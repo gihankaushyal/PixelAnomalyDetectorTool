@@ -1323,9 +1323,9 @@ class MainWindow(qtw.QMainWindow):
 
         # Incrementing through event numbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
-        self.nextButton_2.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
+        self.nextButton_2.clicked.connect(lambda: self.nextEvent(self.eventNumber_2.text()))
         self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
-        self.previousButton_2.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
+        self.previousButton_2.clicked.connect(lambda: self.previousEvent(self.eventNumber_2.text()))
 
         # Set initial message on the status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
@@ -1589,7 +1589,9 @@ class MainWindow(qtw.QMainWindow):
         self.max_ss = inDict['max_ss']
 
         # Call the curveToPlot() method to update the curve based on the selected panel
-        self.curveToPlot()
+        currentTabIndex = self.tabWidget.currentIndex()
+        if currentTabIndex == 1:
+            self.curveToPlot()
 
     @pyqtSlot()
     def viewFiles(self):
@@ -1601,6 +1603,12 @@ class MainWindow(qtw.QMainWindow):
 
         currentTabIndex = self.tabWidget.currentIndex()
         if currentTabIndex == 0:
+            # Enable the eventNumber field if it's not enabled
+            if not self.eventNumber_2.isEnabled():
+                self.eventNumber_2.setEnabled(True)
+            if not self.eventNumber_2.text():
+                self.eventNumber_2.setText("0")
+
             if self.trainingFilesPath:
                 # Read the list of CXI files from the text file
                 with open(self.trainingFilesPath.text(), 'r') as f:
@@ -1610,13 +1618,12 @@ class MainWindow(qtw.QMainWindow):
                 for cxiFile in cxiFileList:
                     # Remove the trailing newline character
                     cxiFile = cxiFile.strip()
-                    print(str(cxiFile))
+
                     # Create an instance of DisplayImage and display the first image
                     self.imageViewer = DisplayImage(str(cxiFile), self.geomFilePath_2.text())
                     self.imageViewer.drawImage(0)
                     self.imageViewer.show()
                     self.totalEvents = self.imageViewer.size
-                    print(self.totalEvents)
 
                     # Connect signals to the appropriate slots
                     self.imageViewer.panelSelected.connect(self.readPanelDetails)
@@ -1710,14 +1717,14 @@ class MainWindow(qtw.QMainWindow):
         currentTabIndex = self.tabWidget.currentIndex()
         if currentTabIndex == 0:
             # Increment the event number if it's not the last event
-            if int(self.eventNumber.text()) < self.totalEvents - 1:
-                self.eventNumber.setText(str(int(eventNumber) + 1))
+            if int(self.eventNumber_2.text()) < self.totalEvents - 1:
+                self.eventNumber_2.setText(str(int(eventNumber) + 1))
             # Reset the event number to 0 if it's the last event
-            elif int(self.eventNumber.text()) == self.totalEvents - 1:
-                self.eventNumber.setText(str(0))
+            elif int(self.eventNumber_2.text()) == self.totalEvents - 1:
+                self.eventNumber_2.setText(str(0))
 
             # Emit the updated event number
-            self.clickedNext.emit(int(self.eventNumber.text()))
+            self.clickedNext.emit(int(self.eventNumber_2.text()))
         else:
             try:
                 # Increment the event number if it's not the last event
@@ -1749,28 +1756,40 @@ class MainWindow(qtw.QMainWindow):
         :param eventNumber: The current event number.
         :return: The updated event number, decremented by 1, or set to the last event if it reaches the beginning of the event list.
         """
-        try:
+        currentTabIndex = self.tabWidget.currentIndex()
+        if currentTabIndex == 0:
             # Decrement the event number if it's not the first event
-            if int(self.eventNumber.text()) > 0:
-                self.eventNumber.setText(str(int(eventNumber) - 1))
+            if int(self.eventNumber_2.text()) > 0:
+                self.eventNumber_2.setText(str(int(eventNumber) - 1))
             # Set the event number to the last event if it's the first event
-            elif int(self.eventNumber.text()) == 0:
-                self.eventNumber.setText(str(self.totalEvents - 1))
-
-            # Update the plot based on the new event number
-            self.curveToPlot()
+            elif int(self.eventNumber_2.text()) == 0:
+                self.eventNumber_2.setText(str(self.totalEvents - 1))
 
             # Emit the updated event number
-            self.clickedPrevious.emit(int(self.eventNumber.text()))
+            self.clickedPrevious.emit(int(self.eventNumber_2.text()))
+        else:
+            try:
+                # Decrement the event number if it's not the first event
+                if int(self.eventNumber.text()) > 0:
+                    self.eventNumber.setText(str(int(eventNumber) - 1))
+                # Set the event number to the last event if it's the first event
+                elif int(self.eventNumber.text()) == 0:
+                    self.eventNumber.setText(str(self.totalEvents - 1))
 
-        except Exception as e:
-            # Display an error message if an exception occurs
-            msg = qtw.QMessageBox()
-            msg.setWindowTitle('Error')
-            msg.setText("An error occurred while reading bad events file")
-            msg.setInformativeText(str(e) + " previousEvent()")
-            msg.setIcon(qtw.QMessageBox.Information)
-            msg.exec_()
+                # Update the plot based on the new event number
+                self.curveToPlot()
+
+                # Emit the updated event number
+                self.clickedPrevious.emit(int(self.eventNumber.text()))
+
+            except Exception as e:
+                # Display an error message if an exception occurs
+                msg = qtw.QMessageBox()
+                msg.setWindowTitle('Error')
+                msg.setText("An error occurred while reading bad events file")
+                msg.setInformativeText(str(e) + " previousEvent()")
+                msg.setIcon(qtw.QMessageBox.Information)
+                msg.exec_()
 
     @pyqtSlot(dict, str)
     def writeToFile(self, eventsList, fileName):
