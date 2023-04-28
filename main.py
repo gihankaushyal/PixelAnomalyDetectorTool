@@ -1306,7 +1306,7 @@ class MainWindow(qtw.QMainWindow):
 
         # Connect UI elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
-        self.trainingFileBrowseButton.clicked.connect(self.browseTrainingFiles)
+        self.trainingFileBrowseButton.clicked.connect(self.browseFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.geomBrowseButton_2.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
@@ -1439,70 +1439,61 @@ class MainWindow(qtw.QMainWindow):
         """
         # Set the status indicator light to busy
         self.setBusy()
+        currentTabIndex = self.tabWidget.currentIndex()
+        if currentTabIndex == 0:
+            # Get the filename of the list of CXI files - from the Hit finding tab
+            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
+                                                                                  'Text Files (*.txt)')
+            self.trainingFilesPath.setText(fileName)
+            self.viewTrainingFilesButton.setEnabled(True)
+            self.nextButton_2.setEnabled(True)
+            self.previousButton_2.setEnabled(True)
 
-        # Open a file dialog to let the user select a CXI file
-        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        if fileName:
-            self.cxiFilePath.setText(fileName)
-            self.cxiFileListPath.setEnabled(False)
-            self.cxiListBrowseButton.setEnabled(False)
-            self.geomBrowseButton.setEnabled(True)
-            self.geomFilePath.setEnabled(True)
-            self.statusbar.showMessage("Browse for a geometry file ", 5000)
+        else:
+            # Open a file dialog to let the user select a CXI file - from the Anomaly Detector tab
+            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+            if fileName:
+                self.cxiFilePath.setText(fileName)
+                self.cxiFileListPath.setEnabled(False)
+                self.cxiListBrowseButton.setEnabled(False)
+                self.geomBrowseButton.setEnabled(True)
+                self.geomFilePath.setEnabled(True)
+                self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
-        # Reset the main window for the next CXI file
-        if self.imageViewer:
-            self.imageViewer.close()
+            # Reset the main window for the next CXI file
+            if self.imageViewer:
+                self.imageViewer.close()
 
-            self.graphWidget.clear()
-            self.eventNumber.setText("0")
-            self.eventNumber.setEnabled(False)
-            self.plotPixelIntensityButton.setEnabled(False)
-            self.poltFitCheckBox.setEnabled(False)
-            self.poltFitCheckBox.setChecked(False)
-            self.plotPeakPixelButton.setEnabled(False)
-            self.sortForMLButton.setEnabled(False)
-            self.sortButton.setEnabled(False)
-            self.nextButton.setEnabled(False)
-            self.previousButton.setEnabled(False)
-            self.MLButton.setEnabled(False)
-            self.orderOfFit.clear()
-            self.orderOfFit.setEnabled(False)
-            self.graphWidget.setEnabled(False)
+                self.graphWidget.clear()
+                self.eventNumber.setText("0")
+                self.eventNumber.setEnabled(False)
+                self.plotPixelIntensityButton.setEnabled(False)
+                self.poltFitCheckBox.setEnabled(False)
+                self.poltFitCheckBox.setChecked(False)
+                self.plotPeakPixelButton.setEnabled(False)
+                self.sortForMLButton.setEnabled(False)
+                self.sortButton.setEnabled(False)
+                self.nextButton.setEnabled(False)
+                self.previousButton.setEnabled(False)
+                self.MLButton.setEnabled(False)
+                self.orderOfFit.clear()
+                self.orderOfFit.setEnabled(False)
+                self.graphWidget.setEnabled(False)
 
-        # Close any related GUI windows
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortForMLGUI = None
+            # Close any related GUI windows
+            if self.sortForMLGUI:
+                self.sortForMLGUI.close()
+                self.sortForMLGUI = None
 
-        if self.mlGUI:
-            self.mlGUI.close()
-            self.mlGUI = None
+            if self.mlGUI:
+                self.mlGUI.close()
+                self.mlGUI = None
 
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortDataGUI = None
+            if self.sortForMLGUI:
+                self.sortForMLGUI.close()
+                self.sortDataGUI = None
 
         # Set the status indicator light back to idle
-        self.setIdle()
-
-    @pyqtSlot()
-    def browseTrainingFiles(self):
-        """
-        This method gets triggered when the browse button is Clicked in the GUI
-        function:The function is to take in a text field where the value needs to be set and called in a dialog box with
-        file structure view starting at the 'root' and lets the user select the file they want and set the file path to
-        the test field.
-        """
-        # Set the status indicator light to busy
-        self.setBusy()
-
-        # Open a file dialog to let the user select a CXI file
-        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Text Files (*.txt);; List Files (*.list)')
-        if fileName:
-            self.trainingFilesPath.setText(fileName)
-
-        # Set the status indicator light to Idle
         self.setIdle()
 
     @pyqtSlot()
