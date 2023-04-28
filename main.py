@@ -1301,14 +1301,16 @@ class MainWindow(qtw.QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
 
         # Load UI from file
-        uic.loadUi("UI/mainwindow-2.ui", self)
-        self.setGeometry(700, 100, 800, 700)
+        uic.loadUi("UI/mainwindow-3.ui", self)
+        # self.setGeometry(700, 100, 820, 710)
 
         # Connect UI elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
+        self.trainingFileBrowseButton.clicked.connect(self.browseTrainingFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
+        self.geomBrowseButton_2.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
-        self.viewFileButton_2.clicked.connect(self.viewFiles)
+        self.viewTrainingFilesButton.clicked.connect(self.viewFilesList)
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
         self.poltFitCheckBox.clicked.connect(self.plotFit) # the vertically average intensity profile
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
@@ -1319,9 +1321,11 @@ class MainWindow(qtw.QMainWindow):
         self.eventNumber.editingFinished.connect(self.curveToPlot)
         self.eventNumber.editingFinished.connect(self.selectDisplay)
 
-        # incrementing through event numbers
+        # Incrementing through event numbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
+        self.nextButton_2.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
         self.previousButton.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
+        self.previousButton_2.clicked.connect(lambda: self.previousEvent(self.eventNumber.text()))
 
         # Set initial message on the status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
@@ -1385,6 +1389,9 @@ class MainWindow(qtw.QMainWindow):
                                             "averaged intensity for all the images in the CXI file")
         self.sortForMLButton.setToolTip("Click to Plot the distribution of two inflation points")
         self.sortButton.setToolTip("Click to Save data with the trained model")
+
+        #   Accessing Child widget
+        self.tabWidget = self.findChild(qtw.QTabWidget, 'tabWidget')
 
     def setBusy(self):
         """
@@ -1480,6 +1487,25 @@ class MainWindow(qtw.QMainWindow):
         self.setIdle()
 
     @pyqtSlot()
+    def browseTrainingFiles(self):
+        """
+        This method gets triggered when the browse button is Clicked in the GUI
+        function:The function is to take in a text field where the value needs to be set and called in a dialog box with
+        file structure view starting at the 'root' and lets the user select the file they want and set the file path to
+        the test field.
+        """
+        # Set the status indicator light to busy
+        self.setBusy()
+
+        # Open a file dialog to let the user select a CXI file
+        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Text Files (*.txt);; List Files (*.list)')
+        if fileName:
+            self.trainingFilesPath.setText(fileName)
+
+        # Set the status indicator light to Idle
+        self.setIdle()
+
+    @pyqtSlot()
     def browseGeom(self):
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -1494,9 +1520,13 @@ class MainWindow(qtw.QMainWindow):
         # Open a file dialog to let the user select a geometry file
         geomName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
         if geomName:
-            self.geomFilePath.setText(geomName)
-            self.viewFileButton.setEnabled(True)
-            self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
+            currentTabIndex = self.tabWidget.currentIndex()
+            if currentTabIndex == 0:
+                self.geomFilePath_2.setText(geomName)
+            else:
+                self.geomFilePath.setText(geomName)
+                self.viewFileButton.setEnabled(True)
+                self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
 
         # Set the status indicator light back to idle
         self.setIdle()
@@ -1623,6 +1653,33 @@ class MainWindow(qtw.QMainWindow):
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
+
+    def viewFilesList(self):
+        """
+            Read a list of CXI files and display them one by one using the DisplayImage class
+            """
+        # Get the filename of the list of CXI files
+        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Text Files (*.txt)')
+
+        if fileName:
+            # Read the list of CXI files from the text file
+            with open(fileName, 'r') as f:
+                cxiFileList = f.readlines()
+
+            # Iterate over each CXI file in the list and display its images using DisplayImage class
+            for cxiFile in cxiFileList:
+                # Remove the trailing newline character
+                cxiFile = cxiFile.strip()
+
+                # Create an instance of DisplayImage and display the first image
+                imageViewer = DisplayImage(cxiFile, self.geomFilePath.text())
+                imageViewer.drawImage(0)
+                self.totalEvents = imageViewer.size
+
+                # Connect signals to the appropriate slots
+                imageViewer.panelSelected.connect(self.readPanelDetails)
+                self.clickedNext.connect(imageViewer.drawImage)
+                self.clickedPrevious.connect(imageViewer.drawImage)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
