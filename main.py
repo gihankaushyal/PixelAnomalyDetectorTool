@@ -1590,7 +1590,7 @@ class MainWindow(qtw.QMainWindow):
 
         # Call the curveToPlot() method to update the curve based on the selected panel
         currentTabIndex = self.tabWidget.currentIndex()
-        if currentTabIndex == 1:
+        if currentTabIndex == 1: # only works when the pixel anomaly tab is active
             self.curveToPlot()
 
     @pyqtSlot()
