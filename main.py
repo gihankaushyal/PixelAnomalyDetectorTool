@@ -697,8 +697,12 @@ class ML(qtw.QMainWindow):
         """
 
         self.setBusy()
-
-        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        # Setting path based on the tab selected.
+        if self.currentTabIndex == 1:
+            folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+        else:
+            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
+                                                                                  'Text Files (*.txt)')
 
         if folderName != "":
             self.parentDirectory.setText(folderName)
