@@ -585,7 +585,7 @@ class SortingForML(qtw.QWidget):
 
 class ML(qtw.QMainWindow):
 
-    def __init__(self, inDict):
+    def __init__(self, inDict, currentTabIndex):
         """
          Initialize the ML QMainWindow with a dictionary containing detector panel information.
         :param inDict: dictionary with detector panel information
@@ -601,7 +601,11 @@ class ML(qtw.QMainWindow):
         self.X_test = None
         self.y_test = None
         self.predictions = None
-        uic.loadUi("UI/machineLearningGUI.ui", self)
+        self.currentTabIndex = currentTabIndex
+        if self.currentTabIndex == 1:
+            uic.loadUi("UI/machineLearningGUI.ui", self)
+        else:
+            uic.loadUi("UI/machineLearningGUI-2.ui", self)
 
         # Load the UI file for the Machine Learning GUI
         self.setWindowTitle('Machine Learning')
@@ -738,27 +742,40 @@ class ML(qtw.QMainWindow):
 
         :return: user selected scikit-learn model as a boolean, indicating if the model has been successfully selected
         """
-
-        modelSelected = self.comboBox.currentText()
-        if modelSelected == 'LogisticRegression':
-            from sklearn.linear_model import LogisticRegression
-            self.model = LogisticRegression()
-            return True
-        elif modelSelected == 'KNeighborsClassifier':
-            from sklearn.neighbors import KNeighborsClassifier
-            self.model = KNeighborsClassifier(n_neighbors=1)
-            return True
-        elif modelSelected == 'DecisionTreeClassifier':
-            from sklearn.tree import DecisionTreeClassifier
-            self.model = DecisionTreeClassifier()
-            return True
-        elif modelSelected == 'RandomForestClassifier':
-            from sklearn.ensemble import RandomForestClassifier
-            self.model = RandomForestClassifier(n_estimators=200)
-            return True
+        if self.currentTabIndex == 1:
+            modelSelected = self.comboBox.currentText()
+            if modelSelected == 'LogisticRegression':
+                from sklearn.linear_model import LogisticRegression
+                self.model = LogisticRegression()
+                return True
+            elif modelSelected == 'KNeighborsClassifier':
+                from sklearn.neighbors import KNeighborsClassifier
+                self.model = KNeighborsClassifier(n_neighbors=1)
+                return True
+            elif modelSelected == 'DecisionTreeClassifier':
+                from sklearn.tree import DecisionTreeClassifier
+                self.model = DecisionTreeClassifier()
+                return True
+            elif modelSelected == 'RandomForestClassifier':
+                from sklearn.ensemble import RandomForestClassifier
+                self.model = RandomForestClassifier(n_estimators=200)
+                return True
+            else:
+                qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
+                return False
         else:
-            qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
-            return False
+            modelSelected = self.comboBox.currentText()
+            if modelSelected == 'SupportVectorClassifier (SVC)':
+                from sklearn.svm import SVC
+                self.model = SVC()
+                return True
+            elif modelSelected == 'AritificalNuralNetowrk (ANN)':
+                # print('this methon havent implemented yet')
+
+                pass
+            else:
+                return False
+
 
     def checkTrainTestSplit(self):
         """
@@ -1301,7 +1318,7 @@ class MainWindow(qtw.QMainWindow):
         super(MainWindow, self).__init__(*args, **kwargs)
 
         # Load UI from file
-        uic.loadUi("UI/mainwindow-3.ui", self)
+        uic.loadUi("UI/mainwindow-4.ui", self)
         # self.setGeometry(700, 100, 820, 710)
 
         # Connect UI elements to functions
@@ -1317,6 +1334,7 @@ class MainWindow(qtw.QMainWindow):
         self.sortButton.clicked.connect(self.sort)
         self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
+        self.trainButton.clicked.connect(self.machineLearning)
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
         self.eventNumber.editingFinished.connect(self.selectDisplay)
@@ -1522,8 +1540,6 @@ class MainWindow(qtw.QMainWindow):
             if currentTabIndex == 0:
                 self.geomFilePath_2.setText(geomName)
                 self.viewTrainingFilesButton.setEnabled(True)
-                self.nextButton_2.setEnabled(True)
-                self.previousButton_2.setEnabled(True)
                 self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
             else:
                 self.geomFilePath.setText(geomName)
@@ -1613,6 +1629,12 @@ class MainWindow(qtw.QMainWindow):
         currentTabIndex = self.tabWidget.currentIndex()
         if currentTabIndex == 0:
 
+            self.nextButton_2.setEnabled(True)
+            self.previousButton_2.setEnabled(True)
+
+            if not self.eventNumber_2.isEnabled():
+                self.eventNumber_2.setEnabled(True)
+
             if self.trainingFilesPath:
                 # Read the list of CXI files from the text file
                 with open(self.trainingFilesPath.text(), 'r') as f:
@@ -1621,8 +1643,7 @@ class MainWindow(qtw.QMainWindow):
                 # Iterate over each CXI file in the list and display its images using DisplayImage class
                 for cxiFile in cxiFileList:
                     # Enable the eventNumber field if it's not enabled
-                    if not self.eventNumber_2.isEnabled():
-                        self.eventNumber_2.setEnabled(True)
+
                     if not self.eventNumber_2.text():
                         self.eventNumber_2.setText("0")
 
@@ -1635,15 +1656,27 @@ class MainWindow(qtw.QMainWindow):
                     self.imageViewer.show()
                     self.totalEvents = self.imageViewer.size
 
+                    # Initial panel assignment
+                    if not self.panelDict:
+                        self.panelDict = self.imageViewer.outgoingDict
+                        self.panelName = self.imageViewer.outgoingDict['panel_name']
+                        self.min_fs = self.imageViewer.outgoingDict['min_fs']
+                        self.max_fs = self.imageViewer.outgoingDict['max_fs']
+                        self.min_ss = self.imageViewer.outgoingDict['min_ss']
+                        self.max_ss = self.imageViewer.outgoingDict['max_ss']
+
                     # Connect signals to the appropriate slots
                     self.imageViewer.panelSelected.connect(self.readPanelDetails)
                     self.clickedNext.connect(self.imageViewer.drawImage)
                     self.clickedPrevious.connect(self.imageViewer.drawImage)
 
+                    self.trainButton.setEnabled(True)
+
                     # Use an event loop to block execution until the display window is closed
                     loop = qtc.QEventLoop()
                     self.imageViewer.destroyed.connect(loop.quit)
                     loop.exec_()
+                    self.eventNumber_2.setText('0')
         else:
             # Enable the eventNumber field if it's not enabled
             if not self.eventNumber.isEnabled():
@@ -1878,7 +1911,8 @@ class MainWindow(qtw.QMainWindow):
         :return: A trained model. Turns ON "Sort" button.
         """
         # create an instance of the ML class and display the window
-        self.mlGUI = ML(self.panelDict)
+        currentTabIndex = self.tabWidget.currentIndex()
+        self.mlGUI = ML(self.panelDict, currentTabIndex)
         self.mlGUI.show()
         # connect the panelSelected signal of the imageViewer to the readPanelDetails method of the mlGUI
         self.imageViewer.panelSelected.connect(self.mlGUI.readPanelDetails)
