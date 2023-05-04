@@ -30,7 +30,9 @@ from PyQt5 import uic
 
 import lib.cfel_filetools as fileTools
 import lib.cfel_imgtools as imgTools
+import lib.cxifile_parser.combineCXIFiles as combineCXIFiles
 from lib.geometry_parser.GeometryFileParser import *
+
 
 
 class DisplayImage(qtw.QWidget):
