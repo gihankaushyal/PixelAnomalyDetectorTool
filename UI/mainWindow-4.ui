@@ -33,17 +33,17 @@
      <widget class="QLabel" name="label_7">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>10</y>
-        <width>211</width>
+        <x>60</x>
+        <y>15</y>
+        <width>130</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Load training files list (*.cxi, *.h5)</string>
+       <string>Load Hits (*.cxi, *.h5)</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="trainingFilesPath">
+     <widget class="QLineEdit" name="hitsFilesPath">
       <property name="geometry">
        <rect>
         <x>240</x>
@@ -53,11 +53,11 @@
        </rect>
       </property>
      </widget>
-     <widget class="QPushButton" name="trainingFileBrowseButton">
+     <widget class="QPushButton" name="hitsFileBrowseButton">
       <property name="geometry">
        <rect>
         <x>690</x>
-        <y>5</y>
+        <y>22</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -73,7 +73,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>96</y>
+        <y>140</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -89,7 +89,7 @@
       <property name="geometry">
        <rect>
         <x>160</x>
-        <y>130</y>
+        <y>174</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -105,7 +105,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>130</y>
+        <y>174</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -118,7 +118,7 @@
       <property name="geometry">
        <rect>
         <x>280</x>
-        <y>90</y>
+        <y>134</y>
         <width>21</width>
         <height>101</height>
        </rect>
@@ -134,7 +134,7 @@
       <property name="geometry">
        <rect>
         <x>370</x>
-        <y>130</y>
+        <y>169</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -147,7 +147,7 @@
       <property name="geometry">
        <rect>
         <x>580</x>
-        <y>90</y>
+        <y>134</y>
         <width>21</width>
         <height>101</height>
        </rect>
@@ -163,7 +163,7 @@
       <property name="geometry">
        <rect>
         <x>630</x>
-        <y>120</y>
+        <y>164</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -176,7 +176,7 @@
       <property name="geometry">
        <rect>
         <x>70</x>
-        <y>212</y>
+        <y>256</y>
         <width>711</width>
         <height>16</height>
        </rect>
@@ -189,7 +189,7 @@
       <property name="geometry">
        <rect>
         <x>70</x>
-        <y>190</y>
+        <y>234</y>
         <width>161</width>
         <height>16</height>
        </rect>
@@ -201,9 +201,9 @@
      <widget class="QLabel" name="label_11">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>50</y>
-        <width>211</width>
+        <x>50</x>
+        <y>95</y>
+        <width>180</width>
         <height>16</height>
        </rect>
       </property>
@@ -215,7 +215,7 @@
       <property name="geometry">
        <rect>
         <x>240</x>
-        <y>50</y>
+        <y>95</y>
         <width>441</width>
         <height>21</height>
        </rect>
@@ -225,7 +225,7 @@
       <property name="geometry">
        <rect>
         <x>690</x>
-        <y>45</y>
+        <y>90</y>
         <width>113</width>
         <height>32</height>
        </rect>
@@ -241,7 +241,7 @@
       <property name="geometry">
        <rect>
         <x>180</x>
-        <y>160</y>
+        <y>204</y>
         <width>31</width>
         <height>21</height>
        </rect>
@@ -251,13 +251,36 @@
       <property name="geometry">
        <rect>
         <x>70</x>
-        <y>165</y>
+        <y>209</y>
         <width>101</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
        <string>Event Number</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="nonHitsFilesPath">
+      <property name="geometry">
+       <rect>
+        <x>240</x>
+        <y>45</y>
+        <width>441</width>
+        <height>21</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_8">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>50</y>
+        <width>161</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Load Non Hits (*.cxi, *.h5)</string>
       </property>
      </widget>
     </widget>
