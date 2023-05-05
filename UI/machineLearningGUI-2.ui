@@ -50,19 +50,6 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="browseButton">
-    <property name="geometry">
-     <rect>
-      <x>640</x>
-      <y>25</y>
-      <width>113</width>
-      <height>32</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Browse</string>
-    </property>
-   </widget>
    <widget class="QPushButton" name="trainButton">
     <property name="geometry">
      <rect>
@@ -172,16 +159,6 @@
      </property>
     </item>
    </widget>
-   <widget class="QLineEdit" name="parentDirectory">
-    <property name="geometry">
-     <rect>
-      <x>260</x>
-      <y>30</y>
-      <width>381</width>
-      <height>21</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QWidget" name="confusionMatrix" native="true">
     <property name="geometry">
      <rect>
@@ -268,12 +245,12 @@
      <rect>
       <x>50</x>
       <y>30</y>
-      <width>211</width>
+      <width>141</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Select the folder with  traing data:</string>
+     <string>Loading the hits from :</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="testSplit">
@@ -332,6 +309,58 @@
     </property>
     <property name="text">
      <string>Classification Report</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_3">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>140</y>
+      <width>211</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Select the folder with  traing data:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>50</y>
+      <width>161</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Loading the nonHits from:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="hitsLocation">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>31</y>
+      <width>561</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="nonHitsLocation">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>50</y>
+      <width>531</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
     </property>
    </widget>
   </widget>
