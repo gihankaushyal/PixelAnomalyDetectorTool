@@ -31,6 +31,7 @@ from PyQt5 import uic
 import lib.cfel_filetools as fileTools
 import lib.cfel_imgtools as imgTools
 import lib.cxifile_parser.combineCXIFiles as combineCXIFiles
+import lib.cxifile_parser.deleteFiducials as deleteFiducials
 from lib.geometry_parser.GeometryFileParser import *
 
 
@@ -624,7 +625,6 @@ class ML(qtw.QMainWindow):
         self.testSplit.setText('30')
 
         # Connect buttons to their corresponding slots
-        self.browseButton.clicked.connect(self.browseFiles)
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
@@ -714,6 +714,11 @@ class ML(qtw.QMainWindow):
 
         self.setIdle()
 
+    def settingUpLabels(self, hitsLocation, nonHitsLocation):
+        self.hitsLocation.setText(hitsLocation)
+        self.nonHitsLocation.setText(nonHitsLocation)
+
+
     # model training using multiple runs needs to be implemented
     # @pyqtSlot()
     # def checkBoxClicked(self):
@@ -782,7 +787,6 @@ class ML(qtw.QMainWindow):
             else:
                 return False
 
-
     def checkTrainTestSplit(self):
         """
             This method checks if the train-test split entered by the user is valid and sums up to 100%.
@@ -816,80 +820,146 @@ class ML(qtw.QMainWindow):
         :return: Sets X_train, X_test, y_train, y_test as class attributes
         """
 
-
         from sklearn.model_selection import train_test_split
-        folder = self.parentDirectory.text()
+        if self.currentTabIndex == 1:
+            folder = self.parentDirectory.text()
 
-        # Processing bad events
-        files = Path(folder).glob('badEvents-advanceSort-*.list')
-        dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
+            # Processing bad events
+            files = Path(folder).glob('badEvents-advanceSort-*.list')
+            dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
-        for file in files:
+            for file in files:
 
-            try:
-                temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber']
+                try:
+                    temp_df = pd.read_csv(str(file), delimiter=" ")
+                    temp_df.columns = ['FileName', 'EventNumber']
 
-                # reading the panel data from the file
-                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
-                fileName = temp_df['FileName'].iloc[0]
+                    # reading the panel data from the file
+                    temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+                    fileName = temp_df['FileName'].iloc[0]
 
-                with h5py.File(fileName, "r") as f:
-                    data = f['entry_1']['data_1']['data'][()]
+                    with h5py.File(fileName, "r") as f:
+                        data = f['entry_1']['data_1']['data'][()]
 
-                tempList = []
-                for i in list(temp_df['EventNumber']):
-                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                    tempList.append(frame.flatten())
+                    tempList = []
+                    for i in list(temp_df['EventNumber']):
+                        frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+                        tempList.append(frame.flatten())
 
-                temp_df['Data'] = tempList
+                    temp_df['Data'] = tempList
 
-                dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
-            except Exception as e:
-                msg = qtw.QMessageBox()
-                msg.setWindowTitle('Warning')
-                msg.setText(
-                    "An error occurred while reading bad events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep()")
-                msg.setIcon(qtw.QMessageBox.Warning)
-                msg.exec_()
-                continue
-        dataFrame_bad['Flag'] = 0
+                    dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
+                except Exception as e:
+                    msg = qtw.QMessageBox()
+                    msg.setWindowTitle('Warning')
+                    msg.setText(
+                        "An error occurred while reading bad events file %s                                  " % str(file))
+                    msg.setInformativeText(str(e) + " dataPrep()")
+                    msg.setIcon(qtw.QMessageBox.Warning)
+                    msg.exec_()
+                    continue
+            dataFrame_bad['Flag'] = 0
 
-        # Processing good events
-        files = Path(folder).glob('goodEvents-advanceSort-*.list')
-        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
+            # Processing good events
+            files = Path(folder).glob('goodEvents-advanceSort-*.list')
+            dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
 
-        for file in files:
-            try:
-                temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber']
+            for file in files:
+                try:
+                    temp_df = pd.read_csv(str(file), delimiter=" ")
+                    temp_df.columns = ['FileName', 'EventNumber']
 
-                # reading the panel data from the file
-                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
-                fileName = temp_df['FileName'].iloc[0]
+                    # reading the panel data from the file
+                    temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+                    fileName = temp_df['FileName'].iloc[0]
 
-                with h5py.File(fileName, "r") as f:
-                    data = f['entry_1']['data_1']['data'][()]
+                    with h5py.File(fileName, "r") as f:
+                        data = f['entry_1']['data_1']['data'][()]
 
-                tempList = list()
-                for i in list(temp_df['EventNumber']):
-                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                    tempList.append(frame.flatten())
+                    tempList = list()
+                    for i in list(temp_df['EventNumber']):
+                        frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+                        tempList.append(frame.flatten())
 
-                temp_df['Data'] = tempList
+                    temp_df['Data'] = tempList
 
-                dataFrame_good = pd.concat([dataFrame_good, temp_df])
-            except Exception as e:
-                msg = qtw.QMessageBox()
-                msg.setWindowTitle('Error')
-                msg.setText(
-                    "An error occurred while reading good events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep()")
-                msg.setIcon(qtw.QMessageBox.Information)
-                msg.exec_()
-                continue
-        dataFrame_good['Flag'] = 1
+                    dataFrame_good = pd.concat([dataFrame_good, temp_df])
+                except Exception as e:
+                    msg = qtw.QMessageBox()
+                    msg.setWindowTitle('Error')
+                    msg.setText(
+                        "An error occurred while reading good events file %s                                  " % str(file))
+                    msg.setInformativeText(str(e) + " dataPrep()")
+                    msg.setIcon(qtw.QMessageBox.Information)
+                    msg.exec_()
+                    continue
+            dataFrame_good['Flag'] = 1
+        else:
+            if 'hits.cxi':
+                inputFiles = self.hitsLocation.text()
+                outputFile = 'hits.cxi'
+                combineCXIFiles.combine_cxi_files(inputFiles,outputFile)
+            if 'nonHits.cxi':
+                inputFiles = self.nonHitsLocation.text()
+                outputFile = 'nonHits.cxi'
+                combineCXIFiles.combine_cxi_files(inputFiles, outputFile)
+                deleteFiducials.compare_and_remove_datasets('hits.cxi','nonHits.cxi')
+
+
+            # for hits (good)
+            chunk_size = 100  # Adjust this value based on your memory constraints
+
+            with h5py.File('hits.cxi', 'r') as f:
+                data = f['entry_1']['data_1']['data']
+                num_chunks = (data.shape[0] + chunk_size - 1) // chunk_size
+
+                dataFrame_good = pd.DataFrame(columns=['Data'])
+
+                for chunk_idx in range(num_chunks):
+                    start_idx = chunk_idx * chunk_size
+                    end_idx = min(start_idx + chunk_size, data.shape[0])
+
+                    chunk_shape = (end_idx - start_idx, *data.shape[1:])
+                    chunk_data = np.empty(chunk_shape, dtype=data.dtype)
+                    data.read_direct(chunk_data, source_sel=np.s_[start_idx:end_idx])
+
+                    temp_list = []
+
+                    for i in range(chunk_data.shape[0]):
+                        frame = chunk_data[i, self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+                        temp_list.append(frame.flatten())
+
+                    temp_df = pd.DataFrame(temp_list, columns=['Data'])
+                    dataFrame_good = dataFrame_good.append(temp_df, ignore_index=True)
+
+            # for nonHits (bad)
+
+            with h5py.File('nonHits.cxi', 'r') as f:
+                data = f['entry_1']['data_1']['data']
+                num_chunks = (data.shape[0] + chunk_size - 1) // chunk_size
+
+                dataFrame_bad = pd.DataFrame(columns=['Data'])
+
+                for chunk_idx in range(num_chunks):
+                    start_idx = chunk_idx * chunk_size
+                    end_idx = min(start_idx + chunk_size, data.shape[0])
+
+                    chunk_shape = (end_idx - start_idx, *data.shape[1:])
+                    chunk_data = np.empty(chunk_shape, dtype=data.dtype)
+                    data.read_direct(chunk_data, source_sel=np.s_[start_idx:end_idx])
+
+                    temp_list = []
+
+                    for i in range(chunk_data.shape[0]):
+                        frame = chunk_data[i, self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+                        temp_list.append(frame.flatten())
+
+                    temp_df = pd.DataFrame(temp_list, columns=['Data'])
+                    dataFrame_bad = dataFrame_bad.append(temp_df, ignore_index=True)
+
+
+
+
 
         # Preparing the data for training and testing
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
@@ -939,7 +1009,6 @@ class ML(qtw.QMainWindow):
         :param i: QMessageBox output (&Yes or &No)
         :return: None
         """
-
 
         if i.text() == '&Yes':
             self.setBusy()
@@ -1329,7 +1398,7 @@ class MainWindow(qtw.QMainWindow):
 
         # Connect UI elements to functions
         self.cxiBrowseButton.clicked.connect(self.browseFiles)
-        self.trainingFileBrowseButton.clicked.connect(self.browseFiles)
+        self.hitsFileBrowseButton.clicked.connect(self.browseFiles)
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.geomBrowseButton_2.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
@@ -1468,8 +1537,14 @@ class MainWindow(qtw.QMainWindow):
             # Get the filename of the list of CXI files - from the Hit finding tab
             fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
                                                                                   'Text Files (*.txt)')
-            self.trainingFilesPath.setText(fileName)
-            self.statusbar.showMessage("Browse for a geometry file ", 5000)
+            self.hitsFilesPath.setText(fileName)
+            self.statusbar.showMessage("Browse for a NonHits file ", 5000)
+
+            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
+                                                                              'Text Files (*.txt)')
+            self.nonHitsFilesPath.setText(fileName)
+
+            self.statusbar.showMessage("Browse for a Geom file ", 5000)
 
             if self.imageViewer:
                 self.imageViewer.close()
@@ -1641,9 +1716,9 @@ class MainWindow(qtw.QMainWindow):
             if not self.eventNumber_2.isEnabled():
                 self.eventNumber_2.setEnabled(True)
 
-            if self.trainingFilesPath:
+            if self.hitsFilesPath:
                 # Read the list of CXI files from the text file
-                with open(self.trainingFilesPath.text(), 'r') as f:
+                with open(self.hitsFilesPath.text(), 'r') as f:
                     cxiFileList = f.readlines()
 
                 # Iterate over each CXI file in the list and display its images using DisplayImage class
@@ -1891,7 +1966,11 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLGUI.show()
 
         # Connect signals from the imageViewer and SortingForML GUIs
-        self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
+        if self.imageViewer:
+            self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
+        else:
+            self.sortForMLGUI.readPanelDetails(self.panelDict)
+
         self.sortForMLGUI.readyToSaveGood.connect(self.writeToFile)
         self.sortForMLGUI.readyToSaveBad.connect(self.writeToFile)
 
@@ -1919,9 +1998,13 @@ class MainWindow(qtw.QMainWindow):
         # create an instance of the ML class and display the window
         currentTabIndex = self.tabWidget.currentIndex()
         self.mlGUI = ML(self.panelDict, currentTabIndex)
+        self.mlGUI.settingUpLabels(self.hitsFilesPath.text(),self.nonHitsFilesPath.text())
         self.mlGUI.show()
         # connect the panelSelected signal of the imageViewer to the readPanelDetails method of the mlGUI
-        self.imageViewer.panelSelected.connect(self.mlGUI.readPanelDetails)
+        if self.imageViewer:
+            self.imageViewer.panelSelected.connect(self.mlGUI.readPanelDetails)
+        else:
+            self.mlGUI.readPanelDetails(self.panelDict)
 
         # enable the Sort button
         self.sortButton.setEnabled(True)
