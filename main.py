@@ -30,7 +30,7 @@ from PyQt5 import uic
 
 import lib.cfel_filetools as fileTools
 import lib.cfel_imgtools as imgTools
-import lib.cxifile_parser.combineCXIFiles as combineCXIFiles
+import lib.cxifile_parser.compareCXIFiles as combineCXIFiles
 import lib.cxifile_parser.deleteFiducials as deleteFiducials
 from lib.geometry_parser.GeometryFileParser import *
 
@@ -625,6 +625,8 @@ class ML(qtw.QMainWindow):
         self.testSplit.setText('30')
 
         # Connect buttons to their corresponding slots
+        if self.currentTabIndex == 1:
+            self.browseButton.clicked.connect(self.browseFiles)
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
@@ -895,67 +897,7 @@ class ML(qtw.QMainWindow):
                     continue
             dataFrame_good['Flag'] = 1
         else:
-            if 'hits.cxi':
-                inputFiles = self.hitsLocation.text()
-                outputFile = 'hits.cxi'
-                combineCXIFiles.combine_cxi_files(inputFiles,outputFile)
-            if 'nonHits.cxi':
-                inputFiles = self.nonHitsLocation.text()
-                outputFile = 'nonHits.cxi'
-                combineCXIFiles.combine_cxi_files(inputFiles, outputFile)
-                deleteFiducials.compare_and_remove_datasets('hits.cxi','nonHits.cxi')
-
-
-            # for hits (good)
-            chunk_size = 100  # Adjust this value based on your memory constraints
-
-            with h5py.File('hits.cxi', 'r') as f:
-                data = f['entry_1']['data_1']['data']
-                num_chunks = (data.shape[0] + chunk_size - 1) // chunk_size
-
-                dataFrame_good = pd.DataFrame(columns=['Data'])
-
-                for chunk_idx in range(num_chunks):
-                    start_idx = chunk_idx * chunk_size
-                    end_idx = min(start_idx + chunk_size, data.shape[0])
-
-                    chunk_shape = (end_idx - start_idx, *data.shape[1:])
-                    chunk_data = np.empty(chunk_shape, dtype=data.dtype)
-                    data.read_direct(chunk_data, source_sel=np.s_[start_idx:end_idx])
-
-                    temp_list = []
-
-                    for i in range(chunk_data.shape[0]):
-                        frame = chunk_data[i, self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                        temp_list.append(frame.flatten())
-
-                    temp_df = pd.DataFrame(temp_list, columns=['Data'])
-                    dataFrame_good = dataFrame_good.append(temp_df, ignore_index=True)
-
-            # for nonHits (bad)
-
-            with h5py.File('nonHits.cxi', 'r') as f:
-                data = f['entry_1']['data_1']['data']
-                num_chunks = (data.shape[0] + chunk_size - 1) // chunk_size
-
-                dataFrame_bad = pd.DataFrame(columns=['Data'])
-
-                for chunk_idx in range(num_chunks):
-                    start_idx = chunk_idx * chunk_size
-                    end_idx = min(start_idx + chunk_size, data.shape[0])
-
-                    chunk_shape = (end_idx - start_idx, *data.shape[1:])
-                    chunk_data = np.empty(chunk_shape, dtype=data.dtype)
-                    data.read_direct(chunk_data, source_sel=np.s_[start_idx:end_idx])
-
-                    temp_list = []
-
-                    for i in range(chunk_data.shape[0]):
-                        frame = chunk_data[i, self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                        temp_list.append(frame.flatten())
-
-                    temp_df = pd.DataFrame(temp_list, columns=['Data'])
-                    dataFrame_bad = dataFrame_bad.append(temp_df, ignore_index=True)
+            # data prep for hit finding
 
 
 
@@ -1750,6 +1692,7 @@ class MainWindow(qtw.QMainWindow):
                     self.imageViewer.panelSelected.connect(self.readPanelDetails)
                     self.clickedNext.connect(self.imageViewer.drawImage)
                     self.clickedPrevious.connect(self.imageViewer.drawImage)
+                    self.imageViewer.destroyed.connect(self.setImageViewerClosed)
 
                     self.trainButton.setEnabled(True)
 
@@ -1998,7 +1941,8 @@ class MainWindow(qtw.QMainWindow):
         # create an instance of the ML class and display the window
         currentTabIndex = self.tabWidget.currentIndex()
         self.mlGUI = ML(self.panelDict, currentTabIndex)
-        self.mlGUI.settingUpLabels(self.hitsFilesPath.text(),self.nonHitsFilesPath.text())
+        if currentTabIndex == 0:
+            self.mlGUI.settingUpLabels(self.hitsFilesPath.text(),self.nonHitsFilesPath.text())
         self.mlGUI.show()
         # connect the panelSelected signal of the imageViewer to the readPanelDetails method of the mlGUI
         if self.imageViewer:
