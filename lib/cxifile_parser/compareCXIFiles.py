@@ -69,48 +69,54 @@ def fiducialsFromCXI(cxiFile):
     :param cxiFile: in put cxi file
     :return: an array with fiducils
     """
-    with h5py.file(cxiFile, 'r') as f:
+    with h5py.File(cxiFile, 'r') as f:
         fiducials = np.array(f['LCLS']['fiducial'])[()]
+        print(len(fiducials))
         return fiducials
 
 
-def compareFiducials(arr1, arr2):
+def compareFiducials(list1, list2):
     """
     comparing the two arrays with fiducials
-    :param arr1: arrys of hits
-    :param arr2: array of hits + non hits
+    :param list: arrys of hits
+    :param list2: array of hits + non hits
     :return: an arrya of arr2 - arr1
     """
-    return list(set(arr1) & set(arr2))
+    print(list(set(list1) & set(list2)))
+    return list(set(list1) & set(list2))
 
 
-def deleteDataFromFiducials(list, cxiFile, ):
+def deleteDataFromFiducials(lst, cxiFile):
     """
     delete the images/slices from the np arrays matches to the location of the fiducials
-    :param list: fiducials to be deleted
+    :param lst: fiducials to be deleted
     :param cxiFile: the source cxi file
     :return: a new cxi file with the given fiducials deleted
     """
+    # print(cxiFile, type(cxiFile))
     fiducials = fiducialsFromCXI(cxiFile)
+    print(len(fiducials))
 
     with h5py.File(cxiFile, 'r') as f:
         data = f['entry_1']['data_1']['data'][()]
+    print(lst)
 
-    for element in list:
+    for element in lst:
         locationToDelete = np.where(fiducials == element)
+        print(locationToDelete)
         fiducials = np.delete(fiducials, locationToDelete)
+        print(len(fiducials))
         data = np.delete(data, locationToDelete, axis=0)
 
-    return fiducials
-    return data
+    return (fiducials, data)
 
 
-def extractDataFromFiducials(list, cxiFile, ):
+def extractDataFromFiducials(lst, cxiFile ):
     """
     extract the images/slices from the np arrays matches to the location of the fiducials
-    :param list: fiducials to be deleted
+    :param lst: fiducials to be extracted
     :param cxiFile: the source cxi file
-    :return: a new cxi file with the given fiducials deleted
+    :return: a new cxi file with the given fiducials extracted
     """
     fiducials = fiducialsFromCXI(cxiFile)
 
@@ -118,14 +124,14 @@ def extractDataFromFiducials(list, cxiFile, ):
         data = f['entry_1']['data_1']['data'][()]
 
     locationToExtract = []
-    for element in list:
+    for element in lst:
         locationToExtract.append(np.where(fiducials == element))
 
     dataOut = np.array([])
     for location in locationToExtract:
         dataOut.append(data[location])
 
-    return list
+    return lst
     return dataOut
 
 
