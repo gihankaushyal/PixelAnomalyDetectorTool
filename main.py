@@ -30,7 +30,7 @@ from PyQt5 import uic
 
 import lib.cfel_filetools as fileTools
 import lib.cfel_imgtools as imgTools
-import lib.cxifile_parser.compareCXIFiles as combineCXIFiles
+import lib.cxifile_parser.compareCXIFiles as compareCXIFiles
 import lib.cxifile_parser.deleteFiducials as deleteFiducials
 from lib.geometry_parser.GeometryFileParser import *
 
@@ -897,12 +897,16 @@ class ML(qtw.QMainWindow):
                     continue
             dataFrame_good['Flag'] = 1
         else:
-            # data prep for hit finding
+            with open(self.hitsLocation.text(),'r') as file1, open( self.nonHitsLocation.text(), 'r') as file2:
+                for line1, line2 in zip(file1,file2):
+                    hitsFiducials = list(compareCXIFiles.fiducialsFromCXI(line1.strip()))
+                    everythingFiducials = list(compareCXIFiles.fiducialsFromCXI(line2.strip()))
+                    commonFiducials = compareCXIFiles.compareFiducials(hitsFiducials,everythingFiducials)
+                    nonHitsFiducials, data = compareCXIFiles.deleteDataFromFiducials(commonFiducials,line2.strip())
+                    print("i'm here")
+                    compareCXIFiles.createCXIFile('%s-nonHits.cxi' % (line1.split('.')[0]), nonHitsFiducials, data)
 
-
-
-
-
+        exit()
         # Preparing the data for training and testing
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
@@ -1483,7 +1487,7 @@ class MainWindow(qtw.QMainWindow):
             self.statusbar.showMessage("Browse for a NonHits file ", 5000)
 
             fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'List Files (*.list);; '
-                                                                              'Text Files (*.txt)')
+                                                                              'Text Files (*.txt) ')
             self.nonHitsFilesPath.setText(fileName)
 
             self.statusbar.showMessage("Browse for a Geom file ", 5000)
