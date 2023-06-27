@@ -68,6 +68,11 @@ class DisplayImage(qtw.QWidget):
 
         # adding a checkBoxes
         self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
+        self.fixHistogramCheckBox = qtw.QCheckBox("Fix Histogram")
+
+        self.layoutForCheckBoxes = qtw.QHBoxLayout()
+        self.layoutForCheckBoxes.addWidget(self.foundPeaksCheckBox)
+        self.layoutForCheckBoxes.addWidget(self.fixHistogramCheckBox)
 
         # connecting the checkBoxes to a method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
@@ -75,7 +80,7 @@ class DisplayImage(qtw.QWidget):
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
-        self.layout.addWidget(self.foundPeaksCheckBox)
+        self.layout.addLayout(self.layoutForCheckBoxes)
 
         # reading the geometry file
         try:
@@ -120,6 +125,9 @@ class DisplayImage(qtw.QWidget):
         self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
+        # connecting signals
+        self.mainWidget.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
+
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
@@ -142,6 +150,7 @@ class DisplayImage(qtw.QWidget):
             self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
             # showing the pixel map in the main window
             self.mainWidget.setImage(self.imageToDraw)
+
             # setting a window title with the eventNumber and the total number of event in the file
             self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
 
@@ -157,6 +166,38 @@ class DisplayImage(qtw.QWidget):
             msg.setInformativeText(str(e) + " drawImage()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
+
+    def handleHistogram(self):
+        # Check if the fixHistogramCheckBox is not checked
+        if not self.fixHistogramCheckBox.isChecked():
+            # Retrieve current histogram levels
+            histogram = self.mainWidget.getHistogramWidget()
+            histMin, histMax = histogram.getLevels()
+
+            # Set histogram range and levels for mainWidget
+            self.mainWidget.setHistogramRange(histMin, histMax)
+            self.mainWidget.setLevels(histMin, histMax)
+
+            # Update finalHistMin and finalHistMax variables
+            self.finalHistMin = histMin
+            self.finalHistMax = histMax
+        else:
+            # Checkbox is checked, adjust histogram range within finalHistMin and finalHistMax bounds
+
+            # Retrieve current histogram levels
+            histMin, histMax = self.mainWidget.getHistogramWidget().getLevels()
+
+            # Compare and update finalHistMin if necessary
+            if histMin > self.finalHistMin:
+                self.finalHistMin = histMin
+
+            # Compare and update finalHistMax if necessary
+            if histMax < self.finalHistMax:
+                self.finalHistMax = histMax
+
+            # Set histogram range and levels within finalHistMin and finalHistMax bounds
+            self.mainWidget.setHistogramRange(self.finalHistMin, self.finalHistMax)
+            self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
 
     def drawPeaks(self):
         """
@@ -1229,17 +1270,19 @@ class MainWindow(qtw.QMainWindow):
             self.orderOfFit.setEnabled(False)
             self.graphWidget.setEnabled(False)
 
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortForMLGUI = None
+        try:
+            if self.sortForMLGUI:
+                self.sortForMLGUI.close()
+                self.sortForMLGUI = None
+        except:
+            pass
 
-        if self.mlGUI:
-            self.mlGUI.close()
-            self.mlGUI = None
-
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortDataGUI = None
+        try:
+            if self.mlGUI:
+                self.mlGUI.close()
+                self.mlGUI = None
+        except:
+            pass
 
         self.setIdle()
 
