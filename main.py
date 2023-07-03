@@ -1168,10 +1168,10 @@ class MainWindow(qtw.QMainWindow):
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
         # connecting buttons
-        self.sortButton.clicked.connect(self.sort)
+        self.sortButton.clicked.connect(self.sortData)
         self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
-        self.loadButton.clcked.connect(self.load)
+        self.loadButton.clcked.connect(self.loadModel)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
@@ -1548,7 +1548,7 @@ class MainWindow(qtw.QMainWindow):
 
             if clickedButton == qtw.QMessageBox.Yes:
                 modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
-                with open(modelName, 'rb') as f
+                with open(modelName, 'rb') as f:
                     data = pickle.load(f)
                 self.model = data['model']
                 qtw.QMessageBox.information(self, "This models was trained using panel % please make sure that's "
@@ -1557,7 +1557,7 @@ class MainWindow(qtw.QMainWindow):
 
         else:
             modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
-            with open(modelName, 'rb') as f
+            with open(modelName, 'rb') as f:
                 data = pickle.load(f)
             self.model = data['model']
             qtw.QMessageBox.information(self,
@@ -1566,7 +1566,7 @@ class MainWindow(qtw.QMainWindow):
             self.sortButton.setEnabled(True)
 
     @pyqtSlot()
-    def sort(self):
+    def sortData(self):
         """
         Spawn an instance of SortData.
         :return: A sorted list of good and bad events to be saved.
