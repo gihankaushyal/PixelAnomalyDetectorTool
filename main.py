@@ -1806,7 +1806,7 @@ class MainWindow(qtw.QMainWindow):
         if self.sortDataGUI:
             try:
                 self.sortDataGUI.close()
-            except AttributeError:
+            except Exception:
                 pass
 
 
