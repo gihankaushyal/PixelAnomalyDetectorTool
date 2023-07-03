@@ -1565,7 +1565,6 @@ class MainWindow(qtw.QMainWindow):
                 data = pickle.load(f)
             self.panelDict = {'panel_name': data['panel_name'], 'min_fs': data['min_fs'], 'max_fs': data['max_fs'],
                               'min_ss': data['min_ss'], 'max_ss': data['max_ss']}
-            print(self.panelDict)
             self.model = data['model']
             qtw.QMessageBox.warning(self, "Warining",
                                     "This models was trained using panel %s please make sure that's the panel you want"
