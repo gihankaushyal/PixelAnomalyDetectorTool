@@ -1171,7 +1171,7 @@ class MainWindow(qtw.QMainWindow):
         self.sortButton.clicked.connect(self.sortData)
         self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
-        self.loadButton.clcked.connect(self.loadModel)
+        self.loadButton.clicked.connect(self.loadModel)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
