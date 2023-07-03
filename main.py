@@ -68,6 +68,11 @@ class DisplayImage(qtw.QWidget):
 
         # adding a checkBoxes
         self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
+        self.fixHistogramCheckBox = qtw.QCheckBox("Fix Histogram")
+
+        self.layoutForCheckBoxes = qtw.QHBoxLayout()
+        self.layoutForCheckBoxes.addWidget(self.foundPeaksCheckBox)
+        self.layoutForCheckBoxes.addWidget(self.fixHistogramCheckBox)
 
         # connecting the checkBoxes to a method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
@@ -75,7 +80,7 @@ class DisplayImage(qtw.QWidget):
         # adding a layout and add checkbox and the mainwindow to the layout
         self.layout = qtw.QVBoxLayout()
         self.layout.addWidget(self.mainWidget)
-        self.layout.addWidget(self.foundPeaksCheckBox)
+        self.layout.addLayout(self.layoutForCheckBoxes)
 
         # reading the geometry file
         try:
@@ -120,6 +125,9 @@ class DisplayImage(qtw.QWidget):
         self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
+        # connecting signals
+        self.mainWidget.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
+
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
         """
@@ -142,6 +150,7 @@ class DisplayImage(qtw.QWidget):
             self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
             # showing the pixel map in the main window
             self.mainWidget.setImage(self.imageToDraw)
+
             # setting a window title with the eventNumber and the total number of event in the file
             self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
 
@@ -157,6 +166,38 @@ class DisplayImage(qtw.QWidget):
             msg.setInformativeText(str(e) + " drawImage()")
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
+
+    def handleHistogram(self):
+        # Check if the fixHistogramCheckBox is not checked
+        if not self.fixHistogramCheckBox.isChecked():
+            # Retrieve current histogram levels
+            histogram = self.mainWidget.getHistogramWidget()
+            histMin, histMax = histogram.getLevels()
+
+            # Set histogram range and levels for mainWidget
+            self.mainWidget.setHistogramRange(histMin, histMax)
+            self.mainWidget.setLevels(histMin, histMax)
+
+            # Update finalHistMin and finalHistMax variables
+            self.finalHistMin = histMin
+            self.finalHistMax = histMax
+        else:
+            # Checkbox is checked, adjust histogram range within finalHistMin and finalHistMax bounds
+
+            # Retrieve current histogram levels
+            histMin, histMax = self.mainWidget.getHistogramWidget().getLevels()
+
+            # Compare and update finalHistMin if necessary
+            if histMin > self.finalHistMin:
+                self.finalHistMin = histMin
+
+            # Compare and update finalHistMax if necessary
+            if histMax < self.finalHistMax:
+                self.finalHistMax = histMax
+
+            # Set histogram range and levels within finalHistMin and finalHistMax bounds
+            self.mainWidget.setHistogramRange(self.finalHistMin, self.finalHistMax)
+            self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
 
     def drawPeaks(self):
         """
@@ -522,7 +563,7 @@ class ML(qtw.QMainWindow):
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
-        self.saveButton.clicked.connect(self.save)
+        self.saveButton.clicked.connect(self.saveModel)
         self.comboBox.activated.connect(self.comboBoxChanged)
 
         # for displaying the confusion matrix
@@ -872,12 +913,13 @@ class ML(qtw.QMainWindow):
         self.comboBox.setCurrentIndex(index)
 
     @pyqtSlot()
-    def save(self):
+    def saveModel(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
-
+        data = {'panel_name': self.panelName, 'min_ss': self.min_ss, 'min_fs': self.min_fs, 'max_ss': self.max_ss,
+                'max_fs':self.max_fs, 'model': self.model}
         if filename:
             with open(filename, 'wb') as f:
-                pickle.dump(self.model, f)
+                pickle.dump(data, f)
 
 
 class SortData(qtw.QWidget):
@@ -1073,6 +1115,7 @@ class MainWindow(qtw.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
+
         uic.loadUi("UI/mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
@@ -1097,6 +1140,8 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewerClosed = True
 
         self.messagesViewFile = None
+
+        self.model = None
 
         self.panelDict = None
         self.panelName = None
@@ -1123,10 +1168,11 @@ class MainWindow(qtw.QMainWindow):
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
-
-        self.sortButton.clicked.connect(self.sort)
+        # connecting buttons
+        self.sortButton.clicked.connect(self.sortData)
         self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
+        self.loadButton.clicked.connect(self.loadModel)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
@@ -1229,17 +1275,19 @@ class MainWindow(qtw.QMainWindow):
             self.orderOfFit.setEnabled(False)
             self.graphWidget.setEnabled(False)
 
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortForMLGUI = None
+        try:
+            if self.sortForMLGUI:
+                self.sortForMLGUI.close()
+                self.sortForMLGUI = None
+        except:
+            pass
 
-        if self.mlGUI:
-            self.mlGUI.close()
-            self.mlGUI = None
-
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.sortDataGUI = None
+        try:
+            if self.mlGUI:
+                self.mlGUI.close()
+                self.mlGUI = None
+        except:
+            pass
 
         self.setIdle()
 
@@ -1488,12 +1536,55 @@ class MainWindow(qtw.QMainWindow):
         self.setIdle()
 
     @pyqtSlot()
-    def sort(self):
+    def loadModel(self):
+        if self.mlGUI is not None:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Question')
+            msg.setText("Do you wish to continue?")
+            msg.setInformativeText("You are about to replace the model you trained with a saved model!")
+            msg.setIcon(qtw.QMessageBox.Question)
+            msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+            msg.setDefaultButton(qtw.QMessageBox.No)
+            clickedButton = msg.exec_()
+
+            if clickedButton == qtw.QMessageBox.Yes:
+                modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
+                with open(modelName, 'rb') as f:
+                    data = pickle.load(f)
+                self.panelDict = {'panel_name': data['panel_name'], 'min_fs': data['min_fs'], 'max_fs': data['max_fs'],
+                                  'min_ss': data['min_ss'], 'max_ss': data['max_ss']}
+                self.model = data['model']
+                qtw.QMessageBox.warning(self, "Warning",
+                                        "This models was trained using panel %s please make sure that's the panel you want"
+                                        % data['panel_name'])
+                self.sortButton.setEnabled(True)
+
+        else:
+            modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
+            with open(modelName, 'rb') as f:
+                data = pickle.load(f)
+            self.panelDict = {'panel_name': data['panel_name'], 'min_fs': data['min_fs'], 'max_fs': data['max_fs'],
+                              'min_ss': data['min_ss'], 'max_ss': data['max_ss']}
+            self.model = data['model']
+            qtw.QMessageBox.warning(self, "Warining",
+                                    "This models was trained using panel %s please make sure that's the panel you want"
+                                    % data['panel_name'])
+            self.sortButton.setEnabled(True)
+
+    @pyqtSlot()
+    def sortData(self):
         """
         Spawn an instance of SortData.
         :return: A sorted list of good and bad events to be saved.
         """
-        self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
+
+        if self.model:
+            try:
+                self.sortDataGUI = SortData(self.model, self.panelDict)
+            except TypeError:
+                qtw.QMessageBox.information(self,'Information', 'Please open at least one cxi file to get the geometric information')
+        elif self.mlGUI.model:
+            self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
         self.sortDataGUI.show()
 
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
@@ -1502,7 +1593,10 @@ class MainWindow(qtw.QMainWindow):
         self.setBusy()
 
         loop = qtc.QEventLoop()
-        self.sortForMLGUI.destroyed.connect(loop.quit)
+        try:
+            self.sortForMLGUI.destroyed.connect(loop.quit)
+        except:
+            pass
         loop.exec_()
 
         self.setIdle()
@@ -1711,7 +1805,7 @@ class MainWindow(qtw.QMainWindow):
         if self.sortDataGUI:
             try:
                 self.sortDataGUI.close()
-            except AttributeError:
+            except Exception:
                 pass
 
 
