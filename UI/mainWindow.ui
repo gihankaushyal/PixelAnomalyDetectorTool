@@ -137,7 +137,7 @@
      <string>Plot Pixel Intensity</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="loadModel">
+   <widget class="QPushButton" name="loadButton">
     <property name="enabled">
      <bool>true</bool>
     </property>
