@@ -915,7 +915,8 @@ class ML(qtw.QMainWindow):
     @pyqtSlot()
     def saveModel(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
-        data = {'model': self.model, 'panelName': self.panelName}
+        data = {'panel_name': self.panelName, 'min_ss': self.min_ss, 'min_fs': self.min_fs, 'max_ss': self.max_ss,
+                'max_fs':self.max_fs, 'model': self.model}
         if filename:
             with open(filename, 'wb') as f:
                 pickle.dump(data, f)
@@ -1536,7 +1537,7 @@ class MainWindow(qtw.QMainWindow):
 
     @pyqtSlot()
     def loadModel(self):
-        if self.model is not None:
+        if self.mlGUI is not None:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Question')
             msg.setText("Do you wish to continue?")
@@ -1550,19 +1551,25 @@ class MainWindow(qtw.QMainWindow):
                 modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
                 with open(modelName, 'rb') as f:
                     data = pickle.load(f)
+                self.panelDict = {'panel_name': data['panel_name'], 'min_fs': data['min_fs'], 'max_fs': data['max_fs'],
+                                  'min_ss': data['min_ss'], 'max_ss': data['max_ss']}
                 self.model = data['model']
-                qtw.QMessageBox.information(self, "This models was trained using panel % please make sure that's "
-                                                  "the panel you want" % data['panelName'])
+                qtw.QMessageBox.warning(self, "Warning",
+                                        "This models was trained using panel %s please make sure that's the panel you want"
+                                        % data['panel_name'])
                 self.sortButton.setEnabled(True)
 
         else:
             modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
             with open(modelName, 'rb') as f:
                 data = pickle.load(f)
+            self.panelDict = {'panel_name': data['panel_name'], 'min_fs': data['min_fs'], 'max_fs': data['max_fs'],
+                              'min_ss': data['min_ss'], 'max_ss': data['max_ss']}
+            print(self.panelDict)
             self.model = data['model']
-            qtw.QMessageBox.information(self,
-                                        "This models was trained using panel % please make sure that's "
-                                        "the panel you want" % data['panelName'])
+            qtw.QMessageBox.warning(self, "Warining",
+                                    "This models was trained using panel %s please make sure that's the panel you want"
+                                    % data['panel_name'])
             self.sortButton.setEnabled(True)
 
     @pyqtSlot()
@@ -1571,7 +1578,14 @@ class MainWindow(qtw.QMainWindow):
         Spawn an instance of SortData.
         :return: A sorted list of good and bad events to be saved.
         """
-        self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
+
+        if self.model:
+            try:
+                self.sortDataGUI = SortData(self.model, self.panelDict)
+            except TypeError:
+                qtw.QMessageBox.information(self,'Information', 'Please open at least one cxi file to get the geometric information')
+        elif self.mlGUI.model:
+            self.sortDataGUI = SortData(self.mlGUI.model, self.panelDict)
         self.sortDataGUI.show()
 
         self.sortDataGUI.readyToSaveGood.connect(self.writeToFile)
