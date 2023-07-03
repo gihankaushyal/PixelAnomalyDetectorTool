@@ -1594,7 +1594,10 @@ class MainWindow(qtw.QMainWindow):
         self.setBusy()
 
         loop = qtc.QEventLoop()
-        self.sortForMLGUI.destroyed.connect(loop.quit)
+        try:
+            self.sortForMLGUI.destroyed.connect(loop.quit)
+        except:
+            pass
         loop.exec_()
 
         self.setIdle()
