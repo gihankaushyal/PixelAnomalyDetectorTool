@@ -563,7 +563,7 @@ class ML(qtw.QMainWindow):
         self.trainButton.clicked.connect(self.buttonClicked)
         self.testButton.clicked.connect(self.test)
         self.resetButton.clicked.connect(self.reset)
-        self.saveButton.clicked.connect(self.save)
+        self.saveButton.clicked.connect(self.saveModel)
         self.comboBox.activated.connect(self.comboBoxChanged)
 
         # for displaying the confusion matrix
@@ -913,12 +913,12 @@ class ML(qtw.QMainWindow):
         self.comboBox.setCurrentIndex(index)
 
     @pyqtSlot()
-    def save(self):
+    def saveModel(self):
         filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
-
+        data = {'model': self.model, 'panelName': self.panelName}
         if filename:
             with open(filename, 'wb') as f:
-                pickle.dump(self.model, f)
+                pickle.dump(data, f)
 
 
 class SortData(qtw.QWidget):
@@ -1114,6 +1114,7 @@ class MainWindow(qtw.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
+
         uic.loadUi("UI/mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
         # connecting elements to functions
@@ -1138,6 +1139,8 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewerClosed = True
 
         self.messagesViewFile = None
+
+        self.model = None
 
         self.panelDict = None
         self.panelName = None
@@ -1164,10 +1167,11 @@ class MainWindow(qtw.QMainWindow):
         # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
         # the frames of the
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
-
+        # connecting buttons
         self.sortButton.clicked.connect(self.sort)
         self.sortForMLButton.clicked.connect(self.sortForML)
         self.MLButton.clicked.connect(self.machineLearning)
+        self.loadButton.clcked.connect(self.load)
 
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
@@ -1529,6 +1533,37 @@ class MainWindow(qtw.QMainWindow):
         loop.exec_()
 
         self.setIdle()
+
+    @pyqtSlot()
+    def loadModel(self):
+        if self.model is not None:
+            msg = qtw.QMessageBox()
+            msg.setWindowTitle('Question')
+            msg.setText("Do you wish to continue?")
+            msg.setInformativeText("You are about to replace the model you trained with a saved model!")
+            msg.setIcon(qtw.QMessageBox.Question)
+            msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+            msg.setDefaultButton(qtw.QMessageBox.No)
+            clickedButton = msg.exec_()
+
+            if clickedButton == qtw.QMessageBox.Yes:
+                modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
+                with open(modelName, 'rb') as f
+                    data = pickle.load(f)
+                self.model = data['model']
+                qtw.QMessageBox.information(self, "This models was trained using panel % please make sure that's "
+                                                  "the panel you want" % data['panelName'])
+                self.sortButton.setEnabled(True)
+
+        else:
+            modelName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'Pickle Files (*.pkl)')
+            with open(modelName, 'rb') as f
+                data = pickle.load(f)
+            self.model = data['model']
+            qtw.QMessageBox.information(self,
+                                        "This models was trained using panel % please make sure that's "
+                                        "the panel you want" % data['panelName'])
+            self.sortButton.setEnabled(True)
 
     @pyqtSlot()
     def sort(self):
