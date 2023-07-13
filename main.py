@@ -35,6 +35,7 @@ from lib.geometry_parser.GeometryFileParser import *
 
 class DisplayImage(qtw.QWidget):
     panelSelected = qtc.pyqtSignal(dict)
+    selectionMade = qtc.pyqtSignal(str)
 
     def __init__(self, fileName, geometry):
 
@@ -138,6 +139,8 @@ class DisplayImage(qtw.QWidget):
 
         # connecting signals
         self.imageViewer.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
+        self.goodRadioButton.toggel.connect(self.handleRadioButtons)
+        self.badRadioButton.toggel.connect(self.handleRadioButtons)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
@@ -216,6 +219,12 @@ class DisplayImage(qtw.QWidget):
             self.imageViewer.setHistogramRange(self.finalHistMin, self.finalHistMax)
             # self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
             self.imageViewer.setLevels(self.finalHistMin, self.finalHistMax)
+
+    def handleRadioButtons(self):
+        if self.goodRadioButton.isCheched():
+            self.selectionMade.emit('Yes')
+        elif self.badRadioButton.isCheched():
+            self.selectionMade.emit('No')
 
     def drawPeaks(self):
         """
@@ -1468,6 +1477,8 @@ class MainWindow(qtw.QMainWindow):
                 self.imageViewer.drawImage(int(self.eventNumber.text()))
                 self.totalEvents = self.imageViewer.size
                 self.imageViewerClosed = False
+                self.imageViewer.selectionMade.connect(lambda : self.writeToFile({int(self.eventNumber.text())},
+                                                                                 self.cxiFilePath.text()))
                 self.imageViewer.show()
             elif self.cxiFileListPath.text():
                 with open(self.cxiFileListPath) as f:
