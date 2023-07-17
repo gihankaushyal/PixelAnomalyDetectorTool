@@ -139,8 +139,8 @@ class DisplayImage(qtw.QWidget):
 
         # connecting signals
         self.imageViewer.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
-        self.goodRadioButton.toggel.connect(self.handleRadioButtons)
-        self.badRadioButton.toggel.connect(self.handleRadioButtons)
+        self.goodRadioButton.toggled.connect(self.handleRadioButtons)
+        self.badRadioButton.toggled.connect(self.handleRadioButtons)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
@@ -220,10 +220,13 @@ class DisplayImage(qtw.QWidget):
             # self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
             self.imageViewer.setLevels(self.finalHistMin, self.finalHistMax)
 
+    @pyqtSlot()
     def handleRadioButtons(self):
-        if self.goodRadioButton.isCheched():
+        if self.goodRadioButton.isChecked():
             self.selectionMade.emit('Yes')
-        elif self.badRadioButton.isCheched():
+            print('Good is selected-DisplayImage')
+        elif self.badRadioButton.isChecked():
+            print('Bad is selected-DisplayImage')
             self.selectionMade.emit('No')
 
     def drawPeaks(self):
@@ -762,6 +765,7 @@ class ML(qtw.QMainWindow):
                 fileName = temp_df['FileName'].iloc[0]
 
                 with h5py.File(fileName, "r") as f:
+                    print('Reading %s' % str(file))
                     data = f['entry_1']['data_1']['data'][()]
 
                 tempList = []
@@ -782,6 +786,9 @@ class ML(qtw.QMainWindow):
                 msg.exec_()
                 continue
         dataFrame_bad['Flag'] = 0
+        print('Done reading Bad events...')
+        print('Found %i Good events' % len(dataFrame_bad))
+        print(' ')
 
         # Good Events
         files = Path(folder).glob('goodEvents-advanceSort-*.list')
@@ -797,6 +804,7 @@ class ML(qtw.QMainWindow):
                 fileName = temp_df['FileName'].iloc[0]
 
                 with h5py.File(fileName, "r") as f:
+                    print('Reading %s' % str(file))
                     data = f['entry_1']['data_1']['data'][()]
 
                 tempList = list()
@@ -817,6 +825,8 @@ class ML(qtw.QMainWindow):
                 msg.exec_()
                 continue
         dataFrame_good['Flag'] = 1
+        print('Done reading Good events...')
+        print('Found %i Good events' % len(dataFrame_good))
 
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
@@ -1477,8 +1487,7 @@ class MainWindow(qtw.QMainWindow):
                 self.imageViewer.drawImage(int(self.eventNumber.text()))
                 self.totalEvents = self.imageViewer.size
                 self.imageViewerClosed = False
-                self.imageViewer.selectionMade.connect(lambda : self.writeToFile({int(self.eventNumber.text())},
-                                                                                 self.cxiFilePath.text()))
+                self.imageViewer.selectionMade.connect(self.handleImageSelectionForML)
                 self.imageViewer.show()
             elif self.cxiFileListPath.text():
                 with open(self.cxiFileListPath) as f:
@@ -1527,6 +1536,11 @@ class MainWindow(qtw.QMainWindow):
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
+
+    @pyqtSlot()
+    def handleImageSelectionForML(self, selection):
+        if selection == 'Yes':
+            print('Yes selected' )
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
