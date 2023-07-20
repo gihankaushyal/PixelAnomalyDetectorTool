@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # imports
+import os.path
 import random
 import warnings
 from builtins import Exception
@@ -13,13 +14,13 @@ from pathlib import Path
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
-# from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
+from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
-# import plotly.express as px
+import plotly.express as px
 from PyQt5.QtCore import pyqtSlot
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -45,15 +46,19 @@ class DisplayImage(qtw.QWidget):
         """
         super(DisplayImage, self).__init__()
 
-        # setting the size and location of the window
-        self.outgoingDict = None
-        self.setGeometry(10, 100, 600, 600)
+        # laoading the UI file
+        uic.loadUi("UI/imageViewerGUI.ui", self)
+        self.mainLayout = qtw.QHBoxLayout()
+        self.imageViewer = pg.ImageView()
+        self.mainLayout.addWidget(self.imageViewer)
+        self.mainWidget.setLayout(self.mainLayout)
 
         # assigning the file name and the geometry
         self.fileName = fileName
         self.geometryName = geometry
 
         # class variables
+        self.outgoingDict = None
         self.eventNumber = None
         self.imageToDraw = None
         self.cxi = None
@@ -63,24 +68,30 @@ class DisplayImage(qtw.QWidget):
         self.panelsXYEdges = {}
         self.outgoingDict = {}
 
-        # main window for display the data
-        self.mainWidget = pg.ImageView()
+        # main window for display the data by hand
+        # self.mainWidget = pg.ImageView()
 
+        # setting the size and location of the window
+        # self.setGeometry(10, 100, 600, 600)
         # adding a checkBoxes
-        self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
-        self.fixHistogramCheckBox = qtw.QCheckBox("Fix Histogram")
+        # self.foundPeaksCheckBox = qtw.QCheckBox('Found Peaks')
+        # self.fixHistogramCheckBox = qtw.QCheckBox("Fix Histogram")
+        # self.selectFor
 
-        self.layoutForCheckBoxes = qtw.QHBoxLayout()
-        self.layoutForCheckBoxes.addWidget(self.foundPeaksCheckBox)
-        self.layoutForCheckBoxes.addWidget(self.fixHistogramCheckBox)
+        # self.layoutForCheckBoxes = qtw.QHBoxLayout()
+        # self.layoutForCheckBoxes.addWidget(self.foundPeaksCheckBox)
+        # self.layoutForCheckBoxes.addWidget(self.fixHistogramCheckBox)
+
+        # adding a layout and add checkbox and the mainwindow to the layout
+        # self.layout = qtw.QVBoxLayout()
+        # self.layout.addWidget(self.mainWidget)
+        # self.layout.addLayout(self.layoutForCheckBoxes)
+        # self.setLayout(self.layout)
+
 
         # connecting the checkBoxes to a method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
 
-        # adding a layout and add checkbox and the mainwindow to the layout
-        self.layout = qtw.QVBoxLayout()
-        self.layout.addWidget(self.mainWidget)
-        self.layout.addLayout(self.layoutForCheckBoxes)
 
         # reading the geometry file
         try:
@@ -110,23 +121,24 @@ class DisplayImage(qtw.QWidget):
 
         # adding an overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
-        self.mainWidget.getView().addItem(self.foundPeaksCanvas)
+        # self.mainWidget.getView().addItem(self.foundPeaksCanvas)
+        self.imageViewer.getView().addItem(self.foundPeaksCanvas)
 
         # adding a canvas for displaying panel edges
         self.panelEdgesCanvas = pg.PlotDataItem()
-        self.mainWidget.getView().addItem(self.panelEdgesCanvas)
+        # self.mainWidget.getView().addItem(self.panelEdgesCanvas)
+        self.imageViewer.getView().addItem(self.panelEdgesCanvas)
 
         # connecting a mouse clicked event to a select panel method
-        self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
-
-        self.setLayout(self.layout)
+        # self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
+        self.imageViewer.getView().scene().sigMouseClicked.connect(self.selectPanel)
 
         # handling what happens after the widget is closed
         self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
         # connecting signals
-        self.mainWidget.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
+        self.imageViewer.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
@@ -149,7 +161,8 @@ class DisplayImage(qtw.QWidget):
             # converting data into a pixel map to display and applying geometry
             self.imageToDraw = imgTools.pixel_remap(imgData, self.geometry['x'], self.geometry['y'])
             # showing the pixel map in the main window
-            self.mainWidget.setImage(self.imageToDraw)
+            # self.mainWidget.setImage(self.imageToDraw)
+            self.imageViewer.setImage(self.imageToDraw)
 
             # setting a window title with the eventNumber and the total number of event in the file
             self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
@@ -158,6 +171,12 @@ class DisplayImage(qtw.QWidget):
                 self.drawInitialPanel()
 
             self.drawPeaks()
+
+            # resetting the radiobuttons
+            if self.goodRadioButton.isChecked():
+                self.dummyRadioButton.setChecked(True)
+            elif self.badRadioButton.isChecked():
+                self.dummyRadioButton.setChecked(True)
 
         except IndexError as e:
             msg = qtw.QMessageBox()
@@ -171,12 +190,15 @@ class DisplayImage(qtw.QWidget):
         # Check if the fixHistogramCheckBox is not checked
         if not self.fixHistogramCheckBox.isChecked():
             # Retrieve current histogram levels
-            histogram = self.mainWidget.getHistogramWidget()
+            # histogram = self.mainWidget.getHistogramWidget()
+            histogram = self.imageViewer.getHistogramWidget()
             histMin, histMax = histogram.getLevels()
 
             # Set histogram range and levels for mainWidget
-            self.mainWidget.setHistogramRange(histMin, histMax)
-            self.mainWidget.setLevels(histMin, histMax)
+            # self.mainWidget.setHistogramRange(histMin, histMax)
+            self.imageViewer.setHistogramRange(histMin, histMax)
+            # self.mainWidget.setLevels(histMin, histMax)
+            self.imageViewer.setLevels(histMin, histMax)
 
             # Update finalHistMin and finalHistMax variables
             self.finalHistMin = histMin
@@ -185,7 +207,8 @@ class DisplayImage(qtw.QWidget):
             # Checkbox is checked, adjust histogram range within finalHistMin and finalHistMax bounds
 
             # Retrieve current histogram levels
-            histMin, histMax = self.mainWidget.getHistogramWidget().getLevels()
+            # histMin, histMax = self.mainWidget.getHistogramWidget().getLevels()
+            histMin, histMax = self.imageViewer.getHistogramWidget().getLevels()
 
             # Compare and update finalHistMin if necessary
             if histMin > self.finalHistMin:
@@ -196,8 +219,10 @@ class DisplayImage(qtw.QWidget):
                 self.finalHistMax = histMax
 
             # Set histogram range and levels within finalHistMin and finalHistMax bounds
-            self.mainWidget.setHistogramRange(self.finalHistMin, self.finalHistMax)
-            self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
+            # self.mainWidget.setHistogramRange(self.finalHistMin, self.finalHistMax)
+            self.imageViewer.setHistogramRange(self.finalHistMin, self.finalHistMax)
+            # self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
+            self.imageViewer.setLevels(self.finalHistMin, self.finalHistMax)
 
     def drawPeaks(self):
         """
@@ -284,8 +309,10 @@ class DisplayImage(qtw.QWidget):
             # panel locations corrected for displayImage
 
             pos = event.scenePos()
-            if self.mainWidget.getView().sceneBoundingRect().contains(pos):
-                mouse_point = self.mainWidget.getView().mapSceneToView(pos)
+            # if self.mainWidget.getView().sceneBoundingRect().contains(pos):
+            if self.imageViewer.getView().sceneBoundingRect().contains(pos):
+                # mouse_point = self.mainWidget.getView().mapSceneToView(pos)
+                mouse_point = self.imageViewer.getView().mapSceneToView(pos)
                 x_mouse = int(mouse_point.x())
                 y_mouse = int(mouse_point.y())
 
@@ -343,17 +370,17 @@ class SortingForML(qtw.QWidget):
         uic.loadUi("UI/sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
-        self.layoutSortingForML = qtw.QHBoxLayout()
-        self.figureSortingForML = plt.figure()
-        self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
-        self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
-        self.graphSpace.setLayout(self.layoutSortingForML)
+        # self.layoutSortingForML = qtw.QHBoxLayout()
+        # self.figureSortingForML = plt.figure()
+        # self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+        # self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+        # self.graphSpace.setLayout(self.layoutSortingForML)
 
         # for plotting with plotly
-        # self.layout = qtw.QHBoxLayout()
-        # self.browser = qtwew.QWebEngineView()
-        # self.layout.addWidget(self.browser)
-        # self.graphSpace.setLayout(self.layout)
+        self.layout = qtw.QHBoxLayout()
+        self.browser = qtwew.QWebEngineView()
+        self.layout.addWidget(self.browser)
+        self.graphSpace.setLayout(self.layout)
 
         self.fileName = fileName
         self.orderOfFit = oft
@@ -421,9 +448,17 @@ class SortingForML(qtw.QWidget):
                                    2)
                         x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
                                    2)
+                        if x1 > x2:
+                            self.inflectionPoint1List.append(x1)
+                            self.inflectionPoint2List.append(x2)
+                        else:
+                            self.inflectionPoint2List.append(x1)
+                            self.inflectionPoint1List.append(x2)
 
-                        self.inflectionPoint1List.append(x1)
-                        self.inflectionPoint2List.append(x2)
+                        # old method
+                        # self.inflectionPoint1List.append(x1)
+                        # self.inflectionPoint2List.append(x2)
+
                     except IndexError as e:
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
@@ -447,28 +482,27 @@ class SortingForML(qtw.QWidget):
             print(e, '-plotInflectionPoint')
 
         # with plotly
-        # df = pd.DataFrame()
-        # df['Inflection_poit1'] = self.x1_list
-        # df['Inflection_poit2'] = self.x2_list
-        # fig = px.histogram(df, nbins=200, opacity=0.5)
-        # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-
-        # with seaborn
-        self.figureSortingForML.clear()
         df = pd.DataFrame()
         df['Inflection_point1'] = self.inflectionPoint1List
         df['Inflection_point2'] = self.inflectionPoint2List
-        colors = ['red', 'green', 'blue', 'violet', 'pink']
-        random.shuffle(colors)
-        for column in df.columns:
-            sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
-        plt.title('Distributions of Inflection points 1 and 2')
-        plt.ylabel('Count')
-        plt.xlabel(' Vertically Average Pixel Intensity')
-        plt.xticks()
-        plt.legend()
+        fig = px.histogram(df, nbins=200, opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        self.canvasForInflectionPoints.draw()
+        # with seaborn
+        # self.figureSortingForML.clear()
+        # df = pd.DataFrame()
+        # df['Inflection_point1'] = self.inflectionPoint1List
+        # df['Inflection_point2'] = self.inflectionPoint2List
+        # colors = ['red', 'green', 'blue', 'violet', 'pink']
+        # random.shuffle(colors)
+        # for column in df.columns:
+        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        # plt.title('Distributions of Inflection points 1 and 2')
+        # plt.ylabel('Count')
+        # plt.xlabel(' Vertically Average Pixel Intensity')
+        # plt.xticks()
+        # plt.legend()
+        # self.canvasForInflectionPoints.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
@@ -733,6 +767,7 @@ class ML(qtw.QMainWindow):
                 fileName = temp_df['FileName'].iloc[0]
 
                 with h5py.File(fileName, "r") as f:
+                    print('Reading %s' % str(file))
                     data = f['entry_1']['data_1']['data'][()]
 
                 tempList = []
@@ -753,6 +788,9 @@ class ML(qtw.QMainWindow):
                 msg.exec_()
                 continue
         dataFrame_bad['Flag'] = 0
+        print('Done reading Bad events...')
+        print('Found %i Good events' % len(dataFrame_bad))
+        print(' ')
 
         # Good Events
         files = Path(folder).glob('goodEvents-advanceSort-*.list')
@@ -768,6 +806,7 @@ class ML(qtw.QMainWindow):
                 fileName = temp_df['FileName'].iloc[0]
 
                 with h5py.File(fileName, "r") as f:
+                    print('Reading %s' % str(file))
                     data = f['entry_1']['data_1']['data'][()]
 
                 tempList = list()
@@ -788,6 +827,8 @@ class ML(qtw.QMainWindow):
                 msg.exec_()
                 continue
         dataFrame_good['Flag'] = 1
+        print('Done reading Good events...')
+        print('Found %i Good events' % len(dataFrame_good))
 
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
@@ -1118,47 +1159,14 @@ class MainWindow(qtw.QMainWindow):
 
         uic.loadUi("UI/mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
+
         # connecting elements to functions
-        self.cxiBrowseButton.clicked.connect(self.browseFiles)
+        # self.cxiBrowseButton.clicked.connect(self.self.handleBrowseButtons)
+        self.cxiBrowseButton.clicked.connect(lambda: self.browseFiles(self.cxiBrowseButton.objectName()))
+        # self.cxiListBrowseButton.clicked.connect(self.handleBrowseButtons)
+        self.cxiListBrowseButton.clicked.connect(lambda: self.browseFiles(self.cxiListBrowseButton.objectName()))
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
-
-        #  First message on status bar
-        self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
-
-        # initializing the popup windows
-        self.imageViewer = None
-        self.sortForMLGUI = None
-        self.mlGUI = None
-        self.sortDataGUI = None
-
-        self.fileSize = None
-        self.totalEvents = None
-        self.plotName = 'plotCurve'
-
-        # variables to identify the respective windows are opened or closed.
-        self.imageViewerClosed = True
-
-        self.messagesViewFile = None
-
-        self.model = None
-
-        self.panelDict = None
-        self.panelName = None
-        self.min_fs = None
-        self.max_fs = None
-        self.min_ss = None
-        self.max_ss = None
-        self.detectorLeft = [
-            'p4a0', 'p4a1', 'p4a2', 'p4a3',
-            'p5a0', 'p5a1', 'p5a2', 'p5a3',
-            'p6a0', 'p6a1', 'p6a2', 'p6a3',
-            'p7a0', 'p7a1', 'p7a2', 'p7a3',
-            'p8a0', 'p8a1', 'p8a2', 'p8a3',
-            'p9a0', 'p9a1', 'p9a2', 'p9a3',
-            'p10a0', 'p10a1', 'p10a2', 'p10a3',
-            'p11a0', 'p11a1', 'p11a2', 'p11a3',
-        ]
         # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
         # panel
         self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
@@ -1177,6 +1185,44 @@ class MainWindow(qtw.QMainWindow):
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
         self.eventNumber.editingFinished.connect(self.selectDisplay)
+
+        #  First message on status bar
+        self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
+
+        # initializing class variables
+        # initializing the popup windows
+        self.imageViewer = None
+        self.sortForMLGUI = None
+        self.mlGUI = None
+        self.sortDataGUI = None
+
+        self.fileSize = None
+        self.totalEvents = None
+        self.plotName = 'plotCurve'
+
+        # variables to identify the respective windows are opened or closed.
+        self.imageViewerClosed = True
+
+        self.messagesViewFile = None
+
+        self.model = None
+        self.panelDict = None
+        self.panelName = None
+        self.min_fs = None
+        self.max_fs = None
+        self.min_ss = None
+        self.max_ss = None
+        self.fileLocation= os.getcwd()
+        self.detectorLeft = [
+            'p4a0', 'p4a1', 'p4a2', 'p4a3',
+            'p5a0', 'p5a1', 'p5a2', 'p5a3',
+            'p6a0', 'p6a1', 'p6a2', 'p6a3',
+            'p7a0', 'p7a1', 'p7a2', 'p7a3',
+            'p8a0', 'p8a1', 'p8a2', 'p8a3',
+            'p9a0', 'p9a1', 'p9a2', 'p9a3',
+            'p10a0', 'p10a1', 'p10a2', 'p10a3',
+            'p11a0', 'p11a1', 'p11a2', 'p11a3',
+        ]
 
         # incrementing through event numbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
@@ -1235,7 +1281,7 @@ class MainWindow(qtw.QMainWindow):
             qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
 
     @pyqtSlot()
-    def browseFiles(self):
+    def browseFiles(self, buttonName):
         """
         This method gets triggered when the browse button is Clicked in the GUI
         function:The function is to take in a text field where the value needs to be set and called in a dialog box with
@@ -1244,36 +1290,44 @@ class MainWindow(qtw.QMainWindow):
         """
 
         self.setBusy()
-
-        fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-        if fileName:
-            self.cxiFilePath.setText(fileName)
-            self.cxiFileListPath.setEnabled(False)
-            self.cxiListBrowseButton.setEnabled(False)
-            self.geomBrowseButton.setEnabled(True)
-            self.geomFilePath.setEnabled(True)
-            self.statusbar.showMessage("Browse for a geometry file ", 5000)
+        if buttonName == "cxiBrowseButton":
+            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+            if fileName:
+                self.cxiFilePath.setText(fileName)
+                self.cxiFileListPath.setEnabled(False)
+                self.cxiListBrowseButton.setEnabled(False)
+                self.geomBrowseButton.setEnabled(True)
+                self.geomFilePath.setEnabled(True)
+                self.statusbar.showMessage("Browse for a geometry file ", 5000)
+        elif buttonName == "cxiListBrowseButton":
+            fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
+            if fileListName:
+                self.cxiFileListPath.setText(fileListName)
+                self.cxiFilePath.setEnabled(False)
+                self.cxiBrowseButton.setEnabled(False)
+                self.geomBrowseButton.setEnabled(True)
+                self.geomFilePath.setEnabled(True)
+                self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
         # resting the main window for the next cxi file
         if self.imageViewer:
             self.imageViewer.close()
-            # del self.imageViewer
-            # self.imageViewer = None
-            self.graphWidget.clear()
-            self.eventNumber.setText("0")
-            self.eventNumber.setEnabled(False)
-            self.plotPixelIntensityButton.setEnabled(False)
-            self.poltFitCheckBox.setEnabled(False)
-            self.poltFitCheckBox.setChecked(False)
-            self.plotPeakPixelButton.setEnabled(False)
-            self.sortForMLButton.setEnabled(False)
-            self.sortButton.setEnabled(False)
-            self.nextButton.setEnabled(False)
-            self.previousButton.setEnabled(False)
-            self.MLButton.setEnabled(False)
-            self.orderOfFit.clear()
-            self.orderOfFit.setEnabled(False)
-            self.graphWidget.setEnabled(False)
+        self.graphWidget.clear()
+        self.eventNumber.setText("0")
+        self.eventNumber.setEnabled(False)
+        self.plotPixelIntensityButton.setEnabled(False)
+        self.poltFitCheckBox.setEnabled(False)
+        self.poltFitCheckBox.setChecked(False)
+        self.plotPeakPixelButton.setEnabled(False)
+        self.sortForMLButton.setEnabled(False)
+        self.sortButton.setEnabled(False)
+        self.nextButton.setEnabled(False)
+        self.previousButton.setEnabled(False)
+        self.MLButton.setEnabled(False)
+        self.orderOfFit.clear()
+        self.orderOfFit.setEnabled(False)
+        self.graphWidget.setEnabled(False)
+        self.fileLocation = os.getcwd()
 
         try:
             if self.sortForMLGUI:
@@ -1379,17 +1433,35 @@ class MainWindow(qtw.QMainWindow):
 
         if not self.imageViewerClosed:
             self.imageViewer.close()
-            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
+            if self.cxiFilePath.text():
+                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+                self.imageViewer.drawImage(int(self.eventNumber.text()))
+                self.totalEvents = self.imageViewer.size
+                self.imageViewerClosed = False
+                self.imageViewer.show()
+            elif self.cxiFileListPath.text():
+                with open(self.cxiFileListPath) as f:
+                    for line in f:
+                        self.imageViewer = DisplayImage(line,self.geomFilePath.text())
+                        self.imageViewer.drawImage(int(self.eventNumber.text()))
+                        self.totalEvents = self.imageViewer.size
+                        self.imageViewerClosed = False
+                        self.imageViewer.show()
         else:
-            self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
+            if self.cxiFilePath.text():
+                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+                self.imageViewer.drawImage(int(self.eventNumber.text()))
+                self.totalEvents = self.imageViewer.size
+                self.imageViewerClosed = False
+                self.imageViewer.show()
+            elif self.cxiFileListPath.text():
+                with open(self.cxiFileListPath.text()) as f:
+                    for line in f:
+                        self.imageViewer = DisplayImage(line.strip(), self.geomFilePath.text())
+                        self.imageViewer.drawImage(int(self.eventNumber.text()))
+                        self.totalEvents = self.imageViewer.size
+                        self.imageViewerClosed = False
+                        self.imageViewer.show()
 
         self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
                                                                           "buttons to navigate through images",
@@ -1405,15 +1477,61 @@ class MainWindow(qtw.QMainWindow):
             self.min_ss = self.imageViewer.outgoingDict['min_ss']
             self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
+        # connecting signals from and to, to the imageViewer object
         self.imageViewer.panelSelected.connect(self.readPanelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.goodRadioButton.toggled.connect(self.handleRadioButtons)
+        self.imageViewer.badRadioButton.toggled.connect(self.handleRadioButtons)
         self.imageViewer.destroyed.connect(self.setImageViewerClosed)
+
+        # clearing the radio buttons
+        if self.imageViewer.goodRadioButton.isChecked():
+            print('Good button is clicked')
+            self.imageViewer.goodRadioButton.setChecked(False)
+        elif self.imageViewer.badRadioButton.isChecked():
+            print('bad button is clicked')
+            self.imageViewer.badRadioButton.setChecked(False)
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
+
+    @pyqtSlot()
+    def handleRadioButtons(self):
+        savingDict = {}
+        if self.imageViewer.goodRadioButton.isChecked():
+            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
+            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            if not os.path.isfile(self.fileLocation + '/'+'goodEvents-advanceSort-%s.list' % tag):
+                while True:
+                    try:
+                        self.fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
+                                                                options=qtw.QFileDialog.DontUseNativeDialog)
+                        self.writeToFile(savingDict,self.fileLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
+                        break
+                    except OSError:
+                        qtw.QMessageBox.information(self,'Information', 'Please select a file save location')
+                        continue
+            else:
+                self.writeToFile(savingDict, self.fileLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
+        elif self.imageViewer.badRadioButton.isChecked():
+            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
+            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            if not os.path.isfile(self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag):
+                while True:
+                    try:
+                        self.fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location',
+                                                                            directory=' ',
+                                                                            options=qtw.QFileDialog.DontUseNativeDialog)
+                        self.writeToFile(savingDict, self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
+                        break
+                    except OSError:
+                        qtw.QMessageBox.information(self, 'Information', 'Please select a file save location')
+                        continue
+            else:
+                self.writeToFile(savingDict, self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
@@ -1468,17 +1586,18 @@ class MainWindow(qtw.QMainWindow):
             msg.exec_()
 
     @pyqtSlot(dict, str)
-    def writeToFile(self, eventsList, fileName):
+    def writeToFile(self, eventsDict, fileName):
         """
         A method to save sorted events
-        :param eventsList: dictionary with *cxi file path and event numbers
+        :param eventsDict: dictionary with *cxi file path and event numbers
         :param fileName: save file name
         :return: *.list file
         """
-        f = open(fileName, 'w')
+        f = open(fileName, 'a')
 
-        for key in eventsList.keys():
-            for i in eventsList[key]:
+        self.statusbar.showMessage("Saving file %s " % fileName, 2000)
+        for key in eventsDict.keys():
+            for i in eventsDict[key]:
                 f.write(key)
                 f.write(' ')
                 f.write('//')
@@ -1486,7 +1605,6 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
-        self.statusbar.showMessage("Saving file %s " % fileName, 2000)
 
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
@@ -1647,7 +1765,8 @@ class MainWindow(qtw.QMainWindow):
         :return: A plot in the  self.graphingSpace
         """
         try:
-            fileName = self.cxiFilePath.text()
+            if self.cxiFilePath.text():
+                fileName = self.cxiFilePath.text()
             eventNumber = int(self.eventNumber.text())
 
             with h5py.File(fileName, "r") as f:
@@ -1773,11 +1892,6 @@ class MainWindow(qtw.QMainWindow):
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
-
-    # def write(self, message):
-    #     print("I got the message:", message)
-    #     # Update the status bar with the message
-    #     self.statusbar.showMessage(message)
 
     def closeEvent(self, QCloseEvent):
         """
