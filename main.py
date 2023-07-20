@@ -172,16 +172,6 @@ class DisplayImage(qtw.QWidget):
 
             self.drawPeaks()
 
-            # resetting the radio buttons
-            # self.goodRadioButton.setChecked(False)
-            # self.badRadioButton.setChecked(False)
-            if self.goodRadioButton.isChecked():
-                print('good is checked')
-                self.dummyRadioButton.setChecked(True)
-            elif self.badRadioButton.isChecked():
-                print('bad is checked')
-                self.dummyRadioButton.setChecked(True)
-
         except IndexError as e:
             msg = qtw.QMessageBox()
             msg.setWindowTitle('Information')
@@ -1186,6 +1176,7 @@ class MainWindow(qtw.QMainWindow):
         #  First message on status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
 
+        # initializing class variables
         # initializing the popup windows
         self.imageViewer = None
         self.sortForMLGUI = None
@@ -1202,13 +1193,13 @@ class MainWindow(qtw.QMainWindow):
         self.messagesViewFile = None
 
         self.model = None
-
         self.panelDict = None
         self.panelName = None
         self.min_fs = None
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
+        self.fileLocation= os.getcwd()
         self.detectorLeft = [
             'p4a0', 'p4a1', 'p4a2', 'p4a3',
             'p5a0', 'p5a1', 'p5a2', 'p5a3',
@@ -1308,21 +1299,22 @@ class MainWindow(qtw.QMainWindow):
         # resting the main window for the next cxi file
         if self.imageViewer:
             self.imageViewer.close()
-            self.graphWidget.clear()
-            self.eventNumber.setText("0")
-            self.eventNumber.setEnabled(False)
-            self.plotPixelIntensityButton.setEnabled(False)
-            self.poltFitCheckBox.setEnabled(False)
-            self.poltFitCheckBox.setChecked(False)
-            self.plotPeakPixelButton.setEnabled(False)
-            self.sortForMLButton.setEnabled(False)
-            self.sortButton.setEnabled(False)
-            self.nextButton.setEnabled(False)
-            self.previousButton.setEnabled(False)
-            self.MLButton.setEnabled(False)
-            self.orderOfFit.clear()
-            self.orderOfFit.setEnabled(False)
-            self.graphWidget.setEnabled(False)
+        self.graphWidget.clear()
+        self.eventNumber.setText("0")
+        self.eventNumber.setEnabled(False)
+        self.plotPixelIntensityButton.setEnabled(False)
+        self.poltFitCheckBox.setEnabled(False)
+        self.poltFitCheckBox.setChecked(False)
+        self.plotPeakPixelButton.setEnabled(False)
+        self.sortForMLButton.setEnabled(False)
+        self.sortButton.setEnabled(False)
+        self.nextButton.setEnabled(False)
+        self.previousButton.setEnabled(False)
+        self.MLButton.setEnabled(False)
+        self.orderOfFit.clear()
+        self.orderOfFit.setEnabled(False)
+        self.graphWidget.setEnabled(False)
+        self.fileLocation = os.getcwd()
 
         try:
             if self.sortForMLGUI:
@@ -1499,34 +1491,34 @@ class MainWindow(qtw.QMainWindow):
         if self.imageViewer.goodRadioButton.isChecked():
             savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
             tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
-            if not os.path.isfile('goodEvents-advanceSort-%s.list' % tag):
+            if not os.path.isfile(self.fileLocation + '/'+'goodEvents-advanceSort-%s.list' % tag):
                 while True:
                     try:
-                        fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
+                        self.fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
                                                                 options=qtw.QFileDialog.DontUseNativeDialog)
-                        self.writeToFile(savingDict,fileLocation+ '/' + 'goodEvents-advanceSort-%s.list' % tag)
+                        self.writeToFile(savingDict,self.fileLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
                         break
                     except OSError:
                         qtw.QMessageBox.information(self,'Information', 'Please select a file save location')
                         continue
             else:
-                self.writeToFile(savingDict, 'goodEvents-advanceSort-%s.list' % tag)
+                self.writeToFile(savingDict, self.fileLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
         elif self.imageViewer.badRadioButton.isChecked():
             savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
             tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
-            if not os.path.isfile('badEvents-advanceSort-%s.list' % tag):
+            if not os.path.isfile(self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag):
                 while True:
                     try:
-                        fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location',
+                        self.fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location',
                                                                             directory=' ',
                                                                             options=qtw.QFileDialog.DontUseNativeDialog)
-                        self.writeToFile(savingDict, fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
+                        self.writeToFile(savingDict, self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
                         break
                     except OSError:
                         qtw.QMessageBox.information(self, 'Information', 'Please select a file save location')
                         continue
             else:
-                self.writeToFile(savingDict, 'badEvents-advanceSort-%s.list' % tag)
+                self.writeToFile(savingDict, self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
