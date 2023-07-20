@@ -14,13 +14,13 @@ from pathlib import Path
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
-# from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
+from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
 # Graphing stuff
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
-# import plotly.express as px
+import plotly.express as px
 from PyQt5.QtCore import pyqtSlot
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -68,7 +68,7 @@ class DisplayImage(qtw.QWidget):
         self.panelsXYEdges = {}
         self.outgoingDict = {}
 
-        # main window for display the data
+        # main window for display the data by hand
         # self.mainWidget = pg.ImageView()
 
         # setting the size and location of the window
@@ -171,6 +171,12 @@ class DisplayImage(qtw.QWidget):
                 self.drawInitialPanel()
 
             self.drawPeaks()
+
+            # resetting the radiobuttons
+            if self.goodRadioButton.isChecked():
+                self.dummyRadioButton.setChecked(True)
+            elif self.badRadioButton.isChecked():
+                self.dummyRadioButton.setChecked(True)
 
         except IndexError as e:
             msg = qtw.QMessageBox()
@@ -364,17 +370,17 @@ class SortingForML(qtw.QWidget):
         uic.loadUi("UI/sortForMLGUI.ui", self)
 
         # for plotting with matplotlib
-        self.layoutSortingForML = qtw.QHBoxLayout()
-        self.figureSortingForML = plt.figure()
-        self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
-        self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
-        self.graphSpace.setLayout(self.layoutSortingForML)
+        # self.layoutSortingForML = qtw.QHBoxLayout()
+        # self.figureSortingForML = plt.figure()
+        # self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+        # self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+        # self.graphSpace.setLayout(self.layoutSortingForML)
 
         # for plotting with plotly
-        # self.layout = qtw.QHBoxLayout()
-        # self.browser = qtwew.QWebEngineView()
-        # self.layout.addWidget(self.browser)
-        # self.graphSpace.setLayout(self.layout)
+        self.layout = qtw.QHBoxLayout()
+        self.browser = qtwew.QWebEngineView()
+        self.layout.addWidget(self.browser)
+        self.graphSpace.setLayout(self.layout)
 
         self.fileName = fileName
         self.orderOfFit = oft
@@ -442,9 +448,17 @@ class SortingForML(qtw.QWidget):
                                    2)
                         x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
                                    2)
+                        if x1 > x2:
+                            self.inflectionPoint1List.append(x1)
+                            self.inflectionPoint2List.append(x2)
+                        else:
+                            self.inflectionPoint2List.append(x1)
+                            self.inflectionPoint1List.append(x2)
 
-                        self.inflectionPoint1List.append(x1)
-                        self.inflectionPoint2List.append(x2)
+                        # old method
+                        # self.inflectionPoint1List.append(x1)
+                        # self.inflectionPoint2List.append(x2)
+
                     except IndexError as e:
                         msg = qtw.QMessageBox()
                         msg.setText(str(e).capitalize())
@@ -468,28 +482,27 @@ class SortingForML(qtw.QWidget):
             print(e, '-plotInflectionPoint')
 
         # with plotly
-        # df = pd.DataFrame()
-        # df['Inflection_poit1'] = self.x1_list
-        # df['Inflection_poit2'] = self.x2_list
-        # fig = px.histogram(df, nbins=200, opacity=0.5)
-        # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-
-        # with seaborn
-        self.figureSortingForML.clear()
         df = pd.DataFrame()
         df['Inflection_point1'] = self.inflectionPoint1List
         df['Inflection_point2'] = self.inflectionPoint2List
-        colors = ['red', 'green', 'blue', 'violet', 'pink']
-        random.shuffle(colors)
-        for column in df.columns:
-            sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
-        plt.title('Distributions of Inflection points 1 and 2')
-        plt.ylabel('Count')
-        plt.xlabel(' Vertically Average Pixel Intensity')
-        plt.xticks()
-        plt.legend()
+        fig = px.histogram(df, nbins=200, opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        self.canvasForInflectionPoints.draw()
+        # with seaborn
+        # self.figureSortingForML.clear()
+        # df = pd.DataFrame()
+        # df['Inflection_point1'] = self.inflectionPoint1List
+        # df['Inflection_point2'] = self.inflectionPoint2List
+        # colors = ['red', 'green', 'blue', 'violet', 'pink']
+        # random.shuffle(colors)
+        # for column in df.columns:
+        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        # plt.title('Distributions of Inflection points 1 and 2')
+        # plt.ylabel('Count')
+        # plt.xlabel(' Vertically Average Pixel Intensity')
+        # plt.xticks()
+        # plt.legend()
+        # self.canvasForInflectionPoints.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
