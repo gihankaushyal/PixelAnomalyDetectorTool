@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # imports
+import os.path
 import random
 import warnings
 from builtins import Exception
@@ -35,7 +36,6 @@ from lib.geometry_parser.GeometryFileParser import *
 
 class DisplayImage(qtw.QWidget):
     panelSelected = qtc.pyqtSignal(dict)
-    selectionMade = qtc.pyqtSignal(str)
 
     def __init__(self, fileName, geometry):
 
@@ -139,8 +139,6 @@ class DisplayImage(qtw.QWidget):
 
         # connecting signals
         self.imageViewer.getHistogramWidget().item.sigLevelChangeFinished.connect(self.handleHistogram)
-        self.goodRadioButton.toggled.connect(self.handleRadioButtons)
-        self.badRadioButton.toggled.connect(self.handleRadioButtons)
 
     @pyqtSlot(int)
     def drawImage(self, eventNumber):
@@ -173,6 +171,16 @@ class DisplayImage(qtw.QWidget):
                 self.drawInitialPanel()
 
             self.drawPeaks()
+
+            # resetting the radio buttons
+            # self.goodRadioButton.setChecked(False)
+            # self.badRadioButton.setChecked(False)
+            if self.goodRadioButton.isChecked():
+                print('good is checked')
+                self.dummyRadioButton.setChecked(True)
+            elif self.badRadioButton.isChecked():
+                print('bad is checked')
+                self.dummyRadioButton.setChecked(True)
 
         except IndexError as e:
             msg = qtw.QMessageBox()
@@ -219,15 +227,6 @@ class DisplayImage(qtw.QWidget):
             self.imageViewer.setHistogramRange(self.finalHistMin, self.finalHistMax)
             # self.mainWidget.setLevels(self.finalHistMin, self.finalHistMax)
             self.imageViewer.setLevels(self.finalHistMin, self.finalHistMax)
-
-    @pyqtSlot()
-    def handleRadioButtons(self):
-        if self.goodRadioButton.isChecked():
-            self.selectionMade.emit('Yes')
-            print('Good is selected-DisplayImage')
-        elif self.badRadioButton.isChecked():
-            print('Bad is selected-DisplayImage')
-            self.selectionMade.emit('No')
 
     def drawPeaks(self):
         """
@@ -1157,11 +1156,32 @@ class MainWindow(qtw.QMainWindow):
 
         uic.loadUi("UI/mainWindow.ui", self)
         self.setGeometry(700, 100, 800, 700)
+
         # connecting elements to functions
-        self.cxiBrowseButton.clicked.connect(self.browseFiles)
-        self.cxiListBrowseButton.clicked.connect(self.browseFiles)
+        # self.cxiBrowseButton.clicked.connect(self.self.handleBrowseButtons)
+        self.cxiBrowseButton.clicked.connect(lambda: self.browseFiles(self.cxiBrowseButton.objectName()))
+        # self.cxiListBrowseButton.clicked.connect(self.handleBrowseButtons)
+        self.cxiListBrowseButton.clicked.connect(lambda: self.browseFiles(self.cxiListBrowseButton.objectName()))
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
+        # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
+        # panel
+        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
+        # button for call the fit_curve() method to fit a nth order polynomial for
+        # the vertically average intensity profile
+        self.poltFitCheckBox.clicked.connect(self.plotFit)
+        # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
+        # the frames of the
+        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
+        # connecting buttons
+        self.sortButton.clicked.connect(self.sortData)
+        self.sortForMLButton.clicked.connect(self.sortForML)
+        self.MLButton.clicked.connect(self.machineLearning)
+        self.loadButton.clicked.connect(self.loadModel)
+
+        self.orderOfFit.editingFinished.connect(self.plotFit)
+        self.eventNumber.editingFinished.connect(self.curveToPlot)
+        self.eventNumber.editingFinished.connect(self.selectDisplay)
 
         #  First message on status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
@@ -1199,24 +1219,6 @@ class MainWindow(qtw.QMainWindow):
             'p10a0', 'p10a1', 'p10a2', 'p10a3',
             'p11a0', 'p11a1', 'p11a2', 'p11a3',
         ]
-        # button and input line for calling plotCurves() method to plot vertically average intensity profile for the
-        # panel
-        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
-        # button for call the fit_curve() method to fit a nth order polynomial for
-        # the vertically average intensity profile
-        self.poltFitCheckBox.clicked.connect(self.plotFit)
-        # button for calling plot_max_pixels() method to plot the pixel with the highest intensity for all
-        # the frames of the
-        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
-        # connecting buttons
-        self.sortButton.clicked.connect(self.sortData)
-        self.sortForMLButton.clicked.connect(self.sortForML)
-        self.MLButton.clicked.connect(self.machineLearning)
-        self.loadButton.clicked.connect(self.loadModel)
-
-        self.orderOfFit.editingFinished.connect(self.plotFit)
-        self.eventNumber.editingFinished.connect(self.curveToPlot)
-        self.eventNumber.editingFinished.connect(self.selectDisplay)
 
         # incrementing through event numbers
         self.nextButton.clicked.connect(lambda: self.nextEvent(self.eventNumber.text()))
@@ -1275,7 +1277,7 @@ class MainWindow(qtw.QMainWindow):
             qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
 
     @pyqtSlot()
-    def browseFiles(self):
+    def browseFiles(self, buttonName):
         """
         This method gets triggered when the browse button is Clicked in the GUI
         function:The function is to take in a text field where the value needs to be set and called in a dialog box with
@@ -1284,7 +1286,7 @@ class MainWindow(qtw.QMainWindow):
         """
 
         self.setBusy()
-        if self.cxiFilePath.text():
+        if buttonName == "cxiBrowseButton":
             fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
             if fileName:
                 self.cxiFilePath.setText(fileName)
@@ -1293,7 +1295,7 @@ class MainWindow(qtw.QMainWindow):
                 self.geomBrowseButton.setEnabled(True)
                 self.geomFilePath.setEnabled(True)
                 self.statusbar.showMessage("Browse for a geometry file ", 5000)
-        elif self.cxiFileListPath.text():
+        elif buttonName == "cxiListBrowseButton":
             fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
             if fileListName:
                 self.cxiFileListPath.setText(fileListName)
@@ -1337,62 +1339,6 @@ class MainWindow(qtw.QMainWindow):
             pass
 
         self.setIdle()
-
-    # @pyqtSlot()
-    # def browseFilesList(self):
-    #     """
-    #             This method gets triggered when the browse button is Clicked in the GUI
-    #             function:The function is to take in a text field where the value needs to be set and called in a dialog box with
-    #             file structure view starting at the 'root' and lets the user select the file they want and set the file path to
-    #             the test field.
-    #             """
-    #
-    #     self.setBusy()
-    #
-    #     fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
-    #     if fileListName:
-    #         self.cxiFileListPath.setText(fileListName)
-    #         self.cxiFilePath.setEnabled(False)
-    #         self.cxiBrowseButton.setEnabled(False)
-    #         self.geomBrowseButton.setEnabled(True)
-    #         self.geomFilePath.setEnabled(True)
-    #         self.statusbar.showMessage("Browse for a geometry file ", 5000)
-    #
-    #         # resting the main window for the next cxi file
-    #         if self.imageViewer:
-    #             self.imageViewer.close()
-    #             # del self.imageViewer
-    #             # self.imageViewer = None
-    #             self.graphWidget.clear()
-    #             self.eventNumber.setText("0")
-    #             self.eventNumber.setEnabled(False)
-    #             self.plotPixelIntensityButton.setEnabled(False)
-    #             self.poltFitCheckBox.setEnabled(False)
-    #             self.poltFitCheckBox.setChecked(False)
-    #             self.plotPeakPixelButton.setEnabled(False)
-    #             self.sortForMLButton.setEnabled(False)
-    #             self.sortButton.setEnabled(False)
-    #             self.nextButton.setEnabled(False)
-    #             self.previousButton.setEnabled(False)
-    #             self.MLButton.setEnabled(False)
-    #             self.orderOfFit.clear()
-    #             self.orderOfFit.setEnabled(False)
-    #             self.graphWidget.setEnabled(False)
-    #
-    #         try:
-    #             if self.sortForMLGUI:
-    #                 self.sortForMLGUI.close()
-    #                 self.sortForMLGUI = None
-    #         except:
-    #             pass
-    #
-    #         try:
-    #             if self.mlGUI:
-    #                 self.mlGUI.close()
-    #                 self.mlGUI = None
-    #         except:
-    #             pass
-    #     self.setIdle()
 
     @pyqtSlot()
     def browseGeom(self):
@@ -1487,7 +1433,6 @@ class MainWindow(qtw.QMainWindow):
                 self.imageViewer.drawImage(int(self.eventNumber.text()))
                 self.totalEvents = self.imageViewer.size
                 self.imageViewerClosed = False
-                self.imageViewer.selectionMade.connect(self.handleImageSelectionForML)
                 self.imageViewer.show()
             elif self.cxiFileListPath.text():
                 with open(self.cxiFileListPath) as f:
@@ -1527,10 +1472,21 @@ class MainWindow(qtw.QMainWindow):
             self.min_ss = self.imageViewer.outgoingDict['min_ss']
             self.max_ss = self.imageViewer.outgoingDict['max_ss']
 
+        # connecting signals from and to, to the imageViewer object
         self.imageViewer.panelSelected.connect(self.readPanelDetails)
         self.clickedNext.connect(self.imageViewer.drawImage)
         self.clickedPrevious.connect(self.imageViewer.drawImage)
+        self.imageViewer.goodRadioButton.toggled.connect(self.handleRadioButtons)
+        self.imageViewer.badRadioButton.toggled.connect(self.handleRadioButtons)
         self.imageViewer.destroyed.connect(self.setImageViewerClosed)
+
+        # clearing the radio buttons
+        if self.imageViewer.goodRadioButton.isChecked():
+            print('Good button is clicked')
+            self.imageViewer.goodRadioButton.setChecked(False)
+        elif self.imageViewer.badRadioButton.isChecked():
+            print('bad button is clicked')
+            self.imageViewer.badRadioButton.setChecked(False)
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
@@ -1538,9 +1494,39 @@ class MainWindow(qtw.QMainWindow):
             self.plotPeakPixelButton.setEnabled(True)
 
     @pyqtSlot()
-    def handleImageSelectionForML(self, selection):
-        if selection == 'Yes':
-            print('Yes selected' )
+    def handleRadioButtons(self):
+        savingDict = {}
+        if self.imageViewer.goodRadioButton.isChecked():
+            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
+            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            if not os.path.isfile('goodEvents-advanceSort-%s.list' % tag):
+                while True:
+                    try:
+                        fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
+                                                                options=qtw.QFileDialog.DontUseNativeDialog)
+                        self.writeToFile(savingDict,fileLocation+ '/' + 'goodEvents-advanceSort-%s.list' % tag)
+                        break
+                    except OSError:
+                        qtw.QMessageBox.information(self,'Information', 'Please select a file save location')
+                        continue
+            else:
+                self.writeToFile(savingDict, 'goodEvents-advanceSort-%s.list' % tag)
+        elif self.imageViewer.badRadioButton.isChecked():
+            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
+            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            if not os.path.isfile('badEvents-advanceSort-%s.list' % tag):
+                while True:
+                    try:
+                        fileLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location',
+                                                                            directory=' ',
+                                                                            options=qtw.QFileDialog.DontUseNativeDialog)
+                        self.writeToFile(savingDict, fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
+                        break
+                    except OSError:
+                        qtw.QMessageBox.information(self, 'Information', 'Please select a file save location')
+                        continue
+            else:
+                self.writeToFile(savingDict, 'badEvents-advanceSort-%s.list' % tag)
 
     @pyqtSlot(str)
     def nextEvent(self, eventNumber):
@@ -1595,17 +1581,18 @@ class MainWindow(qtw.QMainWindow):
             msg.exec_()
 
     @pyqtSlot(dict, str)
-    def writeToFile(self, eventsList, fileName):
+    def writeToFile(self, eventsDict, fileName):
         """
         A method to save sorted events
-        :param eventsList: dictionary with *cxi file path and event numbers
+        :param eventsDict: dictionary with *cxi file path and event numbers
         :param fileName: save file name
         :return: *.list file
         """
-        f = open(fileName, 'w')
+        f = open(fileName, 'a')
 
-        for key in eventsList.keys():
-            for i in eventsList[key]:
+        self.statusbar.showMessage("Saving file %s " % fileName, 2000)
+        for key in eventsDict.keys():
+            for i in eventsDict[key]:
                 f.write(key)
                 f.write(' ')
                 f.write('//')
@@ -1613,7 +1600,6 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
-        self.statusbar.showMessage("Saving file %s " % fileName, 2000)
 
         if self.sortForMLGUI:
             self.sortForMLGUI.close()
@@ -1901,11 +1887,6 @@ class MainWindow(qtw.QMainWindow):
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
-
-    # def write(self, message):
-    #     print("I got the message:", message)
-    #     # Update the status bar with the message
-    #     self.statusbar.showMessage(message)
 
     def closeEvent(self, QCloseEvent):
         """
