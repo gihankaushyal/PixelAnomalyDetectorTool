@@ -60,7 +60,7 @@
     <rect>
      <x>330</x>
      <y>670</y>
-     <width>301</width>
+     <width>311</width>
      <height>61</height>
     </rect>
    </property>
@@ -70,14 +70,14 @@
    <widget class="QRadioButton" name="goodRadioButton">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>30</y>
-      <width>61</width>
+      <width>101</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Good</string>
+     <string>Good Image</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="badRadioButton">
@@ -85,25 +85,28 @@
      <rect>
       <x>110</x>
       <y>30</y>
-      <width>51</width>
+      <width>91</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Bad</string>
+     <string>Bad Image</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="dummyRadioButton">
     <property name="geometry">
      <rect>
-      <x>180</x>
+      <x>200</x>
       <y>30</y>
-      <width>81</width>
+      <width>101</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Dummy</string>
+     <string>Ignore Image</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>
