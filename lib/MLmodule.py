@@ -98,15 +98,15 @@ class ML(qtw.QMainWindow):
     #     self.busyLight.hide()
     #     self.idleLight.show()
 
-    # def showNextMessage(self, messageList):
-    #     message = messageList.pop(0)
-    #     self.statusbar.showMessage(message, 3000)
-    #     if messageList:
-    #         qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
+    def showNextMessage(self, messageList):
+        message = messageList.pop(0)
+        self.statusbar.showMessage(message, 3000)
+        if messageList:
+            qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
 
     @pyqtSlot()
     def browseFiles(self):
-        self.setBusy()
+        # self.setBusy()
 
         """
             This method gets triggered when the browse button is Clicked in the GUI
@@ -123,7 +123,7 @@ class ML(qtw.QMainWindow):
                              "Click the Train button to train the model"]
             self.showNextMessage(self.messages)
 
-        self.setIdle()
+        # self.setIdle()
 
     # model training using multiple runs needs to be implemented
     # @pyqtSlot()
@@ -241,21 +241,25 @@ class ML(qtw.QMainWindow):
 
         with ProcessPoolExecutor() as executor:
             # Bad Events
+            print('Started Processing Bad Events')
             files = list(Path(folder).glob('badEvents-advanceSort-*.list'))
             # dataFrames_bad = list(tqdm(executor.map(self.readFile, files, [0] * len(files))))
             dataFrames_bad = list(tqdm(
                 executor.map(ML.readFile, files, [0] * len(files), [self.min_ss] * len(files), [self.max_ss] * len(files),
                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
             dataFrame_bad = pd.concat([df for df in dataFrames_bad if df is not None])
+            print('Finished Processing Bad Events')
 
             # Good Events
+            print('Started Processing Good Events')
             files = list(Path(folder).glob('goodEvents-advanceSort-*.list'))
             # dataFrames_good = list(tqdm(executor.map(self.readFile, files, [1] * len(files))))
             dataFrames_good = list(tqdm(
-                executor.map(ML.readFile, files, [0] * len(files), [self.min_ss] * len(files),
+                executor.map(ML.readFile, files, [1] * len(files), [self.min_ss] * len(files),
                              [self.max_ss] * len(files),
                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
             dataFrame_good = pd.concat([df for df in dataFrames_good if df is not None])
+            print('Finished Processing Good Events')
 
         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
@@ -412,14 +416,15 @@ class ML(qtw.QMainWindow):
         """
 
         if i.text() == '&Yes':
-            self.setBusy()
+            # self.setBusy()
             self.trainButton.setEnabled(False)
             if self.modelSelection() and self.checkTrainTestSplit():
                 # self.dataPrep()
                 self.dataPrepParalle()
+                print('Started training the model: %s' % self.comboBox.currentText())
                 self.model.fit(self.X_train, self.y_train)
                 self.testButton.setEnabled(True)
-                self.setIdle()
+                # self.setIdle()
                 qtw.QMessageBox.information(self, 'Success', "Done Training")
                 self.statusbar.showMessage("Now you can save the model or try training a new model", 3000)
 
@@ -437,7 +442,7 @@ class ML(qtw.QMainWindow):
         from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
         self.predictions = self.model.predict(self.X_test)
 
-        self.setBusy()
+        # self.setBusy()
 
         self.figureConfusionMatrix.clear()
         self.figureClassificationReport.clear()
@@ -468,7 +473,7 @@ class ML(qtw.QMainWindow):
 
         self.testButton.setEnabled(False)
         self.saveButton.setEnabled(True)
-        self.setIdle()
+        # self.setIdle()
 
     @pyqtSlot()
     def reset(self):
