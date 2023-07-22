@@ -10,11 +10,11 @@ import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 
 # Packages for data processing
-import h5py
 import numpy as np
 import pandas as pd
 
 # Packages for data access
+import h5py
 import os.path
 from pathlib import Path
 
