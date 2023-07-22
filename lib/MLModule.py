@@ -1,23 +1,30 @@
+# PyQt5 imports
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import uic
 from PyQt5 import QtCore as qtc
+from PyQt5.QtCore import pyqtSlot
+
+# Packages for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from PyQt5.QtCore import pyqtSlot
+
+# Packages for data processing
 import h5py
 import numpy as np
 import pandas as pd
+
+# Packages for data access
 import os.path
 from pathlib import Path
 
-# Parallelization stuff
+# Packages for Parallelization
 from concurrent.futures import ProcessPoolExecutor
 import traceback
 from tqdm import tqdm
 import psutil
 
-# for saving the model
+# Packes for saving the model
 import pickle
 
 class ML(qtw.QMainWindow):
