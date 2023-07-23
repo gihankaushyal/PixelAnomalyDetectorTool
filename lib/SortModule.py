@@ -8,6 +8,10 @@ from PyQt5.QtCore import pyqtSlot
 from pathlib import Path
 import h5py
 
+# Packages for Parallelization
+from concurrent.futures import ProcessPoolExecutor
+from tqdm import tqdm
+
 
 class SortData(qtw.QWidget):
     readyToSaveGood = qtc.pyqtSignal(dict, str)
@@ -88,8 +92,69 @@ class SortData(qtw.QWidget):
         msg.setIcon(qtw.QMessageBox.Question)
         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
         msg.setDefaultButton(qtw.QMessageBox.Yes)
-        msg.buttonClicked.connect(self.sort)
+        # msg.buttonClicked.connect(self.sort)
+        msg.buttonClicked.connect(self.sortParallel)
         msg.exec_()
+
+    @staticmethod
+    def processFile(args):
+        file, model, min_ss, max_ss, min_fs, max_fs = args
+
+        goodEvents = {}
+        badEvents = {}
+
+        # goodList to store all the events with expected pixel intensities for the file
+        goodList = []
+        # badList to store all the events with detector artifacts for the file
+        badList = []
+
+        with h5py.File(file, "r") as f:
+            data = f['entry_1']['data_1']['data'][()]
+
+        for i in range(data.shape[0]):
+            frame = data[i][min_ss:max_ss, min_fs + 5:max_fs - 5].flatten()
+            predictions = model.predict(frame.reshape(1, -1))
+
+            if predictions:
+                goodList.append(i)
+            else:
+                badList.append(i)
+
+        goodEvents[str(file)] = goodList
+        badEvents[str(file)] = badList
+
+        return goodEvents, badEvents
+
+    def sortParallel(self, i):
+        if i.text() == '&Yes':
+            self.sortButton.setEnabled(False)
+            folder = self.folderPath.text()
+
+            fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
+                                                                                  'Sorted Files', directory=' ',
+                                                                    options=qtw.QFileDialog.DontUseNativeDialog)
+            files = list(Path(folder).glob('*.cxi'))
+            row = 0
+            self.tableWidget.setRowCount(len(list(files)))
+
+            # prepare the arguments for the function
+            args = [(file, self.model, self.min_ss, self.max_ss, self.min_fs, self.max_fs) for file in files]
+
+            with ProcessPoolExecutor() as executor:
+                results = list(tqdm(executor.map(SortData.processFile, args), total=len(files)))
+
+            for file, result in zip(files, results):
+                tag = str(file).split('/')[-1].split('.')[0]
+                goodEvents, badEvents = result
+                self.readyToSaveGood.emit(goodEvents, fileSaveLocation + '/' + 'goodEvents-modelSort-%s.list' % tag)
+                self.readyToSaveBad.emit(badEvents, fileSaveLocation + '/' + 'badEvents-modelSort-%s.list' % tag)
+
+                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
+                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(goodEvents[str(file)]))))
+                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(badEvents[str(file)]))))
+                row += 1
+
+            self.sortButton.setEnabled(False)
 
     def sort(self, i):
         """
