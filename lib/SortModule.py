@@ -7,6 +7,7 @@ from PyQt5.QtCore import pyqtSlot
 # Packages for data access
 from pathlib import Path
 import h5py
+import os.path
 
 # Packages for Parallelization
 from concurrent.futures import ProcessPoolExecutor
@@ -99,6 +100,8 @@ class SortData(qtw.QWidget):
     @staticmethod
     def processFile(args):
         file, model, min_ss, max_ss, min_fs, max_fs = args
+        print(' ')
+        print('Processing file: %s' % file)  # Print the file being processed
 
         goodEvents = {}
         badEvents = {}
@@ -110,6 +113,7 @@ class SortData(qtw.QWidget):
 
         with h5py.File(file, "r") as f:
             data = f['entry_1']['data_1']['data'][()]
+            # print('Number of frames in file: %s' % data.shape[0])  # Print the number of frames in the file
 
         for i in range(data.shape[0]):
             frame = data[i][min_ss:max_ss, min_fs + 5:max_fs - 5].flatten()
@@ -120,6 +124,9 @@ class SortData(qtw.QWidget):
             else:
                 badList.append(i)
 
+        # Print the number of good and bad events
+        print('Finished processing file:  %s' % file)
+
         goodEvents[str(file)] = goodList
         badEvents[str(file)] = badList
 
@@ -129,16 +136,25 @@ class SortData(qtw.QWidget):
         if i.text() == '&Yes':
             self.sortButton.setEnabled(False)
             folder = self.folderPath.text()
+            print('Sorting the *.cxi files in folder: %s' % folder)  # Print the folder path
 
             fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
                                                                                   'Sorted Files', directory=' ',
                                                                     options=qtw.QFileDialog.DontUseNativeDialog)
             files = list(Path(folder).glob('*.cxi'))
             row = 0
+
+            # Print the number of files
+            print('Number of files to be processed: %s' % len(list(files)))
+
             self.tableWidget.setRowCount(len(list(files)))
 
             # prepare the arguments for the function
             args = [(file, self.model, self.min_ss, self.max_ss, self.min_fs, self.max_fs) for file in files]
+
+            # Print the number of available CPUs
+            numCpus = os.cpu_count()
+            print('Number of CPUs available for processing: %s' % numCpus)
 
             with ProcessPoolExecutor() as executor:
                 results = list(tqdm(executor.map(SortData.processFile, args), total=len(files)))
