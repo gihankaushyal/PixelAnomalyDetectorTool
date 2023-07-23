@@ -5,33 +5,40 @@ import os.path
 import random
 import warnings
 from builtins import Exception
+
 # basic stuff
 import h5py
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
 # Gui stuff
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import QtCore as qtc
 from PyQt5 import QtGui as qtg
-from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
-# Graphing stuff
-import pyqtgraph as pg
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pickle
-import plotly.express as px
 from PyQt5.QtCore import pyqtSlot
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+# Graphing stuff
+import pyqtgraph as pg
+from PyQt5 import QtWebEngineWidgets as qtwew # for graphing with plotly
+import plotly.express as px
 
+# for saving the model
+import pickle
+
+# for importing UIs
 from PyQt5 import uic
 
 # import sys
 
+# importing custom libraries
 import lib.cfel_filetools as fileTools
 import lib.cfel_imgtools as imgTools
 from lib.geometry_parser.GeometryFileParser import *
+from lib.LabelingModule import DataLabeler
+from lib.MLModule import ML
+from lib.SortModule import SortData
+
 
 
 class DisplayImage(qtw.QWidget):
@@ -346,762 +353,843 @@ class DisplayImage(qtw.QWidget):
         self.isClosed = True
 
 
-class SortingForML(qtw.QWidget):
-    readyToSaveGood = qtc.pyqtSignal(dict, str)
-    readyToSaveBad = qtc.pyqtSignal(dict, str)
-
-    def __init__(self, fileName, oft, inDict):
-        """
-
-        :param fileName: name of the file to be sorted
-        :param oft: order of the fit for the polynomial
-        :param inDict: dictionary with detector panel information
-        """
-
-        super(SortingForML, self).__init__()
-
-        self.badEvents = None
-        self.goodEvents = None
-        self.inflectionPoint1List = None
-        self.inflectionPoint2List = None
-        self.data = None
-        self.setWindowTitle('Sorting for Machine Learning')
-
-        uic.loadUi("UI/sortForMLGUI.ui", self)
-
-        # for plotting with matplotlib
-        # self.layoutSortingForML = qtw.QHBoxLayout()
-        # self.figureSortingForML = plt.figure()
-        # self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
-        # self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
-        # self.graphSpace.setLayout(self.layoutSortingForML)
-
-        # for plotting with plotly
-        self.layout = qtw.QHBoxLayout()
-        self.browser = qtwew.QWebEngineView()
-        self.layout.addWidget(self.browser)
-        self.graphSpace.setLayout(self.layout)
-
-        self.fileName = fileName
-        self.orderOfFit = oft
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-        # setting initial values for spinBoxes (value ranges for inflection points)
-        self.doubleSpinBoxIF1.setValue(15)
-        self.doubleSpinBoxIF2.setValue(15)
-        self.doubleSpinBoxIF1.setSingleStep(0.05)
-        self.doubleSpinBoxIF2.setSingleStep(0.05)
-
-        # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
-        self.plotInflectionPoints()
-        self.sortButton.clicked.connect(self.sort)
-
-        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
-
-    @pyqtSlot(dict)
-    def readPanelDetails(self, inDict):
-        """
-        :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
-                a panel
-        :return: Assigns panel detail
-        """
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-        self.plotInflectionPoints()
-
-    def plotInflectionPoints(self):
-        """
-        :return: Plot two histograms for inflection point1 and inflection point2 on the self.graphSpace of
-         the sortForMlGUI
-        """
-
-        self.inflectionPoint1List = []
-        self.inflectionPoint2List = []
-
-        try:
-            with h5py.File(self.fileName, "r") as f:
-                self.data = f['entry_1']['data_1']['data'][()]
-
-            for i in range(len(self.data)):
-                frame = self.data[i]
-
-                avgIntensities = []
-                for j in range(self.min_fs + 5, self.max_fs - 5):
-                    avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
-
-                fit = np.polyfit(np.arange(self.min_fs + 5, self.max_fs - 5), avgIntensities, deg=int(self.orderOfFit))
-                # calculating the inflection points (second derivative of the forth order polynomial)
-                # this piece of code would convert a numpy runtime warning to an exception
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("error")
-                    try:
-
-                        x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
-                                   2)
-                        x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
-                                   2)
-                        if x1 > x2:
-                            self.inflectionPoint1List.append(x1)
-                            self.inflectionPoint2List.append(x2)
-                        else:
-                            self.inflectionPoint2List.append(x1)
-                            self.inflectionPoint1List.append(x2)
-
-                        # old method
-                        # self.inflectionPoint1List.append(x1)
-                        # self.inflectionPoint2List.append(x2)
-
-                    except IndexError as e:
-                        msg = qtw.QMessageBox()
-                        msg.setText(str(e).capitalize())
-                        msg.setInformativeText('Try entering a different order for the polynomial')
-                        msg.setIcon(qtw.QMessageBox.Critical)
-                        msg.exec_()
-                    except ValueError:
-                        qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
-                        continue
-                    except Warning as e:
-                        msg = qtw.QMessageBox()
-                        msg.setText(str(e).capitalize())
-                        msg.setInformativeText('Error occurred while trying to calculate the sqrt of %i'
-                                               % (36 * fit[1] * fit[1] - 96 * fit[0] * fit[2]))
-                        msg.setIcon(qtw.QMessageBox.Warning)
-                        msg.exec_()
-
-                        continue
-
-        except Exception as e:
-            print(e, '-plotInflectionPoint')
-
-        # with plotly
-        df = pd.DataFrame()
-        df['Inflection_point1'] = self.inflectionPoint1List
-        df['Inflection_point2'] = self.inflectionPoint2List
-        fig = px.histogram(df, nbins=200, opacity=0.5)
-        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-
-        # with seaborn
-        # self.figureSortingForML.clear()
-        # df = pd.DataFrame()
-        # df['Inflection_point1'] = self.inflectionPoint1List
-        # df['Inflection_point2'] = self.inflectionPoint2List
-        # colors = ['red', 'green', 'blue', 'violet', 'pink']
-        # random.shuffle(colors)
-        # for column in df.columns:
-        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
-        # plt.title('Distributions of Inflection points 1 and 2')
-        # plt.ylabel('Count')
-        # plt.xlabel(' Vertically Average Pixel Intensity')
-        # plt.xticks()
-        # plt.legend()
-        # self.canvasForInflectionPoints.draw()
-
-        # Enabling button and check box after plotting
-        self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
-        self.inflectionPoint2.setEnabled(True)
-        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
-        self.sortButton.setEnabled(True)
-
-    @pyqtSlot()
-    def sort(self):
-        """
-
-        :return: two dictionaries (for both good and bad events) with file names and events sorted out by user
-        defined threshold for inflection points and spread of the distribution
-        """
-
-        tag = str(self.fileName).split('/')[-1].split('.')[0]
-
-        fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
-                                                                options=qtw.QFileDialog.DontUseNativeDialog)
-        if fileSaveLocation != "":
-            self.goodEvents = {}
-            self.badEvents = {}
-
-            # goodList to store all the events with expected pixel intensities for the file
-            goodList = []
-            # badList to store all the events with detector artifacts for the file
-            badList = []
-
-            try:
-
-                for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
-
-                    if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
-                            float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
-                            and \
-                            (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
-                            float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
-
-                        goodList.append(i)
-                    else:
-                        badList.append(i)
-
-                self.goodEvents[str(self.fileName)] = goodList
-                self.badEvents[str(self.fileName)] = badList
-                qtw.QMessageBox.information(self, "Completed", "Sorted files have being saved.")
-                self.readyToSaveGood.emit(self.goodEvents,
-                                          fileSaveLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
-
-            except Exception as e:
-                msg = qtw.QMessageBox()
-                msg.setWindowTitle('Error')
-                msg.setText("An error occurred while sorting the file %s                              " % self.fileName)
-                msg.setInformativeText(str(e) + " sort()")
-                msg.setIcon(qtw.QMessageBox.Information)
-                msg.exec_()
-
-        else:
-            qtw.QMessageBox.warning(self, 'Warning', 'Please Select a Save Location for sorted files')
-
-
-class ML(qtw.QMainWindow):
-
-    def __init__(self, inDict):
-        """
-
-        :param inDict: dictionary with detector panel information
-        """
-
-        super(ML, self).__init__()
-
-        self.messages = None
-        self.model = None
-        self.X_train = None
-        self.y_train = None
-        self.X_test = None
-        self.y_test = None
-        self.predictions = None
-        uic.loadUi("UI/machineLearningGUI.ui", self)
-
-        self.setWindowTitle('Machine Learning')
-
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-        self.trainSplit.setText('70')
-        self.testSplit.setText('30')
-        self.browseButton.clicked.connect(self.browseFiles)
-        self.trainButton.clicked.connect(self.buttonClicked)
-        self.testButton.clicked.connect(self.test)
-        self.resetButton.clicked.connect(self.reset)
-        self.saveButton.clicked.connect(self.saveModel)
-        self.comboBox.activated.connect(self.comboBoxChanged)
-
-        # for displaying the confusion matrix
-        self.layoutConfusionMatrix = qtw.QHBoxLayout()
-        self.figureConfusionMatrix = plt.figure()
-        self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
-        self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
-        self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
-
-        # for displaying the classification report
-        self.layoutClassificationReport = qtw.QHBoxLayout()
-        self.figureClassificationReport = plt.figure()
-        self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
-
-        self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
-        self.classificationReport.setLayout(self.layoutClassificationReport)
-
-        # adding busy and idle lights
-        self.busyLight = BusyLight()
-        self.idleLight = IdleLight()
-        self.statusbar.addPermanentWidget(self.busyLight)
-        self.statusbar.addPermanentWidget(self.idleLight)
-        self.idleLight.show()
-        self.busyLight.hide()
-
-        self.statusbar.showMessage("Point to where you have the data for model training", 3000)
-
-        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
-
-    def setBusy(self):
-        """
-
-        :return: Change the light to busy
-        """
-        self.busyLight.show()
-        self.idleLight.hide()
-
-    def setIdle(self):
-        """
-
-        :return: Change the light to Idle
-        """
-        self.busyLight.hide()
-        self.idleLight.show()
-
-    def showNextMessage(self, messageList):
-        message = messageList.pop(0)
-        self.statusbar.showMessage(message, 3000)
-        if messageList:
-            qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
-
-    @pyqtSlot()
-    def browseFiles(self):
-        self.setBusy()
-
-        """
-            This method gets triggered when the browse button is Clicked in the GUI
-        function: The function is to take in a text field where the value needs to be set and called in a dialog box
-        with file structure view starting at the 'root' and lets the user select the file they want and set the file p
-        ath to the test field.
-        """
-
-        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
-
-        if folderName != "":
-            self.parentDirectory.setText(folderName)
-            self.messages = ["Select a model to be trained", "Enter Train/Test split ",
-                             "Click the Train button to train the model"]
-            self.showNextMessage(self.messages)
-
-        self.setIdle()
-
-    # model training using multiple runs needs to be implemented
-    # @pyqtSlot()
-    # def checkBoxClicked(self):
-    #     """
-    #
-    #     :return: Pass ** functionality hasn't been implemented. **
-    #     """
-    #     if self.checkBox.isChecked():
-    #         self.startRun.setEnabled(True)
-    #         self.endRun.setEnabled(True)
-    #     else:
-    #         self.startRun.setEnabled(False)
-    #         self.endRun.setEnabled(False)
-
-    @pyqtSlot(dict)
-    def readPanelDetails(self, inDict):
-        """
-         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
-        :return: Assigns panel details to class variables from inDict
-        """
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-    def modelSelection(self):
-        """
-
-        :return: user selected scikit-learn model
-        """
-
-        modelSelected = self.comboBox.currentText()
-        if modelSelected == 'LogisticRegression':
-            from sklearn.linear_model import LogisticRegression
-            self.model = LogisticRegression()
-            return True
-        elif modelSelected == 'KNeighborsClassifier':
-            from sklearn.neighbors import KNeighborsClassifier
-            self.model = KNeighborsClassifier(n_neighbors=1)
-            return True
-        elif modelSelected == 'DecisionTreeClassifier':
-            from sklearn.tree import DecisionTreeClassifier
-            self.model = DecisionTreeClassifier()
-            return True
-        elif modelSelected == 'RandomForestClassifier':
-            from sklearn.ensemble import RandomForestClassifier
-            self.model = RandomForestClassifier(n_estimators=200)
-            return True
-        else:
-            qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
-            return False
-
-    def checkTrainTestSplit(self):
-        if self.trainSplit.text().isdigit() and self.testSplit.text().isdigit():
-            train = int(self.trainSplit.text())
-            test = int(self.testSplit.text())
-
-            if train + test > 100 or train + test < 100:
-                qtw.QMessageBox.critical(self, 'Alert', 'The Sum of train split + test split = 100%')
-                qtw.QMessageBox.information(self, 'Information',
-                                            'Setting the train and test split to the default values')
-                self.trainSplit.setText('70')
-                self.testSplit.setText('30')
-                return True
-            else:
-                return True
-
-        else:
-            qtw.QMessageBox.information(self, 'Information', 'Please enter a valid number')
-            return False
-
-    def dataPrep(self):
-        """
-        This method look into the folder where the sorted files are stored (by sort() in SortingForMl) and prepare the
-        data for training and testing.
-        :return: X_train, X_test, y_train, y_test
-        """
-
-        from sklearn.model_selection import train_test_split
-        folder = self.parentDirectory.text()
-
-        # Bad Events
-        files = Path(folder).glob('badEvents-advanceSort-*.list')
-        dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
-
-        for file in files:
-
-            try:
-                temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber']
-
-                # reading the panel data from the file
-                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
-                fileName = temp_df['FileName'].iloc[0]
-
-                with h5py.File(fileName, "r") as f:
-                    print('Reading %s' % str(file))
-                    data = f['entry_1']['data_1']['data'][()]
-
-                tempList = []
-                for i in list(temp_df['EventNumber']):
-                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                    tempList.append(frame.flatten())
-
-                temp_df['Data'] = tempList
-
-                dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
-            except Exception as e:
-                msg = qtw.QMessageBox()
-                msg.setWindowTitle('Warning')
-                msg.setText(
-                    "An error occurred while reading bad events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep()")
-                msg.setIcon(qtw.QMessageBox.Warning)
-                msg.exec_()
-                continue
-        dataFrame_bad['Flag'] = 0
-        print('Done reading Bad events...')
-        print('Found %i Good events' % len(dataFrame_bad))
-        print(' ')
-
-        # Good Events
-        files = Path(folder).glob('goodEvents-advanceSort-*.list')
-        dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
-
-        for file in files:
-            try:
-                temp_df = pd.read_csv(str(file), delimiter=" ")
-                temp_df.columns = ['FileName', 'EventNumber']
-
-                # reading the panel data from the file
-                temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
-                fileName = temp_df['FileName'].iloc[0]
-
-                with h5py.File(fileName, "r") as f:
-                    print('Reading %s' % str(file))
-                    data = f['entry_1']['data_1']['data'][()]
-
-                tempList = list()
-                for i in list(temp_df['EventNumber']):
-                    frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
-                    tempList.append(frame.flatten())
-
-                temp_df['Data'] = tempList
-
-                dataFrame_good = pd.concat([dataFrame_good, temp_df])
-            except Exception as e:
-                msg = qtw.QMessageBox()
-                msg.setWindowTitle('Error')
-                msg.setText(
-                    "An error occurred while reading good events file %s                                  " % str(file))
-                msg.setInformativeText(str(e) + " dataPrep()")
-                msg.setIcon(qtw.QMessageBox.Information)
-                msg.exec_()
-                continue
-        dataFrame_good['Flag'] = 1
-        print('Done reading Good events...')
-        print('Found %i Good events' % len(dataFrame_good))
-
-        dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
-                                    dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
-        X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
-        y_good = dataFrame_good['Flag']
-        X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
-                                                                                test_size=int(self.testSplit.text()))
-
-        dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
-                                   dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
-        X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
-        y_bad = dataFrame_bad['Flag']
-
-        X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
-                                                                            test_size=int(self.testSplit.text()))
-
-        self.X_train = pd.concat([X_good_train, X_bad_train])
-        self.y_train = pd.concat([y_good_train, y_bad_train])
-        self.X_test = pd.concat([X_good_test, X_bad_test])
-        self.y_test = pd.concat([y_good_test, y_bad_test])
-
-    @pyqtSlot()
-    def buttonClicked(self):
-        """
-        This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
-        answer it either moves forward to train a model or allow user to go back and select a different
-        ASCI for training.
-        :return: Yes or No
-        """
-        msg = qtw.QMessageBox()
-        msg.setWindowTitle('Question')
-        msg.setText("Panel Selected: %s                                             " % self.panelName)
-        msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
-                               'selected: %s panel. Would you wish to continue?' % self.panelName)
-        msg.setIcon(qtw.QMessageBox.Question)
-        msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
-        msg.setDefaultButton(qtw.QMessageBox.Yes)
-        msg.buttonClicked.connect(self.train)
-        msg.exec_()
-
-    def train(self, i):
-        """
-        Method to train the user selected model using the data from the selected ASCI
-        :param i: QMessageBox output( &Yes or &No)
-        :return: Model and Enables the "Test" button
-        """
-
-        if i.text() == '&Yes':
-            self.setBusy()
-            self.trainButton.setEnabled(False)
-            if self.modelSelection() and self.checkTrainTestSplit():
-                self.dataPrep()
-                self.model.fit(self.X_train, self.y_train)
-                self.testButton.setEnabled(True)
-                self.setIdle()
-                qtw.QMessageBox.information(self, 'Success', "Done Training")
-                self.statusbar.showMessage("Now you can save the model or try training a new model", 3000)
-
-            else:
-                self.reset()
-        else:
-            self.reset()
-
-    @pyqtSlot()
-    def test(self):
-        """
-        Method to test the validity of the trained model
-        :return: Confusion matrix and a Classification Report
-        """
-        from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
-        self.predictions = self.model.predict(self.X_test)
-
-        self.setBusy()
-
-        self.figureConfusionMatrix.clear()
-        self.figureClassificationReport.clear()
-
-        # printing a heatmap for Confusion matrix
-        # cfm = confusion_matrix(self.y_test, self.predictions)
-        # cfm_df = pd.DataFrame(cfm, index=['0', '1'], columns=['0', '1'])
-        # ax1 = self.figureConfusionMatrix.add_subplot(111)
-        # sns.heatmap(cfm_df, annot=True, cmap='mako', ax=ax1, cbar=False)
-        # ax1.set_ylabel("True Label")
-        # ax1.set_xlabel("Predicted Label")
-        # self.canvasConfusionMatrix.draw()
-        ax1 = self.figureConfusionMatrix.add_subplot(111)
-        ConfusionMatrixDisplay.from_predictions(self.y_test, self.predictions, ax=ax1, colorbar=False, cmap='mako')
-        self.canvasConfusionMatrix.draw()
-
-        # printing a heatmap for Classification report
-        cr = classification_report(self.y_test, self.predictions)
-        columns = cr.strip().split()[0:3]
-        indexes = ['Bad', 'Good', 'Avg', 'Wt. Avg']
-        data = np.array(
-            [cr.strip().split()[5:8], cr.strip().split()[10:13], cr.strip().split()[19:22],
-             cr.strip().split()[25:28]], dtype=float)
-        cr_df = pd.DataFrame(data=data, columns=columns, index=indexes)
-        ax2 = self.figureClassificationReport.add_subplot(111)
-        sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=True, linewidth=1)
-        self.canvasClassificationReport.draw()
-
-        self.testButton.setEnabled(False)
-        self.saveButton.setEnabled(True)
-        self.setIdle()
-
-    @pyqtSlot()
-    def reset(self):
-        """
-        Method to clear out the output from the test()
-        :return: clear the self.confusionMatrix and self.classificationReport
-        """
-        self.figureConfusionMatrix.clear()
-        self.figureClassificationReport.clear()
-        self.trainButton.setEnabled(True)
-        self.testButton.setEnabled(False)
-        self.comboBox.setCurrentIndex(0)
-        self.trainSplit.setText('70')
-        self.testSplit.setText('30')
-
-    @pyqtSlot(int)
-    def comboBoxChanged(self, index):
-        self.reset()
-        self.comboBox.setCurrentIndex(index)
-
-    @pyqtSlot()
-    def saveModel(self):
-        filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
-        data = {'panel_name': self.panelName, 'min_ss': self.min_ss, 'min_fs': self.min_fs, 'max_ss': self.max_ss,
-                'max_fs':self.max_fs, 'model': self.model}
-        if filename:
-            with open(filename, 'wb') as f:
-                pickle.dump(data, f)
-
-
-class SortData(qtw.QWidget):
-    readyToSaveGood = qtc.pyqtSignal(dict, str)
-    readyToSaveBad = qtc.pyqtSignal(dict, str)
-
-    def __init__(self, model, inDict):
-        """
-
-        :param model: trained model
-        :param inDict: dictionary with detector panel information
-        """
-
-        super(SortData, self).__init__()
-
-        uic.loadUi('UI/sortDataGUI.ui', self)
-        self.setWindowTitle('Sort Data')
-
-        self.model = model
-        self.panelName = inDict['panel_name']
-        self.min_fs = inDict['min_fs']
-        self.max_fs = inDict['max_fs']
-        self.min_ss = inDict['min_ss']
-        self.max_ss = inDict['max_ss']
-
-        self.goodEvents = {}
-        self.badEvents = {}
-
-        self.tableWidget = self.findChild(qtw.QTableWidget, 'tableWidget')
-        self.tableWidget.setColumnWidth(0, 350)
-
-        self.browseButton.clicked.connect(self.browseFiles)
-        self.sortButton.clicked.connect(self.buttonClicked)
-
-        self.setAttribute(qtc.Qt.WA_DeleteOnClose)
-
-    @pyqtSlot()
-    def browseFiles(self):
-        """
-        This method gets triggered when the browse button is Clicked in the GUI
-        function: The function is to take in a text field where the value needs to be set and called in a dialog box
-                with file structure view starting at the 'root' and lets the user select the file they want and set the
-                file path to the test field.
-        """
-
-        folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
-
-        if folderName != "":
-            self.folderPath.setText(folderName)
-            self.showFiles()
-
-    def showFiles(self):
-        """
-
-        :return: Displays available files in the selected folder in self.availableFiles (QTextEdit)
-        """
-        folder = self.folderPath.text()
-
-        files = Path(folder).glob('*.cxi')
-
-        for file in files:
-            self.availableFiles.append(str(file).split('/')[-1])
-
-        self.sortButton.setEnabled(True)
-
-    @pyqtSlot()
-    def buttonClicked(self):
-        """
-        Asks a user a Question/ Waring about the model that was trained
-        :return: Yes or No
-        """
-
-        msg = qtw.QMessageBox()
-        msg.setWindowTitle('Question')
-        msg.setText("Panel Selected: %s                                             " % self.panelName)
-        msg.setInformativeText('Please Note! Machine Learning model was trained based on the data from the %s panel. '
-                               'Make sure that you are sorting based on %s panel. If not, train a new model for your '
-                               'frame of choice. Would you wish to continue?' % (self.panelName, self.panelName))
-        msg.setIcon(qtw.QMessageBox.Question)
-        msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
-        msg.setDefaultButton(qtw.QMessageBox.Yes)
-        msg.buttonClicked.connect(self.sort)
-        msg.exec_()
-
-    def sort(self, i):
-        """
-                Sort *cxi files using the trained model
-                :return: two separate *.list files for good and bad events for the cxi files
-                """
-
-        if i.text() == '&Yes':
-
-            self.sortButton.setEnabled(False)
-            folder = self.folderPath.text()
-
-            fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
-                                                                                  'Sorted Files', directory=' ',
-                                                                    options=qtw.QFileDialog.DontUseNativeDialog)
-            files = Path(folder).glob('*.cxi')
-            row = 0
-            self.tableWidget.setRowCount(len(list(files)))
-
-            files = Path(folder).glob('*.cxi')
-            for file in files:
-
-                tag = str(file).split('/')[-1].split('.')[0]
-
-                self.goodEvents = {}
-                self.badEvents = {}
-
-                # goodList to store all the events with expected pixel intensities for the file
-                goodList = []
-                # badList to store all the events with detector artifacts for the file
-                badList = []
-
-                with h5py.File(file, "r") as f:
-                    data = f['entry_1']['data_1']['data'][()]
-
-                for i in range(data.shape[0]):
-
-                    frame = data[i][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5].flatten()
-
-                    predictions = self.model.predict(frame.reshape(1, 31675))
-
-                    if predictions:
-                        goodList.append(i)
-                    else:
-                        badList.append(i)
-
-                self.goodEvents[str(file)] = goodList
-                self.badEvents[str(file)] = badList
-
-                self.readyToSaveGood.emit(self.goodEvents,
-                                          fileSaveLocation + '/' + 'goodEvents-modelSort-%s.list' % tag)
-                self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-modelSort-%s.list' % tag)
-
-                self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
-                self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
-                self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
-                row += 1
-                self.sortButton.setEnabled(False)
+# class SortingForML(qtw.QWidget):
+#     readyToSaveGood = qtc.pyqtSignal(dict, str)
+#     readyToSaveBad = qtc.pyqtSignal(dict, str)
+#
+#     def __init__(self, fileName, oft, inDict):
+#         """
+#
+#         :param fileName: name of the file to be sorted
+#         :param oft: order of the fit for the polynomial
+#         :param inDict: dictionary with detector panel information
+#         """
+#
+#         super(SortingForML, self).__init__()
+#
+#         self.badEvents = None
+#         self.goodEvents = None
+#         self.inflectionPoint1List = None
+#         self.inflectionPoint2List = None
+#         self.data = None
+#         self.setWindowTitle('Sorting for Machine Learning')
+#
+#         uic.loadUi("UI/sortForMLGUI.ui", self)
+#
+#         # for plotting with matplotlib
+#         # self.layoutSortingForML = qtw.QHBoxLayout()
+#         # self.figureSortingForML = plt.figure()
+#         # self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+#         # self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+#         # self.graphSpace.setLayout(self.layoutSortingForML)
+#
+#         # for plotting with plotly
+#         self.layout = qtw.QHBoxLayout()
+#         self.browser = qtwew.QWebEngineView()
+#         self.layout.addWidget(self.browser)
+#         self.graphSpace.setLayout(self.layout)
+#
+#         self.fileName = fileName
+#         self.orderOfFit = oft
+#         self.panelName = inDict['panel_name']
+#         self.min_fs = inDict['min_fs']
+#         self.max_fs = inDict['max_fs']
+#         self.min_ss = inDict['min_ss']
+#         self.max_ss = inDict['max_ss']
+#
+#         # setting initial values for spinBoxes (value ranges for inflection points)
+#         self.doubleSpinBoxIF1.setValue(15)
+#         self.doubleSpinBoxIF2.setValue(15)
+#         self.doubleSpinBoxIF1.setSingleStep(0.05)
+#         self.doubleSpinBoxIF2.setSingleStep(0.05)
+#
+#         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
+#         self.plotInflectionPoints()
+#         self.sortButton.clicked.connect(self.sort)
+#
+#         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
+#
+#     @pyqtSlot(dict)
+#     def readPanelDetails(self, inDict):
+#         """
+#         :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on
+#                 a panel
+#         :return: Assigns panel detail
+#         """
+#         self.panelName = inDict['panel_name']
+#         self.min_fs = inDict['min_fs']
+#         self.max_fs = inDict['max_fs']
+#         self.min_ss = inDict['min_ss']
+#         self.max_ss = inDict['max_ss']
+#
+#         self.plotInflectionPoints()
+#
+#     def plotInflectionPoints(self):
+#         """
+#         :return: Plot two histograms for inflection point1 and inflection point2 on the self.graphSpace of
+#          the sortForMlGUI
+#         """
+#
+#         self.inflectionPoint1List = []
+#         self.inflectionPoint2List = []
+#
+#         try:
+#             with h5py.File(self.fileName, "r") as f:
+#                 self.data = f['entry_1']['data_1']['data'][()]
+#
+#             for i in range(len(self.data)):
+#                 frame = self.data[i]
+#
+#                 avgIntensities = []
+#                 for j in range(self.min_fs + 5, self.max_fs - 5):
+#                     avgIntensities.append(np.average(frame[self.min_ss:self.max_ss, j]))
+#
+#                 fit = np.polyfit(np.arange(self.min_fs + 5, self.max_fs - 5), avgIntensities, deg=int(self.orderOfFit))
+#                 # calculating the inflection points (second derivative of the forth order polynomial)
+#                 # this piece of code would convert a numpy runtime warning to an exception
+#                 with warnings.catch_warnings():
+#                     warnings.filterwarnings("error")
+#                     try:
+#
+#                         x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+#                                    2)
+#                         x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]),
+#                                    2)
+#                         if x1 > x2:
+#                             self.inflectionPoint1List.append(x1)
+#                             self.inflectionPoint2List.append(x2)
+#                         else:
+#                             self.inflectionPoint2List.append(x1)
+#                             self.inflectionPoint1List.append(x2)
+#
+#                         # old method
+#                         # self.inflectionPoint1List.append(x1)
+#                         # self.inflectionPoint2List.append(x2)
+#
+#                     except IndexError as e:
+#                         msg = qtw.QMessageBox()
+#                         msg.setText(str(e).capitalize())
+#                         msg.setInformativeText('Try entering a different order for the polynomial')
+#                         msg.setIcon(qtw.QMessageBox.Critical)
+#                         msg.exec_()
+#                     except ValueError:
+#                         qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+#                         continue
+#                     except Warning as e:
+#                         msg = qtw.QMessageBox()
+#                         msg.setText(str(e).capitalize())
+#                         msg.setInformativeText('Error occurred while trying to calculate the sqrt of %i'
+#                                                % (36 * fit[1] * fit[1] - 96 * fit[0] * fit[2]))
+#                         msg.setIcon(qtw.QMessageBox.Warning)
+#                         msg.exec_()
+#
+#                         continue
+#
+#         except Exception as e:
+#             print(e, '-plotInflectionPoint')
+#
+#         # with plotly
+#         df = pd.DataFrame()
+#         df['Inflection_point1'] = self.inflectionPoint1List
+#         df['Inflection_point2'] = self.inflectionPoint2List
+#         fig = px.histogram(df, nbins=200, opacity=0.5)
+#         self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+#
+#         # with seaborn
+#         # self.figureSortingForML.clear()
+#         # df = pd.DataFrame()
+#         # df['Inflection_point1'] = self.inflectionPoint1List
+#         # df['Inflection_point2'] = self.inflectionPoint2List
+#         # colors = ['red', 'green', 'blue', 'violet', 'pink']
+#         # random.shuffle(colors)
+#         # for column in df.columns:
+#         #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+#         # plt.title('Distributions of Inflection points 1 and 2')
+#         # plt.ylabel('Count')
+#         # plt.xlabel(' Vertically Average Pixel Intensity')
+#         # plt.xticks()
+#         # plt.legend()
+#         # self.canvasForInflectionPoints.draw()
+#
+#         # Enabling button and check box after plotting
+#         self.inflectionPoint1.setEnabled(True)
+#         self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
+#         self.inflectionPoint2.setEnabled(True)
+#         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
+#         self.sortButton.setEnabled(True)
+#
+#     @pyqtSlot()
+#     def sort(self):
+#         """
+#
+#         :return: two dictionaries (for both good and bad events) with file names and events sorted out by user
+#         defined threshold for inflection points and spread of the distribution
+#         """
+#
+#         tag = str(self.fileName).split('/')[-1].split('.')[0]
+#
+#         fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Save Location', directory=' ',
+#                                                                 options=qtw.QFileDialog.DontUseNativeDialog)
+#         if fileSaveLocation != "":
+#             self.goodEvents = {}
+#             self.badEvents = {}
+#
+#             # goodList to store all the events with expected pixel intensities for the file
+#             goodList = []
+#             # badList to store all the events with detector artifacts for the file
+#             badList = []
+#
+#             try:
+#
+#                 for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
+#
+#                     if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
+#                             float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
+#                             and \
+#                             (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
+#                             float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
+#
+#                         goodList.append(i)
+#                     else:
+#                         badList.append(i)
+#
+#                 self.goodEvents[str(self.fileName)] = goodList
+#                 self.badEvents[str(self.fileName)] = badList
+#                 qtw.QMessageBox.information(self, "Completed", "Sorted files have being saved.")
+#                 self.readyToSaveGood.emit(self.goodEvents,
+#                                           fileSaveLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
+#                 self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-advanceSort-%s.list' % tag)
+#
+#             except Exception as e:
+#                 msg = qtw.QMessageBox()
+#                 msg.setWindowTitle('Error')
+#                 msg.setText("An error occurred while sorting the file %s                              " % self.fileName)
+#                 msg.setInformativeText(str(e) + " sort()")
+#                 msg.setIcon(qtw.QMessageBox.Information)
+#                 msg.exec_()
+#
+#         else:
+#             qtw.QMessageBox.warning(self, 'Warning', 'Please Select a Save Location for sorted files')
+
+
+# class ML(qtw.QMainWindow):
+#
+#     def __init__(self, inDict):
+#         """
+#
+#         :param inDict: dictionary with detector panel information
+#         """
+#
+#         super(ML, self).__init__()
+#
+#         self.messages = None
+#         self.model = None
+#         self.X_train = None
+#         self.y_train = None
+#         self.X_test = None
+#         self.y_test = None
+#         self.predictions = None
+#         uic.loadUi("UI/machineLearningGUI.ui", self)
+#
+#         self.setWindowTitle('Machine Learning')
+#
+#         self.panelName = inDict['panel_name']
+#         self.min_fs = inDict['min_fs']
+#         self.max_fs = inDict['max_fs']
+#         self.min_ss = inDict['min_ss']
+#         self.max_ss = inDict['max_ss']
+#         self.trainSplit.setText('70')
+#         self.testSplit.setText('30')
+#         self.browseButton.clicked.connect(self.browseFiles)
+#         self.trainButton.clicked.connect(self.buttonClicked)
+#         self.testButton.clicked.connect(self.test)
+#         self.resetButton.clicked.connect(self.reset)
+#         self.saveButton.clicked.connect(self.saveModel)
+#         self.comboBox.activated.connect(self.comboBoxChanged)
+#
+#         # for displaying the confusion matrix
+#         self.layoutConfusionMatrix = qtw.QHBoxLayout()
+#         self.figureConfusionMatrix = plt.figure()
+#         self.canvasConfusionMatrix = FigureCanvasQTAgg(self.figureConfusionMatrix)
+#         self.layoutConfusionMatrix.addWidget(self.canvasConfusionMatrix)
+#         self.confusionMatrix.setLayout(self.layoutConfusionMatrix)
+#
+#         # for displaying the classification report
+#         self.layoutClassificationReport = qtw.QHBoxLayout()
+#         self.figureClassificationReport = plt.figure()
+#         self.canvasClassificationReport = FigureCanvasQTAgg(self.figureClassificationReport)
+#
+#         self.layoutClassificationReport.addWidget(self.canvasClassificationReport)
+#         self.classificationReport.setLayout(self.layoutClassificationReport)
+#
+#         # adding busy and idle lights
+#         self.busyLight = BusyLight()
+#         self.idleLight = IdleLight()
+#         self.statusbar.addPermanentWidget(self.busyLight)
+#         self.statusbar.addPermanentWidget(self.idleLight)
+#         self.idleLight.show()
+#         self.busyLight.hide()
+#
+#         self.statusbar.showMessage("Point to where you have the data for model training", 3000)
+#
+#         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
+#
+#     def setBusy(self):
+#         """
+#
+#         :return: Change the light to busy
+#         """
+#         self.busyLight.show()
+#         self.idleLight.hide()
+#
+#     def setIdle(self):
+#         """
+#
+#         :return: Change the light to Idle
+#         """
+#         self.busyLight.hide()
+#         self.idleLight.show()
+#
+#     def showNextMessage(self, messageList):
+#         message = messageList.pop(0)
+#         self.statusbar.showMessage(message, 3000)
+#         if messageList:
+#             qtc.QTimer.singleShot(3000, lambda: self.showNextMessage(messageList))
+#
+#     @pyqtSlot()
+#     def browseFiles(self):
+#         self.setBusy()
+#
+#         """
+#             This method gets triggered when the browse button is Clicked in the GUI
+#         function: The function is to take in a text field where the value needs to be set and called in a dialog box
+#         with file structure view starting at the 'root' and lets the user select the file they want and set the file p
+#         ath to the test field.
+#         """
+#
+#         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+#
+#         if folderName != "":
+#             self.parentDirectory.setText(folderName)
+#             self.messages = ["Select a model to be trained", "Enter Train/Test split ",
+#                              "Click the Train button to train the model"]
+#             self.showNextMessage(self.messages)
+#
+#         self.setIdle()
+#
+#     # model training using multiple runs needs to be implemented
+#     # @pyqtSlot()
+#     # def checkBoxClicked(self):
+#     #     """
+#     #
+#     #     :return: Pass ** functionality hasn't been implemented. **
+#     #     """
+#     #     if self.checkBox.isChecked():
+#     #         self.startRun.setEnabled(True)
+#     #         self.endRun.setEnabled(True)
+#     #     else:
+#     #         self.startRun.setEnabled(False)
+#     #         self.endRun.setEnabled(False)
+#
+#     @pyqtSlot(dict)
+#     def readPanelDetails(self, inDict):
+#         """
+#          :param inDict: Dictionary with ASIIC/panel information coming from the signal once the user clicked on a panel
+#         :return: Assigns panel details to class variables from inDict
+#         """
+#         self.panelName = inDict['panel_name']
+#         self.min_fs = inDict['min_fs']
+#         self.max_fs = inDict['max_fs']
+#         self.min_ss = inDict['min_ss']
+#         self.max_ss = inDict['max_ss']
+#
+#     def modelSelection(self):
+#         """
+#
+#         :return: user selected scikit-learn model
+#         """
+#
+#         modelSelected = self.comboBox.currentText()
+#         if modelSelected == 'LogisticRegression':
+#             from sklearn.linear_model import LogisticRegression
+#             self.model = LogisticRegression()
+#             return True
+#         elif modelSelected == 'KNeighborsClassifier':
+#             from sklearn.neighbors import KNeighborsClassifier
+#             self.model = KNeighborsClassifier(n_neighbors=1)
+#             return True
+#         elif modelSelected == 'DecisionTreeClassifier':
+#             from sklearn.tree import DecisionTreeClassifier
+#             self.model = DecisionTreeClassifier()
+#             return True
+#         elif modelSelected == 'RandomForestClassifier':
+#             from sklearn.ensemble import RandomForestClassifier
+#             self.model = RandomForestClassifier(n_estimators=200)
+#             return True
+#         else:
+#             qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
+#             return False
+#
+#     def checkTrainTestSplit(self):
+#         if self.trainSplit.text().isdigit() and self.testSplit.text().isdigit():
+#             train = int(self.trainSplit.text())
+#             test = int(self.testSplit.text())
+#
+#             if train + test > 100 or train + test < 100:
+#                 qtw.QMessageBox.critical(self, 'Alert', 'The Sum of train split + test split = 100%')
+#                 qtw.QMessageBox.information(self, 'Information',
+#                                             'Setting the train and test split to the default values')
+#                 self.trainSplit.setText('70')
+#                 self.testSplit.setText('30')
+#                 return True
+#             else:
+#                 return True
+#
+#         else:
+#             qtw.QMessageBox.information(self, 'Information', 'Please enter a valid number')
+#             return False
+#
+#     @staticmethod
+#     def readFile(file, flag, min_ss, max_ss, min_fs, max_fs):
+#         try:
+#             temp_df = pd.read_csv(str(file), delimiter=" ")
+#             temp_df.columns = ['FileName', 'EventNumber']
+#
+#             # reading the panel data from the file
+#             temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+#             fileName = temp_df['FileName'].iloc[0]
+#
+#             with h5py.File(fileName, "r") as f:
+#                 # print(f'Started Reading {str(file)}')
+#                 data = f['entry_1']['data_1']['data'][()]
+#                 # print(f'Finished Reading {str(file)}')
+#
+#             tempList = []
+#             for i in list(temp_df['EventNumber']):
+#                 frame = data[int(i)][min_ss : max_ss, min_fs + 5 : max_fs - 5]
+#                 tempList.append(frame.flatten())
+#
+#             temp_df['Data'] = tempList
+#             temp_df['Flag'] = flag
+#
+#             return temp_df
+#
+#         except Exception as e:
+#             print(f"An error occurred while reading file {str(file)}: {str(e)}")
+#             print(traceback.format_exc())
+#             return None
+#
+#     def dataPrepParalle(self):
+#         from sklearn.model_selection import train_test_split
+#         folder = self.parentDirectory.text()
+#
+#         # Get the number of CPUs
+#         numCpus = os.cpu_count()
+#         print(f'Number of CPUs: {numCpus}')
+#
+#         # Get the total memory
+#         total_memory = psutil.virtual_memory().total / (1024 ** 3)  # GBs
+#         print(f'Total Memory: {total_memory:.2f} GB')
+#
+#         with ProcessPoolExecutor() as executor:
+#             # Bad Events
+#             files = list(Path(folder).glob('badEvents-advanceSort-*.list'))
+#             # dataFrames_bad = list(tqdm(executor.map(self.readFile, files, [0] * len(files))))
+#             dataFrames_bad = list(tqdm(
+#                 executor.map(ML.readFile, files, [0] * len(files), [self.min_ss] * len(files), [self.max_ss] * len(files),
+#                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
+#             dataFrame_bad = pd.concat([df for df in dataFrames_bad if df is not None])
+#
+#             # Good Events
+#             files = list(Path(folder).glob('goodEvents-advanceSort-*.list'))
+#             # dataFrames_good = list(tqdm(executor.map(self.readFile, files, [1] * len(files))))
+#             dataFrames_bad = list(tqdm(
+#                 executor.map(ML.readFile, files, [0] * len(files), [self.min_ss] * len(files),
+#                              [self.max_ss] * len(files),
+#                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
+#             dataFrame_good = pd.concat([df for df in dataFrames_good if df is not None])
+#
+#         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
+#                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
+#         X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+#         y_good = dataFrame_good['Flag']
+#         X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
+#                                                                                 test_size=int(self.testSplit.text()))
+#
+#         dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
+#                                    dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
+#         X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+#         y_bad = dataFrame_bad['Flag']
+#
+#         X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
+#                                                                             test_size=int(self.testSplit.text()))
+#
+#         self.X_train = pd.concat([X_good_train, X_bad_train])
+#         self.y_train = pd.concat([y_good_train, y_bad_train])
+#         self.X_test = pd.concat([X_good_test, X_bad_test])
+#         self.y_test = pd.concat([y_good_test, y_bad_test])
+#
+#     def dataPrep(self):
+#         """
+#         This method look into the folder where the sorted files are stored (by sort() in SortingForMl) and prepare the
+#         data for training and testing.
+#         :return: X_train, X_test, y_train, y_test
+#         """
+#
+#         from sklearn.model_selection import train_test_split
+#         folder = self.parentDirectory.text()
+#
+#         # Bad Events
+#         files = Path(folder).glob('badEvents-advanceSort-*.list')
+#         dataFrame_bad = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
+#
+#         for file in files:
+#
+#             try:
+#                 temp_df = pd.read_csv(str(file), delimiter=" ")
+#                 temp_df.columns = ['FileName', 'EventNumber']
+#
+#                 # reading the panel data from the file
+#                 temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+#                 fileName = temp_df['FileName'].iloc[0]
+#
+#                 with h5py.File(fileName, "r") as f:
+#                     print('Reading %s' % str(file))
+#                     data = f['entry_1']['data_1']['data'][()]
+#
+#                 tempList = []
+#                 for i in list(temp_df['EventNumber']):
+#                     frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+#                     tempList.append(frame.flatten())
+#
+#                 temp_df['Data'] = tempList
+#
+#                 dataFrame_bad = pd.concat([dataFrame_bad, temp_df])
+#             except Exception as e:
+#                 msg = qtw.QMessageBox()
+#                 msg.setWindowTitle('Warning')
+#                 msg.setText(
+#                     "An error occurred while reading bad events file %s                                  " % str(file))
+#                 msg.setInformativeText(str(e) + " dataPrep()")
+#                 msg.setIcon(qtw.QMessageBox.Warning)
+#                 msg.exec_()
+#                 continue
+#         dataFrame_bad['Flag'] = 0
+#         print('Done reading Bad events...')
+#         print('Found %i Good events' % len(dataFrame_bad))
+#         print(' ')
+#
+#         # Good Events
+#         files = Path(folder).glob('goodEvents-advanceSort-*.list')
+#         dataFrame_good = pd.DataFrame(columns=['FileName', 'EventNumber', 'Data'])
+#
+#         for file in files:
+#             try:
+#                 temp_df = pd.read_csv(str(file), delimiter=" ")
+#                 temp_df.columns = ['FileName', 'EventNumber']
+#
+#                 # reading the panel data from the file
+#                 temp_df['EventNumber'] = temp_df['EventNumber'].apply(lambda x: x.split('/')[2])
+#                 fileName = temp_df['FileName'].iloc[0]
+#
+#                 with h5py.File(fileName, "r") as f:
+#                     print('Reading %s' % str(file))
+#                     data = f['entry_1']['data_1']['data'][()]
+#
+#                 tempList = list()
+#                 for i in list(temp_df['EventNumber']):
+#                     frame = data[int(i)][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5]
+#                     tempList.append(frame.flatten())
+#
+#                 temp_df['Data'] = tempList
+#
+#                 dataFrame_good = pd.concat([dataFrame_good, temp_df])
+#             except Exception as e:
+#                 msg = qtw.QMessageBox()
+#                 msg.setWindowTitle('Error')
+#                 msg.setText(
+#                     "An error occurred while reading good events file %s                                  " % str(file))
+#                 msg.setInformativeText(str(e) + " dataPrep()")
+#                 msg.setIcon(qtw.QMessageBox.Information)
+#                 msg.exec_()
+#                 continue
+#         dataFrame_good['Flag'] = 1
+#         print('Done reading Good events...')
+#         print('Found %i Good events' % len(dataFrame_good))
+#
+#         dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
+#                                     dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
+#         X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+#         y_good = dataFrame_good['Flag']
+#         X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
+#                                                                                 test_size=int(self.testSplit.text()))
+#
+#         dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
+#                                    dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
+#         X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+#         y_bad = dataFrame_bad['Flag']
+#
+#         X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
+#                                                                             test_size=int(self.testSplit.text()))
+#
+#         self.X_train = pd.concat([X_good_train, X_bad_train])
+#         self.y_train = pd.concat([y_good_train, y_bad_train])
+#         self.X_test = pd.concat([X_good_test, X_bad_test])
+#         self.y_test = pd.concat([y_good_test, y_bad_test])
+#
+#     @pyqtSlot()
+#     def buttonClicked(self):
+#         """
+#         This method gets triggered when the "Train" button is pressed and asks a question from the user. Based on the
+#         answer it either moves forward to train a model or allow user to go back and select a different
+#         ASCI for training.
+#         :return: Yes or No
+#         """
+#         msg = qtw.QMessageBox()
+#         msg.setWindowTitle('Question')
+#         msg.setText("Panel Selected: %s                                             " % self.panelName)
+#         msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
+#                                'selected: %s panel. Would you wish to continue?' % self.panelName)
+#         msg.setIcon(qtw.QMessageBox.Question)
+#         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+#         msg.setDefaultButton(qtw.QMessageBox.Yes)
+#         msg.buttonClicked.connect(self.train)
+#         msg.exec_()
+#
+#     def train(self, i):
+#         """
+#         Method to train the user selected model using the data from the selected ASCI
+#         :param i: QMessageBox output( &Yes or &No)
+#         :return: Model and Enables the "Test" button
+#         """
+#
+#         if i.text() == '&Yes':
+#             self.setBusy()
+#             self.trainButton.setEnabled(False)
+#             if self.modelSelection() and self.checkTrainTestSplit():
+#                 # self.dataPrep()
+#                 self.dataPrepParalle()
+#                 self.model.fit(self.X_train, self.y_train)
+#                 self.testButton.setEnabled(True)
+#                 self.setIdle()
+#                 qtw.QMessageBox.information(self, 'Success', "Done Training")
+#                 self.statusbar.showMessage("Now you can save the model or try training a new model", 3000)
+#
+#             else:
+#                 self.reset()
+#         else:
+#             self.reset()
+#
+#     @pyqtSlot()
+#     def test(self):
+#         """
+#         Method to test the validity of the trained model
+#         :return: Confusion matrix and a Classification Report
+#         """
+#         from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+#         self.predictions = self.model.predict(self.X_test)
+#
+#         self.setBusy()
+#
+#         self.figureConfusionMatrix.clear()
+#         self.figureClassificationReport.clear()
+#
+#         # printing a heatmap for Confusion matrix
+#         # cfm = confusion_matrix(self.y_test, self.predictions)
+#         # cfm_df = pd.DataFrame(cfm, index=['0', '1'], columns=['0', '1'])
+#         # ax1 = self.figureConfusionMatrix.add_subplot(111)
+#         # sns.heatmap(cfm_df, annot=True, cmap='mako', ax=ax1, cbar=False)
+#         # ax1.set_ylabel("True Label")
+#         # ax1.set_xlabel("Predicted Label")
+#         # self.canvasConfusionMatrix.draw()
+#         ax1 = self.figureConfusionMatrix.add_subplot(111)
+#         ConfusionMatrixDisplay.from_predictions(self.y_test, self.predictions, ax=ax1, colorbar=False, cmap='mako')
+#         self.canvasConfusionMatrix.draw()
+#
+#         # printing a heatmap for Classification report
+#         cr = classification_report(self.y_test, self.predictions)
+#         columns = cr.strip().split()[0:3]
+#         indexes = ['Bad', 'Good', 'Avg', 'Wt. Avg']
+#         data = np.array(
+#             [cr.strip().split()[5:8], cr.strip().split()[10:13], cr.strip().split()[19:22],
+#              cr.strip().split()[25:28]], dtype=float)
+#         cr_df = pd.DataFrame(data=data, columns=columns, index=indexes)
+#         ax2 = self.figureClassificationReport.add_subplot(111)
+#         sns.heatmap(cr_df, annot=True, cmap='mako', ax=ax2, cbar=True, linewidth=1)
+#         self.canvasClassificationReport.draw()
+#
+#         self.testButton.setEnabled(False)
+#         self.saveButton.setEnabled(True)
+#         self.setIdle()
+#
+#     @pyqtSlot()
+#     def reset(self):
+#         """
+#         Method to clear out the output from the test()
+#         :return: clear the self.confusionMatrix and self.classificationReport
+#         """
+#         self.figureConfusionMatrix.clear()
+#         self.figureClassificationReport.clear()
+#         self.trainButton.setEnabled(True)
+#         self.testButton.setEnabled(False)
+#         self.comboBox.setCurrentIndex(0)
+#         self.trainSplit.setText('70')
+#         self.testSplit.setText('30')
+#
+#     @pyqtSlot(int)
+#     def comboBoxChanged(self, index):
+#         self.reset()
+#         self.comboBox.setCurrentIndex(index)
+#
+#     @pyqtSlot()
+#     def saveModel(self):
+#         filename, _ = qtw.QFileDialog.getSaveFileName(self, "Save File", "", "Pickle Files (*.pkl)")
+#         data = {'panel_name': self.panelName, 'min_ss': self.min_ss, 'min_fs': self.min_fs, 'max_ss': self.max_ss,
+#                 'max_fs':self.max_fs, 'model': self.model}
+#         if filename:
+#             with open(filename, 'wb') as f:
+#                 pickle.dump(data, f)
+
+
+# class SortData(qtw.QWidget):
+#     readyToSaveGood = qtc.pyqtSignal(dict, str)
+#     readyToSaveBad = qtc.pyqtSignal(dict, str)
+#
+#     def __init__(self, model, inDict):
+#         """
+#
+#         :param model: trained model
+#         :param inDict: dictionary with detector panel information
+#         """
+#
+#         super(SortData, self).__init__()
+#
+#         uic.loadUi('UI/sortDataGUI.ui', self)
+#         self.setWindowTitle('Sort Data')
+#
+#         self.model = model
+#         self.panelName = inDict['panel_name']
+#         self.min_fs = inDict['min_fs']
+#         self.max_fs = inDict['max_fs']
+#         self.min_ss = inDict['min_ss']
+#         self.max_ss = inDict['max_ss']
+#
+#         self.goodEvents = {}
+#         self.badEvents = {}
+#
+#         self.tableWidget = self.findChild(qtw.QTableWidget, 'tableWidget')
+#         self.tableWidget.setColumnWidth(0, 350)
+#
+#         self.browseButton.clicked.connect(self.browseFiles)
+#         self.sortButton.clicked.connect(self.buttonClicked)
+#
+#         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
+#
+#     @pyqtSlot()
+#     def browseFiles(self):
+#         """
+#         This method gets triggered when the browse button is Clicked in the GUI
+#         function: The function is to take in a text field where the value needs to be set and called in a dialog box
+#                 with file structure view starting at the 'root' and lets the user select the file they want and set the
+#                 file path to the test field.
+#         """
+#
+#         folderName = qtw.QFileDialog.getExistingDirectory(self, caption='Select Folder', directory=' ')
+#
+#         if folderName != "":
+#             self.folderPath.setText(folderName)
+#             self.showFiles()
+#
+#     def showFiles(self):
+#         """
+#
+#         :return: Displays available files in the selected folder in self.availableFiles (QTextEdit)
+#         """
+#         folder = self.folderPath.text()
+#
+#         files = Path(folder).glob('*.cxi')
+#
+#         for file in files:
+#             self.availableFiles.append(str(file).split('/')[-1])
+#
+#         self.sortButton.setEnabled(True)
+#
+#     @pyqtSlot()
+#     def buttonClicked(self):
+#         """
+#         Asks a user a Question/ Waring about the model that was trained
+#         :return: Yes or No
+#         """
+#
+#         msg = qtw.QMessageBox()
+#         msg.setWindowTitle('Question')
+#         msg.setText("Panel Selected: %s                                             " % self.panelName)
+#         msg.setInformativeText('Please Note! Machine Learning model was trained based on the data from the %s panel. '
+#                                'Make sure that you are sorting based on %s panel. If not, train a new model for your '
+#                                'frame of choice. Would you wish to continue?' % (self.panelName, self.panelName))
+#         msg.setIcon(qtw.QMessageBox.Question)
+#         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
+#         msg.setDefaultButton(qtw.QMessageBox.Yes)
+#         msg.buttonClicked.connect(self.sort)
+#         msg.exec_()
+#
+#     def sort(self, i):
+#         """
+#                 Sort *cxi files using the trained model
+#                 :return: two separate *.list files for good and bad events for the cxi files
+#                 """
+#
+#         if i.text() == '&Yes':
+#
+#             self.sortButton.setEnabled(False)
+#             folder = self.folderPath.text()
+#
+#             fileSaveLocation = qtw.QFileDialog.getExistingDirectory(self, caption='Select Where You Want to Save the'
+#                                                                                   'Sorted Files', directory=' ',
+#                                                                     options=qtw.QFileDialog.DontUseNativeDialog)
+#             files = Path(folder).glob('*.cxi')
+#             row = 0
+#             self.tableWidget.setRowCount(len(list(files)))
+#
+#             files = Path(folder).glob('*.cxi')
+#             for file in files:
+#
+#                 tag = str(file).split('/')[-1].split('.')[0]
+#
+#                 self.goodEvents = {}
+#                 self.badEvents = {}
+#
+#                 # goodList to store all the events with expected pixel intensities for the file
+#                 goodList = []
+#                 # badList to store all the events with detector artifacts for the file
+#                 badList = []
+#
+#                 with h5py.File(file, "r") as f:
+#                     data = f['entry_1']['data_1']['data'][()]
+#
+#                 for i in range(data.shape[0]):
+#
+#                     frame = data[i][self.min_ss:self.max_ss, self.min_fs + 5:self.max_fs - 5].flatten()
+#
+#                     predictions = self.model.predict(frame.reshape(1, 31675))
+#
+#                     if predictions:
+#                         goodList.append(i)
+#                     else:
+#                         badList.append(i)
+#
+#                 self.goodEvents[str(file)] = goodList
+#                 self.badEvents[str(file)] = badList
+#
+#                 self.readyToSaveGood.emit(self.goodEvents,
+#                                           fileSaveLocation + '/' + 'goodEvents-modelSort-%s.list' % tag)
+#                 self.readyToSaveBad.emit(self.badEvents, fileSaveLocation + '/' + 'badEvents-modelSort-%s.list' % tag)
+#
+#                 self.tableWidget.setItem(row, 0, qtw.QTableWidgetItem(str(file).split('/')[-1]))
+#                 self.tableWidget.setItem(row, 1, qtw.QTableWidgetItem(str(len(self.goodEvents[str(file)]))))
+#                 self.tableWidget.setItem(row, 2, qtw.QTableWidgetItem(str(len(self.badEvents[str(file)]))))
+#                 row += 1
+#                 self.sortButton.setEnabled(False)
 
 
 class BusyLight(qtw.QWidget):
@@ -1178,7 +1266,7 @@ class MainWindow(qtw.QMainWindow):
         self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
         # connecting buttons
         self.sortButton.clicked.connect(self.sortData)
-        self.sortForMLButton.clicked.connect(self.sortForML)
+        self.sortForMLButton.clicked.connect(self.dataLabeling)
         self.MLButton.clicked.connect(self.machineLearning)
         self.loadButton.clicked.connect(self.loadModel)
 
@@ -1254,6 +1342,9 @@ class MainWindow(qtw.QMainWindow):
                                             "averaged intensity for all the images in the CXI file")
         self.sortForMLButton.setToolTip("Click to Plot the distribution of two inflation points")
         self.sortButton.setToolTip("Click to Save data with the trained model")
+
+        # for debugging and feature adding
+        self.MLButton.setEnabled(True)
 
     def setBusy(self):
         """
@@ -1611,13 +1702,13 @@ class MainWindow(qtw.QMainWindow):
             self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
 
     @pyqtSlot()
-    def sortForML(self):
+    def dataLabeling(self):
         """
         Spawn an instance of the SortingForML
         :return: good and bad lists to be saved. Turns ON "Train a Model" button
         """
 
-        self.sortForMLGUI = SortingForML(self.cxiFilePath.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortForMLGUI = DataLabeler(self.cxiFilePath.text(), self.orderOfFit.text(), self.panelDict)
         self.sortForMLGUI.show()
         self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
 
