@@ -1,6 +1,4 @@
 # PyQt5 imports
-import warnings
-
 from PyQt5 import QtWidgets as qtw
 from PyQt5 import uic
 from PyQt5 import QtCore as qtc
@@ -16,6 +14,12 @@ import pandas as pd
 
 # Packages for data access
 import h5py
+
+# Packages for multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+
+# Packages for handle warning
+import warnings
 
 
 class DataLabeler(qtw.QWidget):
@@ -69,7 +73,8 @@ class DataLabeler(qtw.QWidget):
         self.doubleSpinBoxIF2.setSingleStep(0.05)
 
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
-        self.plotInflectionPoints()
+        # self.plotInflectionPoints()
+        self.plotInflectionPointsParalle()
         self.sortButton.clicked.connect(self.sort)
 
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
@@ -88,6 +93,95 @@ class DataLabeler(qtw.QWidget):
         self.max_ss = inDict['max_ss']
 
         self.plotInflectionPoints()
+
+    @staticmethod
+    def processFrame(inTuple):
+        """
+
+        :param inTuple: the required arguments as a tuple
+        :return: a list of the calculated inflection points
+        """
+        (frame, min_fs, max_fs, min_ss, max_ss, orderOfFit) = inTuple
+        print("Processing frame...")
+
+        avgIntensities = [np.average(frame[min_ss:max_ss, j]) for j in
+                          range(min_fs + 5, max_fs - 5)]
+        fit = np.polyfit(np.arange(min_fs + 5, max_fs - 5), avgIntensities, deg=int(orderOfFit))
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            try:
+                x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
+                x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
+
+                if x1 > x2:
+                    return x1, x2
+                else:
+                    return x2, x1
+
+            except (IndexError, ValueError, Warning):
+                print("Error while processing frame.")
+                return None, None  # or some other sentinel value
+
+    def plotInflectionPointsParalle(self):
+        print("Plotting inflection points in parallel...")
+        self.inflectionPoint1List = []
+        self.inflectionPoint2List = []
+
+        try:
+            with h5py.File(self.fileName, "r") as f:
+                self.data = f['entry_1']['data_1']['data'][()]
+
+            with ProcessPoolExecutor() as executor:
+                frames = [(frame, self.min_fs, self.max_fs, self.min_ss, self.max_ss, self.orderOfFit) for frame in
+                          self.data]
+                results = list(executor.map(DataLabeler.processFrame, frames))
+
+            # After multiprocessing, collect results and handle any errors
+            for i, (x1, x2) in enumerate(results):
+                if x1 is not None and x2 is not None:  # or whatever your sentinel value was
+                    self.inflectionPoint1List.append(x1)
+                    self.inflectionPoint2List.append(x2)
+                else:
+                    print(f"Calculation Error! Skipping the frame {i}")
+                    # handle errors - note that this is done in the main process, so it's safe to use GUI functions
+                    qtw.QMessageBox.information(self, 'Skip', 'Calculation Error! \n \n Skipping the frame %i' % i)
+
+        except Exception as e:
+            print(f"Error in plotInflectionPoint: {e}")
+
+        # with plotly
+        df = pd.DataFrame()
+        df['Inflection_point1'] = self.inflectionPoint1List
+        df['Inflection_point2'] = self.inflectionPoint2List
+        fig = px.histogram(df, nbins=200, opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+
+        # with seaborn
+        # self.figureSortingForML.clear()
+        # df = pd.DataFrame()
+        # df['Inflection_point1'] = self.inflectionPoint1List
+        # df['Inflection_point2'] = self.inflectionPoint2List
+        # colors = ['red', 'green', 'blue', 'violet', 'pink']
+        # random.shuffle(colors)
+        # for column in df.columns:
+        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        # plt.title('Distributions of Inflection points 1 and 2')
+        # plt.ylabel('Count')
+        # plt.xlabel(' Vertically Average Pixel Intensity')
+        # plt.xticks()
+        # plt.legend()
+        # self.canvasForInflectionPoints.draw()
+
+        # Enabling button and check box after plotting
+        self.inflectionPoint1.setEnabled(True)
+        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
+        self.inflectionPoint2.setEnabled(True)
+        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
+        self.sortButton.setEnabled(True)
+        self.doubleSpinBoxIF1.setValue(round(3*np.std(df['Inflection_point1'].dropna()), 2))
+        self.doubleSpinBoxIF2.setValue(round(3*np.std(df['Inflection_point2'].dropna()), 2))
+        print("Inflection points plotted successfully.")
 
     def plotInflectionPoints(self):
         """
