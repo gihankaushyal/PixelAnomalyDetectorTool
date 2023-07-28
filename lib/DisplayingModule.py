@@ -12,6 +12,7 @@ from lib.geometry_parser.GeometryFileParser import *
 # Packages for graphing
 import pyqtgraph as pg
 
+
 class DisplayImage(qtw.QWidget):
     panelSelected = qtc.pyqtSignal(dict)
 
@@ -66,10 +67,8 @@ class DisplayImage(qtw.QWidget):
         # self.layout.addLayout(self.layoutForCheckBoxes)
         # self.setLayout(self.layout)
 
-
         # connecting the checkBoxes to a method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
-
 
         # reading the geometry file
         try:
@@ -112,7 +111,7 @@ class DisplayImage(qtw.QWidget):
         self.imageViewer.getView().scene().sigMouseClicked.connect(self.selectPanel)
 
         # handling what happens after the widget is closed
-        self.isClosed = False
+        # self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
         # connecting signals
@@ -143,7 +142,7 @@ class DisplayImage(qtw.QWidget):
             self.imageViewer.setImage(self.imageToDraw)
 
             # setting a window title with the eventNumber and the total number of event in the file
-            self.setWindowTitle("Showing %i of %i " % (self.eventNumber, self.size - 1))
+            self.setWindowTitle("%s : Showing %i of %i " % (self.fileName.split('/')[-1], self.eventNumber, self.size - 1))
 
             if self.eventNumber == 0:
                 self.drawInitialPanel()
@@ -320,5 +319,5 @@ class DisplayImage(qtw.QWidget):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    def closeEvent(self, QCloseEvent):
-        self.isClosed = True
+    # def closeEvent(self, QCloseEvent):
+    #     self.isClosed = True
