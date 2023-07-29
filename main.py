@@ -62,6 +62,8 @@ class MainWindow(qtw.QMainWindow):
 
         # initializing class variables
         # initializing the popup windows
+        self.fileName = None
+        self.fileListName = None
         self.imageViewer = None
         self.sortForMLGUI = None
         self.mlGUI = None
@@ -145,9 +147,6 @@ class MainWindow(qtw.QMainWindow):
         self.busyLight.hide()
         self.idleLight.show()
 
-    def setImageViewerClosed(self):
-        self.imageViewerClosed = True
-
     def showNextMessage(self, messageList):
         message = messageList.pop(0)
         self.statusbar.showMessage(message, 3000)
@@ -165,23 +164,35 @@ class MainWindow(qtw.QMainWindow):
 
         self.setBusy()
         if buttonName == "cxiBrowseButton":
-            fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
-            if fileName:
-                self.cxiFilePath.setText(fileName)
+            self.fileName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'CXI Files (*.cxi)')
+            if self.fileName:
+                self.cxiFilePath.setText(self.fileName)
+
                 self.cxiFileListPath.setEnabled(False)
                 self.cxiListBrowseButton.setEnabled(False)
-                self.geomBrowseButton.setEnabled(True)
-                self.geomFilePath.setEnabled(True)
-                self.statusbar.showMessage("Browse for a geometry file ", 5000)
         elif buttonName == "cxiListBrowseButton":
-            fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
-            if fileListName:
-                self.cxiFileListPath.setText(fileListName)
-                self.cxiFilePath.setEnabled(False)
-                self.cxiBrowseButton.setEnabled(False)
-                self.geomBrowseButton.setEnabled(True)
-                self.geomFilePath.setEnabled(True)
-                self.statusbar.showMessage("Browse for a geometry file ", 5000)
+            self.fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
+            if self.fileListName:
+                self.cxiFileListPath.setText(self.fileListName)
+                self.comboBox.setEnabled(True)
+                with open(self.fileListName) as f:
+                    items = [item.strip() for item in f]
+                self.comboBox.addItems(items)
+
+            self.cxiFilePath.setEnabled(False)
+            self.cxiBrowseButton.setEnabled(False)
+
+        self.geomBrowseButton.setEnabled(True)
+        self.geomFilePath.setEnabled(True)
+        self.statusbar.showMessage("Browse for a geometry file ", 5000)
+
+        self.reset()
+
+    def reset(self):
+        """
+        This method reset every parameter to it's initial status
+        :return:
+        """
 
         # resting the main window for the next cxi file
         if self.imageViewer:
@@ -305,37 +316,64 @@ class MainWindow(qtw.QMainWindow):
         if not self.eventNumber.text():
             self.eventNumber.setText("0")
 
-        if not self.imageViewerClosed:
-            self.imageViewer.close()
-            if self.cxiFilePath.text():
-                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-                self.imageViewer.drawImage(int(self.eventNumber.text()))
-                self.totalEvents = self.imageViewer.size
-                self.imageViewerClosed = False
-                self.imageViewer.show()
-            elif self.cxiFileListPath.text():
-                with open(self.cxiFileListPath) as f:
-                    for line in f:
-                        self.imageViewer = DisplayImage(line,self.geomFilePath.text())
-                        self.imageViewer.drawImage(int(self.eventNumber.text()))
-                        self.totalEvents = self.imageViewer.size
-                        self.imageViewerClosed = False
-                        self.imageViewer.show()
-        else:
-            if self.cxiFilePath.text():
-                self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
-                self.imageViewer.drawImage(int(self.eventNumber.text()))
-                self.totalEvents = self.imageViewer.size
-                self.imageViewerClosed = False
-                self.imageViewer.show()
-            elif self.cxiFileListPath.text():
-                with open(self.cxiFileListPath.text()) as f:
-                    for line in f:
-                        self.imageViewer = DisplayImage(line.strip(), self.geomFilePath.text())
-                        self.imageViewer.drawImage(int(self.eventNumber.text()))
-                        self.totalEvents = self.imageViewer.size
-                        self.imageViewerClosed = False
-                        self.imageViewer.show()
+        # for debugging purposes the following lines are commented out
+        # if not self.imageViewerClosed:
+        #     self.imageViewer.close()
+        #     if self.cxiFilePath.text():
+        #         self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+        #         self.imageViewer.drawImage(int(self.eventNumber.text()))
+        #         self.totalEvents = self.imageViewer.size
+        #         self.imageViewerClosed = False
+        #         self.imageViewer.show()
+        #     elif self.cxiFileListPath.text():
+        #         with open(self.cxiFileListPath.text()) as f:
+        #             for line in f:
+        #                 self.imageViewer = DisplayImage(line, self.geomFilePath.text())
+        #                 self.imageViewer.drawImage(int(self.eventNumber.text()))
+        #                 self.totalEvents = self.imageViewer.size
+        #                 self.imageViewerClosed = False
+        #                 self.imageViewer.show()
+        # else:
+        #     if self.cxiFilePath.text():
+        #         self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+        #         self.imageViewer.drawImage(int(self.eventNumber.text()))
+        #         self.totalEvents = self.imageViewer.size
+        #         self.imageViewerClosed = False
+        #         self.imageViewer.show()
+        #     elif self.cxiFileListPath.text():
+        #         with open(self.cxiFileListPath.text()) as f:
+        #             for line in f:
+        #                 self.imageViewer = DisplayImage(line.strip(), self.geomFilePath.text())
+        #                 self.imageViewer.drawImage(int(self.eventNumber.text()))
+        #                 self.totalEvents = self.imageViewer.size
+        #                 self.imageViewerClosed = False
+        #                 self.imageViewer.show()
+
+        # if self.cxiFilePath.text():
+        #     self.imageViewer = DisplayImage(self.cxiFilePath.text(), self.geomFilePath.text())
+        #     self.imageViewer.drawImage(int(self.eventNumber.text()))
+        #     self.totalEvents = self.imageViewer.size
+        #     self.imageViewerClosed = False
+        #     self.imageViewer.show()
+        # elif self.cxiFileListPath.text():
+        #     self.fileList = []
+        #     with open(self.cxiFileListPath.text()) as f:
+        #         self.fileList = [line.strip() for line in f]
+        #
+        #         self.showNextFile()
+
+        if self.cxiFilePath.text():
+            # self.imageViewer.close()
+            self.imageViewer = DisplayImage(self.fileName, self.geomFilePath.text())
+            self.imageViewer.drawImage(int(self.eventNumber.text()))
+            self.totalEvents = self.imageViewer.size
+            self.imageViewerClosed = False
+            self.imageViewer.show()
+        elif self.cxiFileListPath.text():
+            pass
+
+
+
 
         self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
                                                                           "buttons to navigate through images",
@@ -360,17 +398,35 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer.destroyed.connect(self.setImageViewerClosed)
 
         # clearing the radio buttons
-        if self.imageViewer.goodRadioButton.isChecked():
-            print('Good button is clicked')
-            self.imageViewer.goodRadioButton.setChecked(False)
-        elif self.imageViewer.badRadioButton.isChecked():
-            print('bad button is clicked')
-            self.imageViewer.badRadioButton.setChecked(False)
+        # if self.imageViewer.goodRadioButton.isChecked():
+        #     print('Good button is clicked')
+        #     self.imageViewer.goodRadioButton.setChecked(False)
+        # elif self.imageViewer.badRadioButton.isChecked():
+        #     print('bad button is clicked')
+        #     self.imageViewer.badRadioButton.setChecked(False)
 
         if not self.plotPixelIntensityButton.isEnabled():
             self.plotPixelIntensityButton.setEnabled(True)
             self.poltFitCheckBox.setEnabled(True)
             self.plotPeakPixelButton.setEnabled(True)
+
+    def showNextFile(self):
+        if not self.fileList:
+            print('You exhausted the list')
+        else:
+            file = self.fileList.pop(0)
+            print("showing " + file)
+            self.imageViewer = DisplayImage(file, self.geomFilePath.text())
+            self.imageViewer.drawImage(int(self.eventNumber.text()))
+            self.totalEvents = self.imageViewer.size
+            self.imageViewerClosed = False
+            self.imageViewer.show()
+
+    @pyqtSlot()
+    def setImageViewerClosed(self):
+        self.imageViewerClosed = True
+        self.imageViewer = None
+        # self.showNextFile()
 
     @pyqtSlot()
     def handleRadioButtons(self):
