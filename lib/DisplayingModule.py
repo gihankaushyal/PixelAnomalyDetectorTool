@@ -27,6 +27,8 @@ class DisplayImage(qtw.QWidget):
 
         # laoading the UI file
         uic.loadUi("UI/imageViewerGUI.ui", self)
+        self.setGeometry(5, 100, 675, 750)
+
         self.mainLayout = qtw.QHBoxLayout()
         self.imageViewer = pg.ImageView()
         self.mainLayout.addWidget(self.imageViewer)
@@ -67,6 +69,14 @@ class DisplayImage(qtw.QWidget):
         # self.layout.addLayout(self.layoutForCheckBoxes)
         # self.setLayout(self.layout)
 
+        # self.mainWidget.getView().addItem(self.foundPeaksCanvas)
+        # self.mainWidget.getView().addItem(self.panelEdgesCanvas)
+        # self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
+
+        # showing the pixel map in the main window
+        # self.mainWidget.setImage(self.imageToDraw)
+        # self.isClosed = False
+
         # connecting the checkBoxes to a method
         self.foundPeaksCheckBox.stateChanged.connect(lambda: self.drawImage(self.eventNumber))
 
@@ -98,20 +108,16 @@ class DisplayImage(qtw.QWidget):
 
         # adding an overlapping canvas to the found peaks
         self.foundPeaksCanvas = pg.ScatterPlotItem()
-        # self.mainWidget.getView().addItem(self.foundPeaksCanvas)
         self.imageViewer.getView().addItem(self.foundPeaksCanvas)
 
         # adding a canvas for displaying panel edges
         self.panelEdgesCanvas = pg.PlotDataItem()
-        # self.mainWidget.getView().addItem(self.panelEdgesCanvas)
         self.imageViewer.getView().addItem(self.panelEdgesCanvas)
 
         # connecting a mouse clicked event to a select panel method
-        # self.mainWidget.getView().scene().sigMouseClicked.connect(self.selectPanel)
         self.imageViewer.getView().scene().sigMouseClicked.connect(self.selectPanel)
 
         # handling what happens after the widget is closed
-        # self.isClosed = False
         self.setAttribute(qtc.Qt.WA_DeleteOnClose)
 
         # connecting signals
@@ -319,5 +325,3 @@ class DisplayImage(qtw.QWidget):
             msg.setIcon(qtw.QMessageBox.Information)
             msg.exec_()
 
-    # def closeEvent(self, QCloseEvent):
-    #     self.isClosed = True
