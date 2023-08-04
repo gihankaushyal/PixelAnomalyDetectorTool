@@ -43,9 +43,8 @@ class DataLabeler(qtw.QWidget):
         self.data = None
         self.setWindowTitle('Sorting for Machine Learning')
 
-        self.fileNameLabel.setText("Showing the results for %s" % self.fileName.split('/')[-1])
-
         uic.loadUi("UI/sortForMLGUI.ui", self)
+        self.fileNameLabel.setText("Showing the results for : %s" % fileName.split('/')[-1])
 
         # for plotting with matplotlib
         # self.layoutSortingForML = qtw.QHBoxLayout()
