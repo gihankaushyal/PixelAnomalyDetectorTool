@@ -103,7 +103,7 @@ class DataLabeler(qtw.QWidget):
         :return: a list of the calculated inflection points
         """
         (frame, min_fs, max_fs, min_ss, max_ss, orderOfFit) = inTuple
-        print("Processing frame...")
+        # print("Processing frame...")
 
         avgIntensities = [np.average(frame[min_ss:max_ss, j]) for j in
                           range(min_fs + 5, max_fs - 5)]
