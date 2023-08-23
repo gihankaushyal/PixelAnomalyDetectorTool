@@ -115,7 +115,7 @@ class DataLabeler(qtw.QWidget):
                 x1 = round((-6 * fit[1] + np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
                 x2 = round((-6 * fit[1] - np.sqrt(36 * fit[1] * fit[1] - 96 * fit[0] * fit[2])) / (24 * fit[0]), 2)
 
-                if x1 > x2:
+                if x1 < x2:
                     return x1, x2
                 else:
                     return x2, x1
@@ -180,8 +180,14 @@ class DataLabeler(qtw.QWidget):
         self.inflectionPoint2.setEnabled(True)
         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
-        self.doubleSpinBoxIF1.setValue(round(3*np.std(df['Inflection_point1'].dropna()), 2))
-        self.doubleSpinBoxIF2.setValue(round(3*np.std(df['Inflection_point2'].dropna()), 2))
+        # self.doubleSpinBoxIF1.setValue(round(3*np.std(df['Inflection_point1'].dropna()), 2)) # needs to debug
+        self.doubleSpinBoxIF1.setValue(10)
+        print(np.min(df['Inflection_point1']))
+        print(np.max(df['Inflection_point1']))
+        # self.doubleSpinBoxIF2.setValue(round(3*np.std(df['Inflection_point2'].dropna()), 2))
+        self.doubleSpinBoxIF2.setValue(10) # needs to debug
+        print(np.min(df['Inflection_point2']))
+        print(np.max(df['Inflection_point2']))
         print("Inflection points plotted successfully.")
 
     def plotInflectionPoints(self):
