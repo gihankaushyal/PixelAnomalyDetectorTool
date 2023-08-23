@@ -46,9 +46,9 @@ class MainWindow(qtw.QMainWindow):
         self.cxiListBrowseButton.clicked.connect(lambda: self.browseFiles(self.cxiListBrowseButton.objectName()))
         self.geomBrowseButton.clicked.connect(self.browseGeom)
         self.viewFileButton.clicked.connect(self.viewFiles)
-        self.plotPixelIntensityButton.clicked.connect(self.plotCurve)
+        self.resetButton.clicked.connect(self.clearDisplay)
         self.poltFitCheckBox.clicked.connect(self.plotFit)
-        self.plotPeakPixelButton.clicked.connect(lambda: self.plotMaxPixels(self.cxiFilePath.text()))
+        self.plotPeakPixelButton.clicked.connect(self.plotMaxPixels)
         self.sortButton.clicked.connect(self.sortData)
         self.sortForMLButton.clicked.connect(self.dataLabeling)
         self.MLButton.clicked.connect(self.machineLearning)
@@ -56,6 +56,7 @@ class MainWindow(qtw.QMainWindow):
         self.orderOfFit.editingFinished.connect(self.plotFit)
         self.eventNumber.editingFinished.connect(self.curveToPlot)
         self.eventNumber.editingFinished.connect(self.selectDisplay)
+        self.comboBox.activated.connect(self.viewMultipleFiles)
 
         #  First message on status bar
         self.statusbar.showMessage("Browse for CXI file or a list a CXI files ", 5000)
@@ -85,7 +86,7 @@ class MainWindow(qtw.QMainWindow):
         self.max_fs = None
         self.min_ss = None
         self.max_ss = None
-        self.fileLocation= os.getcwd()
+        self.fileLocation = os.getcwd()
         self.detectorLeft = [
             'p4a0', 'p4a1', 'p4a2', 'p4a3',
             'p5a0', 'p5a1', 'p5a2', 'p5a3',
@@ -121,8 +122,7 @@ class MainWindow(qtw.QMainWindow):
 
         # tool tips for buttons
         self.viewFileButton.setToolTip("Click to display the CXI file")
-        self.plotPixelIntensityButton.setToolTip("Click to plot the vertically averaged pixel intensity of "
-                                                 "the selected panel")
+        self.resetButton.setToolTip("Click to reset the display")
         self.plotPeakPixelButton.setToolTip("Click to display the location of the pixel with the highest vertically "
                                             "averaged intensity for all the images in the CXI file")
         self.sortForMLButton.setToolTip("Click to Plot the distribution of two inflation points")
@@ -174,7 +174,6 @@ class MainWindow(qtw.QMainWindow):
             self.fileListName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'list Files (*.list)')
             if self.fileListName:
                 self.cxiFileListPath.setText(self.fileListName)
-                self.comboBox.setEnabled(True)
                 with open(self.fileListName) as f:
                     items = [item.strip() for item in f]
                 self.comboBox.addItems(items)
@@ -186,21 +185,20 @@ class MainWindow(qtw.QMainWindow):
         self.geomFilePath.setEnabled(True)
         self.statusbar.showMessage("Browse for a geometry file ", 5000)
 
-        self.reset()
+        self.resetParameters()
 
-    def reset(self):
+    def resetParameters(self):
         """
         This method reset every parameter to it's initial status
         :return:
         """
 
         # resting the main window for the next cxi file
-        if self.imageViewer:
+        if not self.imageViewerClosed:
             self.imageViewer.close()
         self.graphWidget.clear()
         self.eventNumber.setText("0")
         self.eventNumber.setEnabled(False)
-        self.plotPixelIntensityButton.setEnabled(False)
         self.poltFitCheckBox.setEnabled(False)
         self.poltFitCheckBox.setChecked(False)
         self.plotPeakPixelButton.setEnabled(False)
@@ -230,6 +228,26 @@ class MainWindow(qtw.QMainWindow):
 
         self.setIdle()
 
+    def clearDisplay(self):
+        self.cxiFilePath.setEnabled(True)
+        self.cxiBrowseButton.setEnabled(True)
+        self.cxiFilePath.clear()
+        self.cxiFileListPath.setEnabled(True)
+        self.cxiListBrowseButton.setEnabled(True)
+        self.cxiFileListPath.clear()
+        self.geomFilePath.setEnabled(True)
+        self.geomBrowseButton.setEnabled(True)
+        self.geomFilePath.clear()
+        self.comboBox.setCurrentIndex(0)
+        if self.viewFileButton.isEnabled():
+            self.viewFileButton.setEnabled(False)
+        if self.sortForMLButton.isEnabled():
+            self.sortForMLButton.setEnabled(False)
+        self.comboBox.setEnabled(False)
+        self.comboBox.clear()
+        self.comboBox.addItem('---Select a File---')
+        self.resetParameters()
+
     @pyqtSlot()
     def browseGeom(self):
         """
@@ -244,7 +262,12 @@ class MainWindow(qtw.QMainWindow):
         geomName, _ = qtw.QFileDialog.getOpenFileName(self, 'Open File', ' ', 'geom Files (*.geom)')
         if geomName:
             self.geomFilePath.setText(geomName)
-            self.viewFileButton.setEnabled(True)
+            if self.cxiFileListPath.text():
+                self.viewFileButton.setEnabled(False)
+                self.comboBox.setEnabled(True)
+            else:
+                self.viewFileButton.setEnabled(True)
+
             self.statusbar.showMessage("Press the View File button to display the cxi file ", 5000)
 
         self.setIdle()
@@ -362,18 +385,11 @@ class MainWindow(qtw.QMainWindow):
         #
         #         self.showNextFile()
 
-        if self.cxiFilePath.text():
-            # self.imageViewer.close()
-            self.imageViewer = DisplayImage(self.fileName, self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
-        elif self.cxiFileListPath.text():
-            pass
-
-
-
+        self.imageViewer = DisplayImage(self.fileName, self.geomFilePath.text())
+        self.imageViewer.drawImage(int(self.eventNumber.text()))
+        self.totalEvents = self.imageViewer.size
+        self.imageViewerClosed = False
+        self.imageViewer.show()
 
         self.messagesViewFile = ["Click the Plot Pixel Intensity button", "Click Next and Previous "
                                                                           "buttons to navigate through images",
@@ -397,43 +413,29 @@ class MainWindow(qtw.QMainWindow):
         self.imageViewer.badRadioButton.toggled.connect(self.handleRadioButtons)
         self.imageViewer.destroyed.connect(self.setImageViewerClosed)
 
-        # clearing the radio buttons
-        # if self.imageViewer.goodRadioButton.isChecked():
-        #     print('Good button is clicked')
-        #     self.imageViewer.goodRadioButton.setChecked(False)
-        # elif self.imageViewer.badRadioButton.isChecked():
-        #     print('bad button is clicked')
-        #     self.imageViewer.badRadioButton.setChecked(False)
+        self.poltFitCheckBox.setEnabled(True)
+        self.plotPeakPixelButton.setEnabled(True)
 
-        if not self.plotPixelIntensityButton.isEnabled():
-            self.plotPixelIntensityButton.setEnabled(True)
-            self.poltFitCheckBox.setEnabled(True)
-            self.plotPeakPixelButton.setEnabled(True)
+        self.plotCurve()
+        self.poltFitCheckBox.setChecked(True)
+        self.poltFitCheckBox.clicked.emit(True)
 
-    def showNextFile(self):
-        if not self.fileList:
-            print('You exhausted the list')
-        else:
-            file = self.fileList.pop(0)
-            print("showing " + file)
-            self.imageViewer = DisplayImage(file, self.geomFilePath.text())
-            self.imageViewer.drawImage(int(self.eventNumber.text()))
-            self.totalEvents = self.imageViewer.size
-            self.imageViewerClosed = False
-            self.imageViewer.show()
+    def viewMultipleFiles(self, index):
+        self.resetParameters()
+        self.comboBox.setCurrentIndex(index)
+        self.fileName = self.comboBox.currentText()
+        self.viewFiles()
 
     @pyqtSlot()
     def setImageViewerClosed(self):
         self.imageViewerClosed = True
-        self.imageViewer = None
-        # self.showNextFile()
 
     @pyqtSlot()
     def handleRadioButtons(self):
         savingDict = {}
         if self.imageViewer.goodRadioButton.isChecked():
-            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
-            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            savingDict[self.fileName] = [self.eventNumber.text()]
+            tag = str(self.fileName).split('/')[-1].split('.')[0]
             if not os.path.isfile(self.fileLocation + '/'+'goodEvents-advanceSort-%s.list' % tag):
                 while True:
                     try:
@@ -447,8 +449,8 @@ class MainWindow(qtw.QMainWindow):
             else:
                 self.writeToFile(savingDict, self.fileLocation + '/' + 'goodEvents-advanceSort-%s.list' % tag)
         elif self.imageViewer.badRadioButton.isChecked():
-            savingDict[self.cxiFilePath.text()] = [self.eventNumber.text()]
-            tag = str(self.cxiFilePath.text()).split('/')[-1].split('.')[0]
+            savingDict[self.fileName] = [self.eventNumber.text()]
+            tag = str(self.fileName).split('/')[-1].split('.')[0]
             if not os.path.isfile(self.fileLocation + '/' + 'badEvents-advanceSort-%s.list' % tag):
                 while True:
                     try:
@@ -535,10 +537,12 @@ class MainWindow(qtw.QMainWindow):
                 f.write('\n')
 
         f.close()
-
-        if self.sortForMLGUI:
-            self.sortForMLGUI.close()
-            self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
+        try:
+            if self.sortForMLGUI:
+                self.sortForMLGUI.close()
+                self.statusbar.showMessage("Click on the Train a Model button to get a model trained", 3000)
+        except Exception as e:
+            print(e)
 
     @pyqtSlot()
     def dataLabeling(self):
@@ -547,7 +551,7 @@ class MainWindow(qtw.QMainWindow):
         :return: good and bad lists to be saved. Turns ON "Train a Model" button
         """
 
-        self.sortForMLGUI = DataLabeler(self.cxiFilePath.text(), self.orderOfFit.text(), self.panelDict)
+        self.sortForMLGUI = DataLabeler(self.fileName, self.orderOfFit.text(), self.panelDict)
         self.sortForMLGUI.show()
         self.imageViewer.panelSelected.connect(self.sortForMLGUI.readPanelDetails)
 
@@ -664,7 +668,7 @@ class MainWindow(qtw.QMainWindow):
 
         return storingList[-1][1]
 
-    def returnMaxPixelsList(self, fileName, deg=1):
+    def returnMaxPixelsList(self):
         """
         fileName(str) : name of the file to be open
         deg (int) : order of the fit ex: is the fit a straight line (1) or quadratic (2 or more)
@@ -672,19 +676,24 @@ class MainWindow(qtw.QMainWindow):
         """
         maxPixels = []
 
-        with h5py.File(fileName, "r") as f:
+        with h5py.File(self.fileName, "r") as f:
             data = f['entry_1']['data_1']['data'][()]
 
         for i in range(len(data)):
             frame = data[i]
 
             avgIntensities = []
-            for j in range(10, 186):
-                avgIntensities.append(np.average(frame[2112:2288, j]))
+            for j in range(self.min_fs + 5 , self.max_fs - 5):
+                avgIntensities.append(np.average(frame[self.min_ss + 5 :self.max_ss -5 , j]))
+            try :
+                # fit = np.polyfit(np.arange(self.min_fs + 5, self.max_fs - 5), avgIntensities,
+                #                  deg=int(self.orderOfFit.text()))
+                fit = np.polyfit(np.arange(self.min_fs + 5, self.max_fs - 5), avgIntensities,
+                                 deg=int(self.orderOfFit.text()))
+            except Exception as e:
+                print(e)
 
-            fit = np.polyfit(np.arange(10, 186), avgIntensities, deg=deg)
-
-            maxPixels.append(self.returnMaxPixel(fit, (10, 186)))
+            maxPixels.append(self.returnMaxPixel(fit, (self.min_fs + 5 , self.max_fs - 5)))
 
         return maxPixels
 
@@ -695,11 +704,11 @@ class MainWindow(qtw.QMainWindow):
         :return: A plot in the  self.graphingSpace
         """
         try:
-            if self.cxiFilePath.text():
-                fileName = self.cxiFilePath.text()
+            # if self.fileName:
+            #     fileName = self.fileName
             eventNumber = int(self.eventNumber.text())
 
-            with h5py.File(fileName, "r") as f:
+            with h5py.File(self.fileName, "r") as f:
                 data = f['entry_1']['data_1']['data'][()]
 
             frame = data[eventNumber]
@@ -728,7 +737,7 @@ class MainWindow(qtw.QMainWindow):
             self.poltFitCheckBox.setChecked(False)
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % fileName)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s -plotCurve" % self.fileName)
 
         except ValueError:
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path -plotCurve")
@@ -752,13 +761,11 @@ class MainWindow(qtw.QMainWindow):
                     self.orderOfFit.setEnabled(True)
                     self.orderOfFit.setText("4")
 
-                file_name = self.cxiFilePath.text()
                 eventNumber = int(self.eventNumber.text())
                 avgIntensities = []
                 degry = int(self.orderOfFit.text())
 
-                filename = file_name
-                with h5py.File(filename, "r") as f:
+                with h5py.File(self.fileName, "r") as f:
                     data = f['entry_1']['data_1']['data'][()]
 
                 frame = data[int(eventNumber)]
@@ -792,7 +799,7 @@ class MainWindow(qtw.QMainWindow):
                 self.orderOfFit.setEnabled(True)
 
             except FileNotFoundError:
-                qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % file_name)
+                qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % self.fileName)
 
             except ValueError:
                 qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
@@ -803,24 +810,28 @@ class MainWindow(qtw.QMainWindow):
         else:
             self.plotCurve()
 
-    @pyqtSlot(str)
-    def plotMaxPixels(self, fileName):
+    @pyqtSlot()
+    def plotMaxPixels(self):
         """
         :param fileName: path to the *CXI file (file name)
         :return: a plot with pixel with maximum value for the polynomial fit for all the events
         """
         try:
-            y = self.returnMaxPixelsList(fileName, deg=int(self.orderOfFit.text()))
-            x = range(len(y))
-            self.graphWidget.clear()
-            self.graphWidget.plot(x, y, pen=None, symbol='o')
-            self.graphWidget.setLabel('left', "Pixel Number")
-            self.graphWidget.setLabel('bottom', "Frame Number")
+            if self.orderOFFit:
+                y = self.returnMaxPixelsList()
+                x = range(len(y))
+                self.graphWidget.clear()
+                self.graphWidget.plot(x, y, pen=None, symbol='o')
+                self.graphWidget.setLabel('left', "Pixel Number")
+                self.graphWidget.setLabel('bottom', "Frame Number")
+            else:
+                qtw.QMessageBox.critical(self, 'Fail', 'Please enter the order of Fit')
 
         except FileNotFoundError:
-            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % fileName)
+            qtw.QMessageBox.critical(self, 'Fail', "Couldn't find file %s" % self.fileName)
 
-        except ValueError:
+        except ValueError as e:
+            print(e)
             qtw.QMessageBox.critical(self, 'Fail', "Please Enter a file path")
 
     def closeEvent(self, QCloseEvent):
@@ -831,26 +842,26 @@ class MainWindow(qtw.QMainWindow):
         if self.imageViewer:
             try:
                 self.imageViewer.close()
-            except Exception:
-                pass
+            except Exception as e:
+                print(e)
 
         if self.sortForMLGUI:
             try:
                 self.sortForMLGUI.close()
-            except Exception:
-                pass
+            except Exception as e :
+                print(e)
 
         if self.mlGUI:
             try:
                 self.mlGUI.close()
-            except Exception:
-                pass
+            except Exception as e :
+                print(e)
 
         if self.sortDataGUI:
             try:
                 self.sortDataGUI.close()
-            except Exception:
-                pass
+            except Exception as e:
+                print(e)
 
 
 # main .
