@@ -226,6 +226,13 @@ class MainWindow(qtw.QMainWindow):
         except:
             pass
 
+        try:
+            if self.sortDataGUI:
+                self.sortDataGUI.close()
+                self.sortDataGUI = None
+        except:
+            pass
+
         self.setIdle()
 
     def clearDisplay(self):
