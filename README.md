@@ -104,7 +104,7 @@ development environment (IDE) such as [PyCharm][PyCharm-url]  or a Python distri
 like [Anaconda][Anaconda-url].
 
 Make sure to have the following python packages are installed;
-    ``` h5py, numpy, pandas, matplotlib, seaborn, PyQt5, pyqtgraph, scikit-learn
+    ``` h5py, numpy, pandas, matplotlib, seaborn, PyQt5, pyqtgraph, scikit-learn, tqdm, plotly, psutil
     ```
 
 

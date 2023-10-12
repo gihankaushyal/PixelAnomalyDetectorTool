@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>CXI File:</string>
+     <string>HDF5 File</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="cxiFilePath">
@@ -284,12 +284,12 @@
      <rect>
       <x>10</x>
       <y>120</y>
-      <width>81</width>
+      <width>90</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>Geom File:</string>
+     <string>Geometry File</string>
     </property>
    </widget>
    <widget class="QPushButton" name="viewFileButton">
@@ -358,12 +358,12 @@
      <rect>
       <x>10</x>
       <y>60</y>
-      <width>81</width>
+      <width>90</width>
       <height>20</height>
      </rect>
     </property>
     <property name="text">
-     <string>CXI File List</string>
+     <string>HDF5 File List</string>
     </property>
    </widget>
    <widget class="QLineEdit" name="cxiFileListPath">
