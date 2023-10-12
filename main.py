@@ -109,7 +109,7 @@ class MainWindow(qtw.QMainWindow):
         self.graphingSpace.setLayout(self.layout)
         self.graphWidget.setEnabled(False)
 
-        self.setWindowTitle("PixelAnomalyDetector")
+        self.setWindowTitle("PixelAnomalyDetectorTool")
         self.show()
 
         # adding busy and idle lights
@@ -122,6 +122,9 @@ class MainWindow(qtw.QMainWindow):
 
         # tool tips for buttons
         self.viewFileButton.setToolTip("Click to display the CXI file")
+        self.loadButton.setToolTip('Click to load the Model')
+        self.MLButton.setToolTip('Click to train a model')
+        self.sortButton.setToolTip('Click to sort the files using the model')
         self.resetButton.setToolTip("Click to reset the display")
         self.plotPeakPixelButton.setToolTip("Click to display the location of the pixel with the highest vertically "
                                             "averaged intensity for all the images in the CXI file")
