@@ -54,12 +54,12 @@
     <rect>
      <x>20</x>
      <y>60</y>
-     <width>201</width>
+     <width>281</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Available *.cxi files in the folder</string>
+    <string>Available HDF5 (*h5, *cxi) files in the folder</string>
    </property>
   </widget>
   <widget class="QTextEdit" name="availableFiles">
