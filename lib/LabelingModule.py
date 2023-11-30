@@ -46,23 +46,23 @@ class DataLabeler(qtw.QWidget):
         self.inflectionPoint1List = None
         self.inflectionPoint2List = None
         self.data = None
-        self.setWindowTitle('Sorting for Machine Learning')
+        self.setWindowTitle('Label Data for Machine Learning')
 
         uic.loadUi("UI/labelDataGUI.ui", self)
         self.fileNameLabel.setText("Showing the results for : %s" % fileName.split('/')[-1])
 
         # for plotting with matplotlib
-        self.layoutSortingForML = qtw.QHBoxLayout()
-        self.figureSortingForML = plt.figure()
-        self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
-        self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
-        self.graphSpace.setLayout(self.layoutSortingForML)
+        # self.layoutSortingForML = qtw.QHBoxLayout()
+        # self.figureSortingForML = plt.figure()
+        # self.canvasForInflectionPoints = FigureCanvasQTAgg(self.figureSortingForML)
+        # self.layoutSortingForML.addWidget(self.canvasForInflectionPoints)
+        # self.graphSpace.setLayout(self.layoutSortingForML)
 
         # for plotting with plotly
-        # self.layout = qtw.QHBoxLayout()
-        # self.browser = qtwew.QWebEngineView()
-        # self.layout.addWidget(self.browser)
-        # self.graphSpace.setLayout(self.layout)
+        self.layout = qtw.QHBoxLayout()
+        self.browser = qtwew.QWebEngineView()
+        self.layout.addWidget(self.browser)
+        self.graphSpace.setLayout(self.layout)
 
         self.fileName = fileName
         self.orderOfFit = oft
@@ -73,10 +73,27 @@ class DataLabeler(qtw.QWidget):
         self.max_ss = inDict['max_ss']
 
         # setting initial values for spinBoxes (value ranges for inflection points)
-        self.doubleSpinBoxIF1.setValue(15)
-        self.doubleSpinBoxIF2.setValue(15)
-        self.doubleSpinBoxIF1.setSingleStep(0.05)
-        self.doubleSpinBoxIF2.setSingleStep(0.05)
+        # setting the ranges for the spin boxes
+        self.inflectionPoint1Top.setRange(-500.00,500.00)
+        self.inflectionPoint1Bottom.setRange(-500.00,500.00)
+        self.inflectionPoint2Top.setRange(-500.00,500.00)
+        self.inflectionPoint2Bottom.setRange(-500.00,500.00)
+        # setting the default values for the spin boxes
+        self.inflectionPoint1Top.setValue(15)
+        self.inflectionPoint1Bottom.setValue(15)
+        self.inflectionPoint2Top.setValue(15)
+        self.inflectionPoint2Bottom.setValue(15)
+        #setting the increments for the spin boxes
+        self.inflectionPoint1Top.setSingleStep(0.05)
+        self.inflectionPoint1Bottom.setSingleStep(0.05)
+        self.inflectionPoint2Top.setSingleStep(0.05)
+        self.inflectionPoint2Bottom.setSingleStep(0.05)
+
+        # tooltip for the fields
+        self.inflectionPoint1Top.setToolTip("Upper Bounds")
+        self.inflectionPoint1Bottom.setToolTip("Lower Bounds")
+        self.inflectionPoint2Top.setToolTip("Upper Bounds")
+        self.inflectionPoint2Bottom.setToolTip("Lower Bounds")
 
         # self.plotInflectionPointsButton.clicked.connect(self.plotInflectionPoints)
         # self.plotInflectionPoints()
@@ -157,27 +174,27 @@ class DataLabeler(qtw.QWidget):
             print(f"Error in plotInflectionPoint: {e}")
 
         # with plotly
-        # df = pd.DataFrame()
-        # df['Inflection_point1'] = self.inflectionPoint1List
-        # df['Inflection_point2'] = self.inflectionPoint2List
-        # fig = px.histogram(df, nbins=200, opacity=0.5)
-        # self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
-
-        # with seaborn
-        self.figureSortingForML.clear()
         df = pd.DataFrame()
         df['Inflection_point1'] = self.inflectionPoint1List
         df['Inflection_point2'] = self.inflectionPoint2List
-        colors = ['red', 'green', 'blue', 'violet', 'pink']
-        # random(colors)
-        for column in df.columns:
-            sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
-        plt.title('Distributions of Inflection points 1 and 2')
-        plt.ylabel('Count')
-        plt.xlabel(' Vertically Average Pixel Intensity')
-        plt.xticks()
-        plt.legend()
-        self.canvasForInflectionPoints.draw()
+        fig = px.histogram(df, nbins=200, opacity=0.5)
+        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+
+        # with seaborn
+        # self.figureSortingForML.clear()
+        # df = pd.DataFrame()
+        # df['Inflection_point1'] = self.inflectionPoint1List
+        # df['Inflection_point2'] = self.inflectionPoint2List
+        # colors = ['red', 'green', 'blue', 'violet', 'pink']
+        # # random(colors)
+        # for column in df.columns:
+        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+        # plt.title('Distributions of Inflection points 1 and 2')
+        # plt.ylabel('Count')
+        # plt.xlabel(' Vertically Average Pixel Intensity')
+        # plt.xticks()
+        # plt.legend()
+        # self.canvasForInflectionPoints.draw()
 
         # Enabling button and check box after plotting
         self.inflectionPoint1.setEnabled(True)
@@ -185,14 +202,23 @@ class DataLabeler(qtw.QWidget):
         self.inflectionPoint2.setEnabled(True)
         self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
         self.sortButton.setEnabled(True)
-        # self.doubleSpinBoxIF1.setValue(round(3*np.std(df['Inflection_point1'].dropna()), 2)) # needs to debug
-        self.doubleSpinBoxIF1.setValue(10)
-        print(np.min(df['Inflection_point1']))
-        print(np.max(df['Inflection_point1']))
-        # self.doubleSpinBoxIF2.setValue(round(3*np.std(df['Inflection_point2'].dropna()), 2))
-        self.doubleSpinBoxIF2.setValue(10) # needs to debug
-        print(np.min(df['Inflection_point2']))
-        print(np.max(df['Inflection_point2']))
+        
+        # For Inflection point 1
+        q25 = round(np.percentile(df['Inflection_point1'].dropna(),25), 2)
+        q75 = round(np.percentile(df['Inflection_point1'].dropna(),75),2)
+        IQR = round(q75 - q25,2)
+        #print(q25, q75, IQR)
+        self.inflectionPoint1Top.setValue(q75 + IQR*1.5)
+        self.inflectionPoint1Bottom.setValue(q25 - IQR*1.5)
+
+        # For Inflection point 2
+        q25 = round(np.percentile(df['Inflection_point2'].dropna(),25),2)
+        q75 = round(np.percentile(df['Inflection_point2'].dropna(),75),2)
+        IQR = round(q75 - q25,2)
+        #print(q25, q75, IQR)
+        self.inflectionPoint2Top.setValue(q75 + IQR*1.5)
+        self.inflectionPoint2Bottom.setValue(q25 - IQR*1.5)
+        
         print("Inflection points plotted successfully.")
 
     def plotInflectionPoints(self):
@@ -314,11 +340,8 @@ class DataLabeler(qtw.QWidget):
 
                 for (i, x1, x2) in zip(range(len(self.data)), self.inflectionPoint1List, self.inflectionPoint2List):
 
-                    if (float(self.inflectionPoint1.text()) - self.doubleSpinBoxIF1.value()) <= x1 <= (
-                            float(self.inflectionPoint1.text()) + self.doubleSpinBoxIF1.value()) \
-                            and \
-                            (float(self.inflectionPoint2.text()) - self.doubleSpinBoxIF2.value()) <= x2 <= (
-                            float(self.inflectionPoint2.text()) + self.doubleSpinBoxIF2.value()):
+                    if self.inflectionPoint1Bottom.value() <= x1 <= self.inflectionPoint1Top.value() and \
+                        self.inflectionPoint2Bottom.value() <= x2 <= self.inflectionPoint2Top.value():
 
                         goodList.append(i)
                     else:

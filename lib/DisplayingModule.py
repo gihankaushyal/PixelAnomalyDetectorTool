@@ -264,7 +264,7 @@ class DisplayImage(qtw.QWidget):
 
                 self.panelsXYEdges[panelName] = [x_edges, y_edges]
 
-            pen = pg.mkPen('r', width=3)
+            pen = pg.mkPen('y', width=3)
             # plotting a square along the edges of the selected panel
             self.panelEdgesCanvas.setData(self.panelsXYEdges['p6a0'][0],
                                           self.panelsXYEdges['p6a0'][1], pen=pen)
@@ -304,7 +304,7 @@ class DisplayImage(qtw.QWidget):
                                         int(max(self.panelsXYEdges[panelName][0]))) \
                             and y_mouse in range(int(min(self.panelsXYEdges[panelName][1])),
                                                  int(max(self.panelsXYEdges[panelName][1]))):
-                        pen = pg.mkPen('r', width=3)
+                        pen = pg.mkPen('y', width=3)
                         # plotting a square along the edges of the selected panel
                         self.panelEdgesCanvas.setData(self.panelsXYEdges[panelName][0],
                                                       self.panelsXYEdges[panelName][1], pen=pen)

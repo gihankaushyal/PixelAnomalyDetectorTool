@@ -165,21 +165,86 @@ class ML(qtw.QMainWindow):
         """
 
         modelSelected = self.comboBox.currentText()
+        from sklearn.model_selection import GridSearchCV
+        # Get the number of CPUs
+        numCpus = os.cpu_count() - 2
+
         if modelSelected == 'LogisticRegression':
             from sklearn.linear_model import LogisticRegression
-            self.model = LogisticRegression()
+            logreg= LogisticRegression(random_state=42)
+            paramGrid = {
+                'C': [0.001, 0.01, 0.1, 1, 10, 100],
+                'penalty': ['l1','l2', 'elasticnet'],
+                'solver':['lbfgs', 'liblinear', 'saga'],
+                'class_weight': [None],
+                'max_iter': [100,500,1000]
+                
+            }
+            scoring = ['f1','recall', 'precision', 'accuracy']
+            self.model = GridSearchCV(estimator=logreg,
+                                      param_grid=paramGrid,
+                                      scoring=scoring,
+                                      cv=5,
+                                      refit='f1',
+                                      n_jobs=numCpus,
+                                      verbose=1)
             return True
+        
         elif modelSelected == 'KNeighborsClassifier':
             from sklearn.neighbors import KNeighborsClassifier
-            self.model = KNeighborsClassifier(n_neighbors=1)
+            knn = KNeighborsClassifier()
+            paramGrid = {
+                'n_neighbors': [1, 3, 5, 10],
+                'metric': ['euclidean', 'manhattan','minkowski'],
+                'weights': ['uniform', 'distance'],
+                'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
+                }
+            scoring = ['f1','recall', 'precision', 'accuracy']
+            self.model = GridSearchCV(estimator=knn,
+                                      param_grid=paramGrid,
+                                      scoring=scoring,
+                                      cv=5,
+                                      refit='f1',
+                                      n_jobs=numCpus,
+                                      verbose=1)
             return True
+        
         elif modelSelected == 'DecisionTreeClassifier':
             from sklearn.tree import DecisionTreeClassifier
-            self.model = DecisionTreeClassifier()
+            dtc = DecisionTreeClassifier(random_state=42)
+            paramGrid = {
+                'max_depth': [None, 10, 20, 30, 40, 50],
+                'min_samples_split': [2, 5, 10],
+                'min_samples_leaf': [1, 2, 4],
+                'criterion': ['gini', 'entropy']
+                }
+            scoring = ['f1','recall', 'precision', 'accuracy']
+            self.model = GridSearchCV(estimator=dtc,
+                                      param_grid=paramGrid,
+                                      scoring=scoring,
+                                      cv=5,
+                                      refit='f1',
+                                      n_jobs=numCpus,
+                                      verbose=1)
             return True
+        
         elif modelSelected == 'RandomForestClassifier':
             from sklearn.ensemble import RandomForestClassifier
-            self.model = RandomForestClassifier(n_estimators=200)
+            rfc = RandomForestClassifier(random_state=42)
+            paramGrid = {'n_estimators': [100, 200, 300], 
+                         'max_depth': [None, 10, 20, 30],
+                         'min_samples_split': [2, 5, 10],
+                         'min_samples_leaf': [1, 2, 4],
+                         'bootstrap': [True, False] 
+                         }
+            scoring = ['f1','recall', 'precision', 'accuracy']
+            self.model = GridSearchCV(estimator=rfc,
+                                      param_grid=paramGrid,
+                                      scoring=scoring,
+                                      cv=5,
+                                      refit='f1',
+                                      n_jobs=numCpus,
+                                      verbose=1)
             return True
         else:
             qtw.QMessageBox.critical(self, 'Caution', 'Please Select a model')
@@ -256,6 +321,7 @@ class ML(qtw.QMainWindow):
                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
             dataFrame_bad = pd.concat([df for df in dataFrames_bad if df is not None])
             print('Finished Processing Bad Events')
+            print('Length of the bad events dataFrame: ', len(dataFrame_bad))
 
             # Good Events
             print('Started Processing Good Events')
@@ -267,26 +333,41 @@ class ML(qtw.QMainWindow):
                              [self.min_fs] * len(files), [self.max_fs] * len(files)), total=len(files)))
             dataFrame_good = pd.concat([df for df in dataFrames_good if df is not None])
             print('Finished Processing Good Events')
+            print('Length of the good events dataFrame: ',len(dataFrame_good))
 
-        dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
-                                    dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
-        X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
-        y_good = dataFrame_good['Flag']
-        X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
-                                                                                test_size=int(self.testSplit.text()))
+        # dataFrame_good = pd.concat([dataFrame_good['FileName'], dataFrame_good['EventNumber'],
+        #                             dataFrame_good.pop('Data').apply(pd.Series), dataFrame_good['Flag']], axis=1)
+        # X_good = dataFrame_good.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+        # y_good = dataFrame_good['Flag']
+        # X_good_train, X_good_test, y_good_train, y_good_test = train_test_split(X_good, y_good,
+        #                                                                         test_size=int(self.testSplit.text()), stratify=y_good, random_state=42)
 
-        dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
-                                   dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
-        X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
-        y_bad = dataFrame_bad['Flag']
+        # dataFrame_bad = pd.concat([dataFrame_bad['FileName'], dataFrame_bad['EventNumber'],
+        #                            dataFrame_bad.pop('Data').apply(pd.Series), dataFrame_bad['Flag']], axis=1)
+        # X_bad = dataFrame_bad.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+        # y_bad = dataFrame_bad['Flag']
 
-        X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
-                                                                            test_size=int(self.testSplit.text()))
-
-        self.X_train = pd.concat([X_good_train, X_bad_train])
-        self.y_train = pd.concat([y_good_train, y_bad_train])
-        self.X_test = pd.concat([X_good_test, X_bad_test])
-        self.y_test = pd.concat([y_good_test, y_bad_test])
+        # X_bad_train, X_bad_test, y_bad_train, y_bad_test = train_test_split(X_bad, y_bad,
+        #                                                                     test_size=int(self.testSplit.text()),stratify=y_bad, random_state=42)
+        
+        # self.X_train = pd.concat([X_good_train, X_bad_train])
+        # self.y_train = pd.concat([y_good_train, y_bad_train])
+        # self.X_test = pd.concat([X_good_test, X_bad_test])
+        # self.y_test = pd.concat([y_good_test, y_bad_test])
+        
+        dataFrame_combined = pd.concat([dataFrame_bad,dataFrame_good])
+        dataFrame_combined = pd.concat([dataFrame_combined['FileName'], dataFrame_combined['EventNumber'], \
+                                        dataFrame_combined.pop('Data').apply(pd.Series), dataFrame_combined['Flag']], axis=1)
+        X = dataFrame_combined.drop(['FileName', 'EventNumber', 'Flag'], axis=1)
+        y = dataFrame_combined['Flag']
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, \
+                                                                                test_size=int(self.testSplit.text())/100, \
+                                                                                    stratify=y, random_state=42)
+        
+        print('Length of the combine events dataFrame:', len(dataFrame_combined))
+        print('No of test cases:', len(self.y_test))
+        #exit()
+        
 
     def dataPrep(self):
         """
@@ -408,7 +489,7 @@ class ML(qtw.QMainWindow):
         msg.setWindowTitle('Question')
         msg.setText("Panel Selected: %s                                             " % self.panelName)
         msg.setInformativeText('Machine Learning model will be trained on the pixel data associated with the '
-                               'selected: %s panel. Would you wish to continue?' % self.panelName)
+                               'selected: %s panel. \n \n Would you wish to continue?' % self.panelName)
         msg.setIcon(qtw.QMessageBox.Question)
         msg.setStandardButtons(qtw.QMessageBox.Yes | qtw.QMessageBox.No)
         msg.setDefaultButton(qtw.QMessageBox.Yes)
@@ -427,12 +508,15 @@ class ML(qtw.QMainWindow):
             self.trainButton.setEnabled(False)
             if self.modelSelection() and self.checkTrainTestSplit():
                 # self.dataPrep()
+                #if not self.X_train.empty():
                 self.dataPrepParalle()
                 print('Started training the model: %s' % self.comboBox.currentText())
                 self.model.fit(self.X_train, self.y_train)
                 self.testButton.setEnabled(True)
                 # self.setIdle()
-                qtw.QMessageBox.information(self, 'Success', "Done Training")
+                qtw.QMessageBox.information(self, 'Success', "Model Trained Successfully:\n %s" % 
+                                            str(self.model.best_estimator_))
+                
                 self.statusbar.showMessage("Now you can save the model or try training a new model", 3000)
 
             else:
@@ -489,7 +573,10 @@ class ML(qtw.QMainWindow):
         :return: clear the self.confusionMatrix and self.classificationReport
         """
         self.figureConfusionMatrix.clear()
+        self.canvasConfusionMatrix.draw()
         self.figureClassificationReport.clear()
+        self.canvasClassificationReport.draw()
+        
         self.trainButton.setEnabled(True)
         self.testButton.setEnabled(False)
         self.comboBox.setCurrentIndex(0)
