@@ -89,12 +89,12 @@ To get a local copy up and running follow these simple example steps.
 ### Prerequisites
 [![PyPI - Python Version][Python-badge]][Python-url]
 
-In order of all the dependencies and packages to run smoothly, make sure you have Python version v3.7 or higher by running.
+In order for all the dependencies and packages to run smoothly, make sure you have Python version v3.8 or higher by running.
 * In Linux or Mac: run the following command on a Terminal 
     ```sh
     python --version
     ```
-* in Window: run the following command on Windows command prompt or Windows Powershell
+* in Windows: run the following command on Windows command prompt or Windows Powershell
   ```sh
   python --version
   ```
@@ -122,8 +122,7 @@ Make sure to have the following python packages are installed;
       ```
      
    <div style="text-align: center;">or</div>
-   
-   * Download and installed the dependency packages through the IDE
+```Download and install the dependency packages through the IDE```
    
    
 3. In your Terminal or Command Prompt go into the cloned ```PixelAnomalyDetector``` folder and type:
@@ -133,7 +132,7 @@ Make sure to have the following python packages are installed;
    ```sh
    python main.py
    ```
-4. Click the following links to download a copies of practice data for [model training][model-training-url], 
+4. Click the following links to download a copy of practice data for [model training][model-training-url], 
 data for the [model to be used][model-to-be-used-url]
 and the [geometry][geom-url].
     * <b> Although not required, downloading the entire dataset for model training is strongly encouraged as it will greatly improve the model's predicting accuracy. If you elect to only download a subset of the training data we recommend selecting the <i>*-r0484_*.cxi</i> files for optimal results.</b>
@@ -147,43 +146,41 @@ and the [geometry][geom-url].
 
 
 ### 1. Displaying the HDF5 file
-To open up the HDF5 files (*.h5, *.cxi) you need to point the PixelAnomalyDetector to where is you HDF5 file is 
-located (1) and where is the appropriate geometry file is located (2). Then press ``` View File``` button (3).
+You can open HDF5 files (*.h5, *.cxi) by pointing the PixelAnomalyDetectorTool to where your HDF5 file/s is/are 
+stored `(1)` and where the appropriate geometry file is located `(2)`. Then press ``` View File``` button `(3)`.
 
 ![displayingTheCXIFile]
 
-Some useful hits and guides are shown in the status bar (1) and on the bottom right conner (2) a solid green light 
-indicating the GUI in idle or a blinking yellow light indicating the GUI is busy will be shown.
+Some useful hints and guides are shown in the status bar `(1)` at the bottom and on the bottom right corner `(2)` a solid green light 
+indicating the GUI is idle or a blinking yellow light indicating the GUI is busy will be shown.
 
 ![statusBarAndLights]
 
-Once you pressed the ```View File``` button a separate window will open with all the detector panel assembled
-(similar with [cxiview][cxiview-url]) and one of the ASICs already been 
-selected (1). Title of the widow show the event/image number showing out the total number of events 
-available in the HDF5 file (2). Bottom left corner has a checkbox to turn on and off the found peaks (3). On the 
-right-hand side of the window, you can change the brightness by changing the histogram (4).
+Once you press the `View File button` a separate window will open with all the detector panels assembled
+(similar to cxiviewcxiview-url) and one of the ASICs already been 
+selected `(1)`. The title of the widow shows the event/image number showing the total number of events 
+available in the HDF5 file `(2)`. The bottom left corner has a checkbox to turn on and off the found peaks `(3)`. On the 
+right-hand side of the window, you can change the brightness by changing the histogram `(4)`.
 
 ![fileViewWindow]
 
 ### 2. Displaying the pixel intensity profile and toggle between images
-once the HDF5 file is viewed ```Plot Pixel Intnstiy``` button (1) get enabled and when pressed, vertically average intensity 
-profile (2) for the selected panel will be displayed. You can toggle between the images by pressing ```Next``` and 
-``` Previous ``` buttons (3) or if you want to jump into a particular image you can enter the event number in the 
-```Frame Number``` (4) field. When you are changing the event number on the main GUI the display for viewing the HDF5
+once the HDF5 file is viewed `Plot Pixel `Intensity button `(1)` is enabled and when pressed, the vertically average intensity 
+profile `(2)` for the selected panel will be displayed. You can toggle between the images by pressing `Next` and ` Previous` buttons `(3)` or if you want to jump into a particular image you can enter the event number in the 
+Frame Number `(4)` field. When you are changing the event number on the main GUI the display for viewing the HDF5
 file gets updated. 
  >- If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
  >the window for HDF5 file display and the pixel intensity plot on the main GUI will be automatically updated.
 
 ![plottingPixelIntensity]
 
-### 3. Curve Fitting and Sort data for model training. 
-Bottom left corner of the main GUI, clicked on the ```Plot a Fit``` checkbox (1) to a polynomial fit the pixel intensity 
-plot (2). By default a 4<sup>th</sup> order polynomial will be applied, but you can change the order of the polynomial 
-simply typing in the order in the ```Order of Fit``` field (4). Once you are satisfied with the fit of the polynomial, 
-you can press on the ```Sort for ML``` button (4). A separate window will be opened up with the distributions for 
-inflection points (5). On the Top part of the window, there will be suggested values for inflection points based on each 
-distribution. (6) and thresholds for each inflection points (7). You can also type in the values for each section. Once 
-you are satisfied with the sorting parameters click on the ```Sort``` button (8). You can now safely close this window.
+### 3. Curve Fitting and Sort data for model training.
+In the bottom left corner of the main GUI, click on the ```Plot a Fit``` checkbox `(1)` to a polynomial fit the pixel intensity 
+plot `(2)`. By default, a 4th</sup> order polynomial will be applied, but you can change the order of the polynomial simply by typing in the order in the `Order of Fit field` `(3)`. Once you are satisfied with the fit of the polynomial, 
+you can press the `Label Data button` `(4)`. A separate window will be opened with the distributions for 
+inflection points `(5)`. On the top part of the window, there will be suggested values for inflection points based on each 
+distribution. `(6)` and thresholds for each inflection point `(7)`. You can also type in the values for each section. Once 
+you are satisfied with the sorting parameters click on the `Sort button` `(8)`. You can now safely close this window.
 
 >* In the process of training a machine learning model, it is important to ensure that the data used for training is 
 > accurate and representative of the real-world scenario that the model will be used in. One way to achieve this is by 
