@@ -146,21 +146,23 @@ and the [geometry][geom-url].
 
 
 ### 1. Displaying the HDF5 file
-You can open HDF5 files (*.h5, *.cxi) by pointing the PixelAnomalyDetectorTool to where your HDF5 file/s is/are 
-stored `(1)` and where the appropriate geometry file is located `(2)`. Then press `View File button` `(3)`.
+To display HDF5 files (*.h5, *.cxi), direct the PixelAnomalyDetectorTool to the storage location of your HDF5 file/s `(1)` and the corresponding geometry file `(2)`. Initiate the display by clicking the View File Button `(3)`. If you need to start over, the Reset Button `(4)` clears the current display. For those with a pre-trained model, load it using the Load Model Button `(5)` to apply your custom analyses.
 
-![displayingTheCXIFile]
+![displayingTheHDF5File] 
 
-Some useful hints and guides are shown in the status bar `(1)` at the bottom and on the bottom right corner `(2)` a solid green light 
-indicating the GUI is idle or a blinking yellow light indicating the GUI is busy will be shown.
+To visualize HDF5 files (*.h5, .cxi) from a compiled list (.list), first, navigate to the location of your *.list file `(1)` and select the required detector description file `(2)`. This action populates the dropdown menu `(3)` with all the available files listed in the *.list file. To view the files, simply click the View Files Button `(4)`.
+
+![displayingAListOfHDF5Files]
+
+
+  >Helpful hints and instructions are displayed within the status bar `(1)` at the bottom of the GUI. Additionally, the GUI's current state is indicated by a light in the bottom right corner: a solid green light `(2)` signifies that the GUI is idle, while a blinking yellow light denotes that the GUI is processing or busy.
+
 
 ![statusBarAndLights]
 
-Once you press the `View File button` a separate window will open with all the detector panels assembled
-(similar to [cxiview][cxiview-url]) and one of the ASICs already been 
-selected `(1)`. The title of the widow shows the event/image number showing the total number of events 
-available in the HDF5 file `(2)`. The bottom left corner has a checkbox to turn on and off the found peaks `(3)`. On the 
-right-hand side of the window, you can change the brightness by changing the histogram `(4)`.
+When you click the `View File button`, a new window will open, displaying all the detector panels assembled, with a layout similar to [cxiview][cxiview-url]. One of the ASICs will be pre-selected (1). The window's title bar displays the current event/image number and the total count of events/images in the HDF5 file (2). To the right, you have a histogram to adjust image brightness (3). The bottom left corner features checkboxes to toggle the visibility of peaks detected (4) and to apply the current histogram settings to all images in the file. Lastly, in the bottom right corner, radio buttons allow the classification of the image as 'Good', 'Bad', or 'Ignore' for machine learning purposes.
+
+
 
 ![fileViewWindow]
 
@@ -320,8 +322,9 @@ Thank you, Sabine, for your dedication and expertise.
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/gihan-ketawala/
 [product-screenshot]: images/mainWindow.png
-[displayingTheCXIFile]: images/diplayingTheCXIFile.png
-[statusBarAndLights]: images/statusBarAndLigghts.png
+[displayingTheHDF5File]: images/displayingTheHDF5File.png
+[displayingAListOfHDF5Files]:images/displayingAListOfHDF5Files.png
+[statusBarAndLights]: images/statusBarAndLights.png
 [fileViewWindow]: images/fileViewWindow.png
 [plottingPixelIntensity]: images/plotingPixelIntensity.png
 [sortingForML]: images/sortingForML.png
