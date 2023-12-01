@@ -19,7 +19,7 @@
 <h3 align="center">PixelAnomalyDetector</h3>
 
   <p align="center">
-    A user-friendly graphical user interface (GUI) tool written in Python for analyzing and sorting *.cxi files in detector panels. This tool utilizes machine learning algorithms to quickly and accurately identify and isolate pixel anomalies in detector panel images (*.cxi files), making it easier to optimize performance and improve results. With an easy-to-use interface and powerful sorting capabilities, PixelAnomalyDetector streamlines the analysis process and saves valuable time for researchers. The tool also enables the user to train their own models and fine-tune the detection process, providing great flexibility. Whether you're working on a large dataset or a single image, PixelAnomalyDetector is the perfect tool for identifying and resolving pixel anomalies in detector panels.
+    A user-friendly graphical user interface (GUI) tool written in Python for analyzing and sorting *.cxi files in detector panels. This tool utilizes machine learning algorithms to quickly and accurately identify and isolate pixel anomalies in detector panel images (*.cxi files), making it easier to optimize performance and improve results. With an easy-to-use interface and powerful sorting capabilities, PixelAnomalyDetector streamlines the analysis process and saves valuable time for researchers. The tool also enables the user to train their models and fine-tune the detection process, providing great flexibility. Whether you're working on a large dataset or a single image, PixelAnomalyDetector is the perfect tool for identifying and resolving pixel anomalies in detector panels.
     <br />
     <a href="https://github.com/gihankaushyal/PixelAnomalyDetector"><strong>Explore the docs »</strong></a>
     <br />
@@ -147,7 +147,7 @@ and the [geometry][geom-url].
 
 ### 1. Displaying the HDF5 file
 You can open HDF5 files (*.h5, *.cxi) by pointing the PixelAnomalyDetectorTool to where your HDF5 file/s is/are 
-stored `(1)` and where the appropriate geometry file is located `(2)`. Then press ``` View File``` button `(3)`.
+stored `(1)` and where the appropriate geometry file is located `(2)`. Then press `View File button` `(3)`.
 
 ![displayingTheCXIFile]
 
@@ -157,7 +157,7 @@ indicating the GUI is idle or a blinking yellow light indicating the GUI is busy
 ![statusBarAndLights]
 
 Once you press the `View File button` a separate window will open with all the detector panels assembled
-(similar to cxiviewcxiview-url) and one of the ASICs already been 
+(similar to [cxiview][cxiview-url]) and one of the ASICs already been 
 selected `(1)`. The title of the widow shows the event/image number showing the total number of events 
 available in the HDF5 file `(2)`. The bottom left corner has a checkbox to turn on and off the found peaks `(3)`. On the 
 right-hand side of the window, you can change the brightness by changing the histogram `(4)`.
@@ -166,35 +166,27 @@ right-hand side of the window, you can change the brightness by changing the his
 
 ### 2. Displaying the pixel intensity profile and toggle between images
 once the HDF5 file is viewed `Plot Pixel `Intensity button `(1)` is enabled and when pressed, the vertically average intensity 
-profile `(2)` for the selected panel will be displayed. You can toggle between the images by pressing `Next` and ` Previous` buttons `(3)` or if you want to jump into a particular image you can enter the event number in the 
-Frame Number `(4)` field. When you are changing the event number on the main GUI the display for viewing the HDF5
+profile `(2)` for the selected panel will be displayed. You can toggle between the images by pressing the `Next` and ` Previous buttons` `(3)` or if you want to jump into a particular image you can enter the event number in the 
+Frame Number `(4)` field. When you are changing the event number on the main GUI, the display for viewing the HDF5
 file gets updated. 
- >- If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
+ >* If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
  >the window for HDF5 file display and the pixel intensity plot on the main GUI will be automatically updated.
 
 ![plottingPixelIntensity]
 
 ### 3. Curve Fitting and Sort data for model training.
-In the bottom left corner of the main GUI, click on the ```Plot a Fit``` checkbox `(1)` to a polynomial fit the pixel intensity 
+In the bottom left corner of the main GUI, click on the ```Plot a Fit`checkbox `(1)` to a polynomial fit the pixel intensity 
 plot `(2)`. By default, a 4th</sup> order polynomial will be applied, but you can change the order of the polynomial simply by typing in the order in the `Order of Fit field` `(3)`. Once you are satisfied with the fit of the polynomial, 
-you can press the `Label Data button` `(4)`. A separate window will be opened with the distributions for 
-inflection points `(5)`. On the top part of the window, there will be suggested values for inflection points based on each 
+you can press the `Label Data button` `(4)`. A separate window will be opened with the `distributions for 
+inflection points` `(5)`. On the top part of the window, there will be suggested values for inflection points based on each 
 distribution. `(6)` and thresholds for each inflection point `(7)`. You can also type in the values for each section. Once 
-you are satisfied with the sorting parameters click on the `Sort button` `(8)`. You can now safely close this window.
+you are satisfied with the sorting parameters click on the `Sort button` `(8)`. 
 
->* In the process of training a machine learning model, it is important to ensure that the data used for training is 
-> accurate and representative of the real-world scenario that the model will be used in. One way to achieve this is by 
-> sorting the data into "good" and "bad" frames. "Good" frames are those that are accurate and representative of 
-> the detector pixel intensities, while "bad" frames are with pixel gain switching issues.
+>* In the process of training a machine learning model, it is important to ensure that the data used for training is accurate and representative of the real-world scenario that the model will be used in. One way to achieve this is by sorting the data into "good" and "bad" frames. "Good" frames are those that are accurate and representative of the detector pixel intensities, while "bad" frames are with pixel gain switching issues.
 
->* One technique for sorting the frames is to use inflection points of an nth order polynomial. An inflection point is a 
-> point on a graph where the concavity of the function changes. In other words, it is a point where the function changes
-> from being concave up to concave down or vice versa. By analyzing the inflection points of a polynomial that fits the 
-> data, it is possible to identify regions of the data that are likely to be "good" or "bad." This technique can be used
-> to sort the frames and ensure that only the most accurate and representative data is used for training the model.
+>* One technique for sorting the frames is to use inflection points of an nth order polynomial. An inflection point is a point on a graph where the concavity of the function changes. In other words, it is a point where the function changes from being concave up to concave down or vice versa. By analyzing the inflection points of a polynomial that fits the data, it is possible to identify regions of the data that are likely to be "good" or "bad." This technique can be used to sort the frames and ensure that only the most accurate and representative data is used for training the model.
 
->* Additionally, this technique can be used to identify the outliers in the data, which can be removed before training 
-> the model to improve its performance.
+>* Additionally, this technique can be used to identify the outliers in the data, which can be removed before training the model to improve its performance.
 
 ![sortingForML]
 
@@ -207,9 +199,7 @@ you are satisfied with the sorting parameters click on the `Sort button` `(8)`. 
 ### 4. Training a model
 Now that you have sorted data to train a machine learning model to be trained, click on the ``` Train a Model``` button.
 
-![trainingAModel1]
-
-A separate widow will appear with directions to train a model.
+![trainingAModel1]A separate window will appear with directions to train a model.
 To train the model, follow these steps:
 
 1. Click the "Browse" button to find and select the file that will be used for training. 
@@ -224,20 +214,8 @@ Testing. </i></b>
 
 ![trainingAModel2]
 
-Once the model training is completed, the ```Test``` button (1) will get enabled for you do a model testing.
-Have a look at the ```Confusion Matrix``` (2) and the ```Classification Report``` (3). 
- >* Confusion Matrix and Classification Report are essential evaluation metrics used to assess the quality and accuracy of
- > a machine learning model. Confusion matrix provides a summary of the model's predictions, comparing them to the 
- > actual class labels. It presents the number of correct and incorrect predictions for each class, allowing you to 
- > visualize the model's performance and identify areas of improvement. On the other hand, the classification report 
- > provides a more comprehensive evaluation of the model's performance by calculating various metrics such as precision, 
- > recall, F1-score, and support. These metrics give you an idea of the model's ability to accurately predict the 
- > class labels, how many true positives and false positives it has, and its overall performance. By using both 
- > the confusion matrix and the classification report, you can get a more comprehensive understanding of 
- > the model's performance and fine-tune it to improve its accuracy.
-
-The off diagonal numbers (the false positives 
-and false negative) should be close to Zero. In the Classification Report, have a look at ```Precision, Recall, F1-score
+Once the model training is completed, the ```Test``` button (1) will be enabled for you to do model testing.
+Have a look at the ```Confusion Matrix``` (2) and the ```Classification Report``` (3). The off-diagonal numbers (the false positives and false negatives) should be close to Zero. In the Classification Report, have a look at ```Precision, Recall, F1-score
 and Accuracy``` if the model is performing well, those numbers should be as close as possible to One. You can now safely
 close this window.
 
@@ -250,7 +228,7 @@ To proceed, you have two options after reviewing the model quality matrices:
 
 ![trainingAModel4]
 ### 5. Sorting the Data set using the trained model
-Finally, you are here, Sorting the entire data set using the trained model. To being, click on the ```Sort Data``` 
+Finally, you are here, Sorting the entire data set using the trained model. To begin, click on the ```Sort Data``` 
 button.
 
 ![sortData1]
