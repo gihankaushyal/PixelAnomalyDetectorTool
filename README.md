@@ -167,17 +167,16 @@ When you click the `View File button`, a new window will open, displaying all th
 ![fileViewWindow]
 
 ### 2. Displaying the pixel intensity profile and toggle between images
-once the HDF5 file is viewed `Plot Pixel `Intensity button `(1)` is enabled and when pressed, the vertically average intensity 
-profile `(2)` for the selected panel will be displayed. You can toggle between the images by pressing the `Next` and ` Previous buttons` `(3)` or if you want to jump into a particular image you can enter the event number in the 
-Frame Number `(4)` field. When you are changing the event number on the main GUI, the display for viewing the HDF5
+once the HDF5 file is viewed by clicking `View File` button `(1)`, a vertically average intensity profile `(2)` fitted with a 4th order polynomial by default for the selected panel will be displayed. You can toggle between the images by pressing the `Next` and ` Previous` buttons `(3)` or if you want to jump into a particular image you can enter the event number in the 
+`Frame Number` `(4)` field. When you are changing the event number on the main GUI, the display for viewing the HDF5
 file gets updated. 
- >* If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on 
- >the window for HDF5 file display and the pixel intensity plot on the main GUI will be automatically updated.
+ >* If you wish to plot the pixel intensity for a different detector panel, simply mouse click on the desired panel on the window `(5)` for HDF5 file display and the pixel intensity plot on the main GUI will automatically be updated.
 
 ![plottingPixelIntensity]
 
 ### 3. Curve Fitting and Sort data for model training.
-In the bottom left corner of the main GUI, click on the ```Plot a Fit`checkbox `(1)` to a polynomial fit the pixel intensity 
+
+In the bottom left corner of the main GUI, click on the `Plot a Fit`checkbox `(1)` to a polynomial fit the pixel intensity 
 plot `(2)`. By default, a 4th</sup> order polynomial will be applied, but you can change the order of the polynomial simply by typing in the order in the `Order of Fit field` `(3)`. Once you are satisfied with the fit of the polynomial, 
 you can press the `Label Data button` `(4)`. A separate window will be opened with the `distributions for 
 inflection points` `(5)`. On the top part of the window, there will be suggested values for inflection points based on each 
@@ -326,7 +325,7 @@ Thank you, Sabine, for your dedication and expertise.
 [displayingAListOfHDF5Files]:images/displayingAListOfHDF5Files.png
 [statusBarAndLights]: images/statusBarAndLights.png
 [fileViewWindow]: images/fileViewWindow.png
-[plottingPixelIntensity]: images/plotingPixelIntensity.png
+[plottingPixelIntensity]: images/plottingPixelIntensity.png
 [sortingForML]: images/sortingForML.png
 [trainingAModel1]: images/trainingAModel-1.png
 [trainingAModel2]: images/trainingAModel-2.png
