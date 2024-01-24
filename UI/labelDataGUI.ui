@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>110</y>
+     <y>140</y>
      <width>741</width>
-     <height>391</height>
+     <height>370</height>
     </rect>
    </property>
   </widget>
@@ -68,10 +68,10 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>570</x>
-     <y>20</y>
-     <width>171</width>
-     <height>32</height>
+     <x>590</x>
+     <y>30</y>
+     <width>151</width>
+     <height>90</height>
     </rect>
    </property>
    <property name="text">
@@ -104,17 +104,17 @@
     </rect>
    </property>
   </widget>
-  <widget class="QDoubleSpinBox" name="doubleSpinBoxIF1">
+  <widget class="QDoubleSpinBox" name="inflectionPoint1Top">
    <property name="geometry">
     <rect>
      <x>370</x>
-     <y>60</y>
+     <y>59</y>
      <width>68</width>
      <height>24</height>
     </rect>
    </property>
   </widget>
-  <widget class="QDoubleSpinBox" name="doubleSpinBoxIF2">
+  <widget class="QDoubleSpinBox" name="inflectionPoint2Top">
    <property name="geometry">
     <rect>
      <x>490</x>
@@ -128,26 +128,72 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>65</y>
-     <width>341</width>
+     <y>75</y>
+     <width>301</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>Based on the distribution, suggested ranges for:       +/-</string>
+    <string>Based on the distribution, suggested ranges for:       </string>
    </property>
   </widget>
   <widget class="QLabel" name="fileNameLabel">
    <property name="geometry">
     <rect>
-     <x>190</x>
-     <y>90</y>
+     <x>210</x>
+     <y>120</y>
      <width>341</width>
      <height>16</height>
     </rect>
    </property>
    <property name="text">
     <string/>
+   </property>
+  </widget>
+  <widget class="QDoubleSpinBox" name="inflectionPoint2Bottom">
+   <property name="geometry">
+    <rect>
+     <x>490</x>
+     <y>87</y>
+     <width>68</width>
+     <height>24</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QDoubleSpinBox" name="inflectionPoint1Bottom">
+   <property name="geometry">
+    <rect>
+     <x>370</x>
+     <y>86</y>
+     <width>68</width>
+     <height>24</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_5">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>61</y>
+     <width>41</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Upper</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_6">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>88</y>
+     <width>41</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Lower</string>
    </property>
   </widget>
  </widget>

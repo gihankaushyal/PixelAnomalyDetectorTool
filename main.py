@@ -131,8 +131,7 @@ class MainWindow(qtw.QMainWindow):
         self.sortForMLButton.setToolTip("Click to Plot the distribution of two inflation points")
         self.sortButton.setToolTip("Click to Save data with the trained model")
 
-        # for debugging and feature adding
-        self.MLButton.setEnabled(True)
+        
 
     def setBusy(self):
         """
@@ -282,6 +281,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.setIdle()
 
+
     @pyqtSlot()
     def curveToPlot(self):
         """
@@ -429,6 +429,9 @@ class MainWindow(qtw.QMainWindow):
         self.plotCurve()
         self.poltFitCheckBox.setChecked(True)
         self.poltFitCheckBox.clicked.emit(True)
+
+        # for debugging and feature adding
+        self.MLButton.setEnabled(True)
 
     def viewMultipleFiles(self, index):
         self.resetParameters()
