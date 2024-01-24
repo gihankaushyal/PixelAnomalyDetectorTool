@@ -118,9 +118,9 @@ class DataLabeler(qtw.QWidget):
         self.plotInflectionPoints()
 
     @staticmethod
-    def processFrame(inTuple):
+    def processFrameOld(inTuple):
         """
-
+        Calculate second derivative for a forth order polynomian (Order of fit =4) and returns the infection points
         :param inTuple: the required arguments as a tuple
         :return: a list of the calculated inflection points
         """
@@ -143,6 +143,51 @@ class DataLabeler(qtw.QWidget):
                     return x2, x1
 
             except (IndexError, ValueError, Warning):
+                print("Error while processing frame.")
+                return None, None  # or some other sentinel value
+
+    @staticmethod
+    def processFrame(inTuple):
+        """
+        Calculate second derivative for any given order of fit (Polynomial) and returns the infection points
+        :param inTuple: the required arguments as a tuple
+        :return: a list of the calculated inflection points
+        """
+        (frame, min_fs, max_fs, min_ss, max_ss, orderOfFit) = inTuple
+        # print("Processing frame...")
+
+        avgIntensities = [np.average(frame[min_ss:max_ss, j]) for j in
+                          range(min_fs + 5, max_fs - 5)]
+        # Polynomial fit
+        fit = np.polyfit(np.arange(min_fs + 5, max_fs - 5), avgIntensities, deg=int(orderOfFit))
+        p  = np.poly1d(fit)
+
+        # Calculate first and Second derivative
+        #first_derivative = np.poly1d(p,1)
+        secondDerivative = np.poly1d(np.polyder(p, 2))
+
+        # calculating the roots of the second derivative
+        critialPoints = secondDerivative.r
+        # print(critialPoints)
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error")
+            try:
+               
+                roots = []
+                for point in critialPoints:
+                    if np.isreal(point):
+                        point = np.real(point)
+                        roots.append(point)
+
+                if roots[0] < roots[1]:
+                    return roots[0], roots[1]
+                else:
+                    return roots[1], roots[0]
+
+            # except (IndexError, ValueError, Warning):
+            except Exception as e:
+                print(e)
                 print("Error while processing frame.")
                 return None, None  # or some other sentinel value
 
@@ -173,53 +218,57 @@ class DataLabeler(qtw.QWidget):
         except Exception as e:
             print(f"Error in plotInflectionPoint: {e}")
 
-        # with plotly
-        df = pd.DataFrame()
-        df['Inflection_point1'] = self.inflectionPoint1List
-        df['Inflection_point2'] = self.inflectionPoint2List
-        fig = px.histogram(df, nbins=200, opacity=0.5)
-        self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
+        try:
+            # with plotly
+            df = pd.DataFrame()
+            df['Inflection_point1'] = self.inflectionPoint1List
+            df['Inflection_point2'] = self.inflectionPoint2List
+            fig = px.histogram(df, nbins=200, opacity=0.5)
+            self.browser.setHtml(fig.to_html(include_plotlyjs='cdn'))
 
-        # with seaborn
-        # self.figureSortingForML.clear()
-        # df = pd.DataFrame()
-        # df['Inflection_point1'] = self.inflectionPoint1List
-        # df['Inflection_point2'] = self.inflectionPoint2List
-        # colors = ['red', 'green', 'blue', 'violet', 'pink']
-        # # random(colors)
-        # for column in df.columns:
-        #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
-        # plt.title('Distributions of Inflection points 1 and 2')
-        # plt.ylabel('Count')
-        # plt.xlabel(' Vertically Average Pixel Intensity')
-        # plt.xticks()
-        # plt.legend()
-        # self.canvasForInflectionPoints.draw()
+            # with seaborn
+            # self.figureSortingForML.clear()
+            # df = pd.DataFrame()
+            # df['Inflection_point1'] = self.inflectionPoint1List
+            # df['Inflection_point2'] = self.inflectionPoint2List
+            # colors = ['red', 'green', 'blue', 'violet', 'pink']
+            # # random(colors)
+            # for column in df.columns:
+            #     sns.histplot(data=df[column], color=colors.pop(), binrange=(-300, 300), bins=80, alpha=0.5, label=column)
+            # plt.title('Distributions of Inflection points 1 and 2')
+            # plt.ylabel('Count')
+            # plt.xlabel(' Vertically Average Pixel Intensity')
+            # plt.xticks()
+            # plt.legend()
+            # self.canvasForInflectionPoints.draw()
 
-        # Enabling button and check box after plotting
-        self.inflectionPoint1.setEnabled(True)
-        self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
-        self.inflectionPoint2.setEnabled(True)
-        self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
-        self.sortButton.setEnabled(True)
-        
-        # For Inflection point 1
-        q25 = round(np.percentile(df['Inflection_point1'].dropna(),25), 2)
-        q75 = round(np.percentile(df['Inflection_point1'].dropna(),75),2)
-        IQR = round(q75 - q25,2)
-        #print(q25, q75, IQR)
-        self.inflectionPoint1Top.setValue(q75 + IQR*1.5)
-        self.inflectionPoint1Bottom.setValue(q25 - IQR*1.5)
+            # Enabling button and check box after plotting
+            self.inflectionPoint1.setEnabled(True)
+            self.inflectionPoint1.setText(str(round(np.median(df['Inflection_point1'].dropna()), 2)))
+            self.inflectionPoint2.setEnabled(True)
+            self.inflectionPoint2.setText(str(round(np.median(df['Inflection_point2'].dropna()), 2)))
+            self.sortButton.setEnabled(True)
+            
+            # For Inflection point 1
+            q25 = round(np.percentile(df['Inflection_point1'].dropna(),25), 2)
+            q75 = round(np.percentile(df['Inflection_point1'].dropna(),75),2)
+            IQR = round(q75 - q25,2)
+            #print(q25, q75, IQR)
+            self.inflectionPoint1Top.setValue(q75 + IQR*1.5)
+            self.inflectionPoint1Bottom.setValue(q25 - IQR*1.5)
 
-        # For Inflection point 2
-        q25 = round(np.percentile(df['Inflection_point2'].dropna(),25),2)
-        q75 = round(np.percentile(df['Inflection_point2'].dropna(),75),2)
-        IQR = round(q75 - q25,2)
-        #print(q25, q75, IQR)
-        self.inflectionPoint2Top.setValue(q75 + IQR*1.5)
-        self.inflectionPoint2Bottom.setValue(q25 - IQR*1.5)
-        
-        print("Inflection points plotted successfully.")
+            # For Inflection point 2
+            q25 = round(np.percentile(df['Inflection_point2'].dropna(),25),2)
+            q75 = round(np.percentile(df['Inflection_point2'].dropna(),75),2)
+            IQR = round(q75 - q25,2)
+            #print(q25, q75, IQR)
+            self.inflectionPoint2Top.setValue(q75 + IQR*1.5)
+            self.inflectionPoint2Bottom.setValue(q25 - IQR*1.5)
+            
+            print("Inflection points plotted successfully.")
+
+        except Exception as e: 
+            print(e)
 
     def plotInflectionPoints(self):
         """
